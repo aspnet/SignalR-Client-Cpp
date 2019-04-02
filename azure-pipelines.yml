@@ -6,6 +6,10 @@ jobs:
   parameters:
     agentOs: Windows
     beforeBuild:
+    - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
+      displayName: Bootstrap vcpkg
+    - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk cpprestsdk:x64-windows"
+      displayName: vcpkg install dependencies
     - script: echo Hello, world!
       displayName: 'Run a one-line script'
 
@@ -13,6 +17,11 @@ jobs:
   parameters:
     agentOs: macOs
     beforeBuild:
+    - script: brew install gcc boost
+    - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+      displayName: Bootstrap vcpkg
+    - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
+      displayName: vcpkg install dependencies
     - script: echo Hello, world!
       displayName: 'Run a one-line script'
 
@@ -20,5 +29,9 @@ jobs:
   parameters:
     agentOs: Linux
     beforeBuild:
+    - script: |
+        ./src/submodules/vcpkg/bootstrap-vcpkg.sh
+        sudo ./src/submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread
+      displayName: vcpkg install dependencies
     - script: echo Hello, world!
       displayName: 'Run a one-line script'
