@@ -30,8 +30,8 @@ jobs:
     agentOs: Linux
     beforeBuild:
     - script: |
-        ./src/submodules/vcpkg/bootstrap-vcpkg.sh
-        sudo ./src/submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread
+        ./submodules/vcpkg/bootstrap-vcpkg.sh
+        sudo ./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread
       displayName: vcpkg install dependencies
     - script: echo Hello, world!
       displayName: 'Run a one-line script'
