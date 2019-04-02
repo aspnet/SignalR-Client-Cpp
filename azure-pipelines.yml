@@ -5,20 +5,20 @@ jobs:
 - template: .azure/default-build.yml
   parameters:
     agentOs: Windows
-  beforeBuild:
-  - script: echo Hello, world!
-    displayName: 'Run a one-line script'
+    beforeBuild:
+    - script: echo Hello, world!
+      displayName: 'Run a one-line script'
 
 - template: .azure/default-build.yml
   parameters:
     agentOs: macOs
-  beforeBuild:
-  - script: echo Hello, world!
-    displayName: 'Run a one-line script'
+    beforeBuild:
+    - script: echo Hello, world!
+      displayName: 'Run a one-line script'
 
 - template: .azure/default-build.yml
   parameters:
     agentOs: Linux
-  beforeBuild:
-  - script: echo Hello, world!
-    displayName: 'Run a one-line script'
+    beforeBuild:
+    - script: echo Hello, world!
+      displayName: 'Run a one-line script'
