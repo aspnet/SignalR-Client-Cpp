@@ -10,16 +10,10 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_LDFLAGS}")
 
-if(WIN32)
-  find_package(cpprestsdk REQUIRED)
-  set(CPPREST_LIB "cpprestsdk::cpprest")
-endif()
+find_package(cpprestsdk REQUIRED)
+set(CPPREST_LIB "cpprestsdk::cpprest")
 
 include_directories (include)
-
-if(NOT WIN32)
-  find_library(CPPREST_LIB NAMES "cpprest" PATHS ${CPPREST_LIB_DIR} REQUIRED)
-endif()
 
 # TODO: We shouldn't use this, it makes the dll/lib export all symbols
 # We need this for testing, but we might just add all the files to the test project manually

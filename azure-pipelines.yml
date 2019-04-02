@@ -10,8 +10,6 @@ jobs:
       displayName: Bootstrap vcpkg
     - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk cpprestsdk:x64-windows"
       displayName: vcpkg install dependencies
-    - script: echo Hello, world!
-      displayName: 'Run a one-line script'
 
 - template: .azure/default-build.yml
   parameters:
@@ -22,8 +20,6 @@ jobs:
       displayName: Bootstrap vcpkg
     - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
       displayName: vcpkg install dependencies
-    - script: echo Hello, world!
-      displayName: 'Run a one-line script'
 
 - template: .azure/default-build.yml
   parameters:
@@ -33,5 +29,3 @@ jobs:
         ./submodules/vcpkg/bootstrap-vcpkg.sh
         sudo ./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread
       displayName: vcpkg install dependencies
-    - script: echo Hello, world!
-      displayName: 'Run a one-line script'
