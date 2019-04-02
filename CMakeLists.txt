@@ -10,7 +10,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_LDFLAGS}")
 
-find_package(cpprestsdk REQUIRED)
+find_package(cpprestsdk CONFIG REQUIRED)
 set(CPPREST_LIB "cpprestsdk::cpprest")
 
 include_directories (include)
