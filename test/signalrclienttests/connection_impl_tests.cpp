@@ -1450,10 +1450,11 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     auto disconnect_completed_event = std::make_shared<event>();
 
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [disconnect_completed_event](std::function<void(std::string, std::exception_ptr)> callback)
-        {
+        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::exception())); },
+        [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::exception())); },
+        [disconnect_completed_event](const std::string&, std::function<void(std::exception_ptr)> callback) {
             disconnect_completed_event->wait();
-            callback("{ }\x1e", nullptr);
+            callback(nullptr);
         });
 
     auto writer = std::shared_ptr<log_writer>{std::make_shared<memory_log_writer>()};
@@ -1489,7 +1490,8 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     ASSERT_EQ("[state change] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[4]));
 }
 
-TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_before_init_message_received)
+// Test races with start and stop
+TEST(connection_impl_stop, DISABLED_ongoing_start_request_canceled_if_connection_stopped_before_init_message_received)
 {
     auto http_client = std::make_unique<test_http_client>([](const std::string& url, http_request)
     {
