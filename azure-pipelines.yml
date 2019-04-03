@@ -6,13 +6,12 @@ jobs:
   parameters:
     agentOs: Windows
     beforeBuild:
-    - powershell: "& vcpkg.exe install cpprestsdk cpprestsdk:x64-windows"
+    - powershell: "& vcpkg.exe install cpprestsdk cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
       displayName: vcpkg install dependencies
 
 - template: .azure/default-build.yml
   parameters:
     agentOs: macOs
-    cmakeRunArgs: -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake
     beforeBuild:
     - script: brew install gcc boost
     - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
@@ -24,5 +23,5 @@ jobs:
   parameters:
     agentOs: Linux
     beforeBuild:
-    - script: sudo vcpkg install cpprestsdk boost-system boost-chrono boost-thread
+    - script: sudo vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg
       displayName: vcpkg install dependencies
