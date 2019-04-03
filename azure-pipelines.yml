@@ -5,6 +5,7 @@ jobs:
 - template: .azure/default-build.yml
   parameters:
     agentOs: Windows
+    cMakeRunArgs: '-A x64'
     beforeBuild:
     - powershell: "& vcpkg.exe install cpprestsdk cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
       displayName: vcpkg install dependencies
