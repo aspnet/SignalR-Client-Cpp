@@ -1,5 +1,5 @@
 # Use the same crt library for gtest and signalrclienttests projects (Windows only)
-enable_testing()
+
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory (../submodules/googletest gtest)
 
