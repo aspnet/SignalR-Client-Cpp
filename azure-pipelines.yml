@@ -26,3 +26,5 @@ jobs:
     beforeBuild:
     - script: sudo vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg
       displayName: vcpkg install dependencies
+      # gtest is hanging on Linux
+      continueOnError: true
