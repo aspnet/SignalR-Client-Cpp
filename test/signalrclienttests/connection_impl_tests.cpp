@@ -1488,7 +1488,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(5U, log_entries.size());
+    ASSERT_EQ(5U, log_entries.size()) << dump_vector(log_entries);
     ASSERT_EQ("[state change] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
     ASSERT_EQ("[info        ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
     ASSERT_EQ("[info        ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
