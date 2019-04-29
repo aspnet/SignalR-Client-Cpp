@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+  </PropertyGroup>
+  <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v140.windesktop.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v140.windesktop.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v140.windesktop.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v140.windesktop.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v140.winapp.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v140.winapp.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v140.winapp.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v140.winapp.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v120.winxp.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winxp.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v120.winxp.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winxp.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v120.winphonesl.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winphonesl.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v120.winphonesl.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winphonesl.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v120.winphone.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winphone.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v120.winphone.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winphone.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.windesktop.msvcstl.dyn.rt-dyn.targets')" />
+    <Import Project="$(NuGetPackageRoot)cpprestsdk.v120.winapp.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winapp.msvcstl.dyn.rt-dyn.targets" Condition="Exists('$(NuGetPackageRoot)cpprestsdk.v120.winapp.msvcstl.dyn.rt-dyn\2.9.1\build\native\cpprestsdk.v120.winapp.msvcstl.dyn.rt-dyn.targets')" />
+  </ImportGroup>
+</Project>

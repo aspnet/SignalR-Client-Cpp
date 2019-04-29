@@ -61,15 +61,19 @@ TEST(connection_impl_start, cannot_start_non_disconnected_exception)
     }
 }
 
-// TODO: race in state check
 TEST(connection_impl_start, connection_state_is_connecting_when_connection_is_being_started)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
-        /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
-        /* connect function */[](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed")))); });
+	auto state_mre = manual_reset_event<void>();
+	auto websocket_client = create_test_websocket_client(
+		/* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+		/* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+		/* connect function */[&state_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
+		{
+			state_mre.get();
+			callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+		});
 
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
 
@@ -80,6 +84,7 @@ TEST(connection_impl_start, connection_state_is_connecting_when_connection_is_be
     });
 
     ASSERT_EQ(connection->get_connection_state(), connection_state::connecting);
+    state_mre.set();
 
     try
     {
