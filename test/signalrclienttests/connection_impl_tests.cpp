@@ -61,6 +61,7 @@ TEST(connection_impl_start, cannot_start_non_disconnected_exception)
     }
 }
 
+// TODO: race in state check
 TEST(connection_impl_start, connection_state_is_connecting_when_connection_is_being_started)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
@@ -1458,7 +1459,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
         });
 
     auto writer = std::shared_ptr<log_writer>{std::make_shared<memory_log_writer>()};
-    auto connection = create_connection(std::make_shared<test_websocket_client>(), writer, trace_level::all);
+    auto connection = create_connection(std::move(websocket_client), writer, trace_level::all);
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)

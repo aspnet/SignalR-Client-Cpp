@@ -174,7 +174,7 @@ namespace signalr
             // TODO: use transfer format
 
             return connection->start_transport(url)
-                .then([weak_connection, start_tce](std::shared_ptr<transport> transport)
+                .then([weak_connection](std::shared_ptr<transport> transport)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
