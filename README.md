@@ -1,7 +1,5 @@
 # ASP.NET Core SignalR C++ Client
 
-C++ Client for ASP.NET Core SignalR.
+This project is part of ASP.NET Core. You can find samples, documentation and getting started instructions for ASP.NET Core at https://github.com/aspnet/AspNetCore
 
-To file issues, go to [aspnet/AspNetCore](https://github.com/aspnet/AspNetCore/issues).
-
-This project is part of ASP.NET Core. You can find samples, documentation and getting started instructions for ASP.NET Core at the [Home](https://github.com/aspnet/home) repo.
+Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
