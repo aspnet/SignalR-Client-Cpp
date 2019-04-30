@@ -117,7 +117,7 @@ namespace signalr
         pplx::task_completion_event<void> start_tce;
 
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
-		auto token = m_disconnect_cts.get_token();
+        auto token = m_disconnect_cts.get_token();
 
         pplx::task_from_result()
             .then([weak_connection, url]()
@@ -174,19 +174,19 @@ namespace signalr
 
             // TODO: use transfer format
 
-			if (token.is_canceled())
-			{
-				pplx::cancel_current_task();
-				return pplx::task_from_result();
-			}
+            if (token.is_canceled())
+            {
+                pplx::cancel_current_task();
+                return pplx::task_from_result();
+            }
 
             return connection->start_transport(url)
                 .then([weak_connection, token](std::shared_ptr<transport> transport)
             {
-				if (token.is_canceled())
-				{
-					pplx::cancel_current_task();
-					return pplx::task_from_result();
+                if (token.is_canceled())
+                {
+                    pplx::cancel_current_task();
+                    return pplx::task_from_result();
 				}
                 auto connection = weak_connection.lock();
                 if (!connection)

@@ -1460,7 +1460,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
         [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::exception())); },
         [disconnect_completed_event](const std::string&, std::function<void(std::exception_ptr)> callback) {
             disconnect_completed_event->wait();
-            callback(nullptr);
+            callback(std::make_exception_ptr(std::exception()));
         });
 
     auto writer = std::shared_ptr<log_writer>{std::make_shared<memory_log_writer>()};
