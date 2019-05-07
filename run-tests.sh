@@ -2,6 +2,6 @@
 
 echo "Running executable"
 eval $*
-EXITCODE = $?
-echo "Finished running with exit code " $EXITCODE
+EXITCODE=$?
+echo "Finished running with exit code: " $EXITCODE
 exit $EXITCODE
