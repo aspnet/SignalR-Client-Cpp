@@ -11,7 +11,5 @@ int main(int argc, char* argv[])
 #endif
 {
     ::testing::InitGoogleTest(&argc, argv);
-    auto ret = RUN_ALL_TESTS();
-    std::cout << "Finsihed running tests " << ret << std::endl;
-    return ret;
+    return RUN_ALL_TESTS();
 }

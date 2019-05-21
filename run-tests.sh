@@ -1,11 +1,7 @@
 #!/bin/bash
 
 echo "Running executable"
-if [ "$(uname)" = "Linux" ]; then
-  strace $*
-else
-  eval $*
-fi
+eval $*
 EXITCODE=$?
 echo "Finished running with exit code: " $EXITCODE
 exit $EXITCODE
