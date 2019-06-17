@@ -29,7 +29,7 @@ else()
   target_link_libraries(signalrclient ${CPPREST_LIB})
 endif()
 
-install(TARGETS signalrclient)
+install(TARGETS signalrclient LIBRARY)
 
 # Copy include directory to output
 # add_custom_command(TARGET signalrclient POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include $<TARGET_FILE_DIR:signalrclient>/include)
