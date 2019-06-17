@@ -51,5 +51,4 @@ if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
-install(TARGETS signalrclient)
 install(DIRECTORY include/ DESTINATION include/)
