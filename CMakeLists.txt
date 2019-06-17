@@ -6,6 +6,8 @@ endif()
 
 project (signalrclient)
 
+include(CTest)
+
 if(NOT WIN32)
   set(EXTRA_FLAGS "-std=c++11 -fPIC -DNO_SIGNALRCLIENT_EXPORTS")
 else()
@@ -44,9 +46,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
 add_subdirectory(src/signalrclient)
 
-SET(ENABLE_TESTING OFF CACHE BOOL "Enable tests to build")
-if(${ENABLE_TESTING})
+if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(test)
 endif()
-UNSET(ENABLE_TESTING CACHE)
+
+install(TARGETS signalrclient)
+install(DIRECTORY include/ DESTINATION include/)

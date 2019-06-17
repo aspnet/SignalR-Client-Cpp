@@ -1,5 +1,3 @@
-
-
 set (SOURCES
   callback_manager.cpp
   connection.cpp
@@ -31,4 +29,4 @@ else()
 endif()
 
 # Copy include directory to output
-add_custom_command(TARGET signalrclient POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include $<TARGET_FILE_DIR:signalrclient>/include)
+# add_custom_command(TARGET signalrclient POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include $<TARGET_FILE_DIR:signalrclient>/include)
