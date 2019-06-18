@@ -29,6 +29,7 @@ else()
   target_link_libraries(signalrclient ${CPPREST_LIB})
 endif()
 
+include(GNUInstallDirs)
 install(TARGETS signalrclient LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Copy include directory to output

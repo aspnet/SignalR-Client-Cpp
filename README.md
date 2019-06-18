@@ -6,6 +6,7 @@ Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
 
 ### Build on Windows ###
 ```powershell
+PS> git submodule update --init
 PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
 PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk cpprestsdk:x64-windows
 PS> mkdir build.release
@@ -17,6 +18,7 @@ Output will be in `build.release\bin\Release\`
 
 ### Build on Mac ###
 ```bash
+$ git submodule update --init
 $ brew install gcc boost
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
 $ ./submodules/vcpkg/vcpkg install cpprestsdk
@@ -30,6 +32,7 @@ Output will be in `build.release/bin/`
 ### Build on Linux ###
 
 ```bash
+$ git submodule update --init
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
 $ ./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread
 $ mkdir build.release
