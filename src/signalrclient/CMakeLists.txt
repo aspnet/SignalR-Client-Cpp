@@ -22,15 +22,16 @@ set (SOURCES
 
 add_library (signalrclient SHARED ${SOURCES})
 
-# TODO: PRIVATE link libraries
 if(NOT WIN32)
-  target_link_libraries(signalrclient ${CPPREST_LIB} OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread)
+  target_link_libraries(signalrclient
+    PUBLIC ${CPPREST_LIB}
+    PRIVATE OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread
+  )
 else()
-  target_link_libraries(signalrclient ${CPPREST_LIB})
+  target_link_libraries(signalrclient
+    PUBLIC ${CPPREST_LIB}
+  )
 endif()
 
 include(GNUInstallDirs)
 install(TARGETS signalrclient LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-# Copy include directory to output
-# add_custom_command(TARGET signalrclient POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include $<TARGET_FILE_DIR:signalrclient>/include)
