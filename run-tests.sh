@@ -3,7 +3,7 @@
 echo "Running executable"
 
 PID=0
-EXITCODE=1
+EXITCODE=0
 
 # launch process in background
 eval $* &
