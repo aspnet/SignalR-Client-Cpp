@@ -8,7 +8,7 @@ Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
 ```powershell
 PS> git submodule update --init
 PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
-PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk cpprestsdk:x64-windows
+PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk:x64-windows
 PS> mkdir build.release
 PS> cd build.release
 PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE=..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_BUILD_TYPE=Release

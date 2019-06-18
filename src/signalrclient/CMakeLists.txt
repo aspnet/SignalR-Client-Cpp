@@ -24,7 +24,7 @@ add_library (signalrclient SHARED ${SOURCES})
 
 # TODO: PRIVATE link libraries
 if(NOT WIN32)
-  target_link_libraries(signalrclient ${CPPREST_LIB} ${OPENSSL_LIBRARIES} Boost::boost Boost::system Boost::chrono Boost::thread)
+  target_link_libraries(signalrclient ${CPPREST_LIB} OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread)
 else()
   target_link_libraries(signalrclient ${CPPREST_LIB})
 endif()
