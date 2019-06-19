@@ -22,7 +22,12 @@ set (SOURCES
 
 add_library (signalrclient SHARED ${SOURCES})
 
-if(NOT WIN32)
+if(APPLE)
+  target_link_libraries(signalrclient
+    PUBLIC ${CPPREST_LIB}
+    PRIVATE OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread
+  )
+elseif(NOT WIN32)
   target_link_libraries(signalrclient
     PUBLIC ${CPPREST_LIB}
     PRIVATE OpenSSL::SSL
