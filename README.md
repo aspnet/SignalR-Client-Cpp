@@ -19,7 +19,7 @@ Output will be in `build.release\bin\Release\`
 ### Build on Mac ###
 ```bash
 $ git submodule update --init
-$ brew install gcc6 boost
+$ brew install gcc6
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
 $ ./submodules/vcpkg/vcpkg install cpprestsdk
 $ mkdir build.release
