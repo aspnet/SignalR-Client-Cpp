@@ -4,6 +4,7 @@
 #pragma once
 
 #include "transfer_format.h"
+#include <functional>
 
 namespace signalr
 {

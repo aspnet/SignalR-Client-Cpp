@@ -117,6 +117,7 @@ namespace signalr
         pplx::task_completion_event<void> start_tce;
 
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
+        auto token = m_disconnect_cts.get_token();
 
         pplx::task_from_result()
             .then([weak_connection, url]()
@@ -127,8 +128,8 @@ namespace signalr
                 return pplx::task_from_exception<negotiation_response>("connection no longer exists");
             }
             return negotiate::negotiate(*connection->m_http_client, url, connection->m_signalr_client_config);
-        }, m_disconnect_cts.get_token())
-            .then([weak_connection, start_tce, redirect_count, url](negotiation_response negotiation_response)
+        }, token)
+            .then([weak_connection, start_tce, redirect_count, url, token](negotiation_response negotiation_response)
         {
             auto connection = weak_connection.lock();
             if (!connection)
@@ -173,9 +174,20 @@ namespace signalr
 
             // TODO: use transfer format
 
-            return connection->start_transport(url)
-                .then([weak_connection, start_tce](std::shared_ptr<transport> transport)
+            if (token.is_canceled())
             {
+                pplx::cancel_current_task();
+                return pplx::task_from_result();
+            }
+
+            return connection->start_transport(url)
+                .then([weak_connection, token](std::shared_ptr<transport> transport)
+            {
+                if (token.is_canceled())
+                {
+                    pplx::cancel_current_task();
+                    return pplx::task_from_result();
+				}
                 auto connection = weak_connection.lock();
                 if (!connection)
                 {
@@ -194,7 +206,7 @@ namespace signalr
 
                 return pplx::task_from_result();
             });
-        }, m_disconnect_cts.get_token())
+        }, token)
             .then([start_tce, weak_connection](pplx::task<void> previous_task)
         {
             auto connection = weak_connection.lock();

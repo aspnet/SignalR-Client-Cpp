@@ -337,12 +337,12 @@ namespace signalr
         {
             if (exception)
             {
-                set_exception(exception);
                 auto hub_connection = weak_hub_connection.lock();
                 if (hub_connection)
                 {
                     hub_connection->m_callback_manager.remove_callback(callback_id);
                 }
+                set_exception(exception);
             }
             else
             {
@@ -397,7 +397,7 @@ namespace signalr
                 }
                 else
                 {
-                    set_result(json::value::value());
+                    set_result(json::value());
                 }
             };
         }

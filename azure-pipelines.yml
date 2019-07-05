@@ -5,20 +5,24 @@ jobs:
 - template: .azure/default-build.yml
   parameters:
     agentOs: Windows
+    cMakeRunArgs: '-A x64'
     beforeBuild:
-    - script: echo Hello, world!
-      displayName: 'Run a one-line script'
+    - powershell: "& vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
+      displayName: vcpkg install dependencies
 
 - template: .azure/default-build.yml
   parameters:
     agentOs: macOs
     beforeBuild:
-    - script: echo Hello, world!
-      displayName: 'Run a one-line script'
+    - script: brew install gcc6
+    - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+      displayName: Bootstrap vcpkg
+    - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
+      displayName: vcpkg install dependencies
 
 - template: .azure/default-build.yml
   parameters:
     agentOs: Linux
     beforeBuild:
-    - script: echo Hello, world!
-      displayName: 'Run a one-line script'
+    - script: sudo vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg
+      displayName: vcpkg install dependencies
