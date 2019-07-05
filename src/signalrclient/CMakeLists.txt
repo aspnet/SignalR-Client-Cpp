@@ -39,4 +39,9 @@ else()
 endif()
 
 include(GNUInstallDirs)
-install(TARGETS signalrclient LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+if(WIN32)
+  install(TARGETS signalrclient RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR})
+else()
+  install(TARGETS signalrclient LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
