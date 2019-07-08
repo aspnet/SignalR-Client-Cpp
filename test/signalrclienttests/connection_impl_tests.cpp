@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include "test_utils.h"
-#include "test_web_request_factory.h"
 #include "test_websocket_client.h"
 #include "test_transport_factory.h"
 #include "connection_impl.h"

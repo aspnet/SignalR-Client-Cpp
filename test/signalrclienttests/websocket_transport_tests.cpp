@@ -6,6 +6,7 @@
 #include "trace_log_writer.h"
 #include "test_websocket_client.h"
 #include "websocket_transport.h"
+#include "default_websocket_client.h"
 #include "memory_log_writer.h"
 #include <future>
 

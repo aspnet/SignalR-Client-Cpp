@@ -9,9 +9,10 @@
 #include "negotiate.h"
 #include "url_builder.h"
 #include "trace_log_writer.h"
-#include "make_unique.h"
 #include "signalrclient/signalr_exception.h"
 #include "default_http_client.h"
+#include <future>
+#include "case_insensitive_comparison_utils.h"
 
 namespace signalr
 {
@@ -20,22 +21,6 @@ namespace signalr
     {
         // this is a workaround for a compiler bug where mutable lambdas won't sometimes compile
         static void log(const logger& logger, trace_level level, const std::string& entry);
-
-        bool case_insensitive_string_compare(const std::string& lhs, const std::string& rhs)
-        {
-            if (lhs.size() != rhs.size())
-            {
-                return false;
-            }
-
-            for (int i = 0; i < lhs.size(); ++i)
-            {
-                if (tolower(lhs[i]) != tolower(rhs[i]))
-                {
-                    return false;
-                }
-            }
-        }
     }
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
@@ -73,28 +58,21 @@ namespace signalr
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
             m_start_completed_event.set();
-            pplx::task_completion_event<void> tce;
-            shutdown([tce](std::exception_ptr exception)
+            std::shared_ptr<std::promise<void>> promise = std::make_shared<std::promise<void>>();
+            shutdown([promise](std::exception_ptr exception)
                 {
                     if (exception == nullptr)
                     {
-                        tce.set();
+                        promise->set_value();
                     }
                     else
                     {
-                        tce.set_exception(exception);
+                        // TODO: Log?
+                        promise->set_exception(exception);
                     }
                 });
 
-            pplx::create_task(tce).get();
-        }
-        catch (const pplx::task_canceled&)
-        {
-            // because we are in the dtor and the `connection_imp` is ref counted we should not get the `task_canceled`
-            // exception because it would indicate that some other thread/task still holds reference to this instance
-            // so how come we are in the dtor?
-            _ASSERTE(false);
-            return;
+            promise->get_future().get();
         }
         catch (...) // must not throw from destructors
         { }
@@ -116,7 +94,7 @@ namespace signalr
             // there should not be any active transport at this point
             _ASSERTE(!m_transport);
 
-            m_disconnect_cts = pplx::cancellation_token_source();
+            m_disconnect_cts = std::make_shared<cancellation_token>();
             m_start_completed_event.reset();
             m_connection_id = "";
         }
@@ -144,9 +122,8 @@ namespace signalr
         }
 
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
-        auto token = m_disconnect_cts.get_token();
+        const auto& token = m_disconnect_cts;
 
-        pplx::task_completion_event<negotiation_response> tce;
         negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
             [callback, weak_connection, redirect_count, token, url](const negotiation_response& response, std::exception_ptr exception)
             {
@@ -200,7 +177,8 @@ namespace signalr
                 bool foundWebsockets = false;
                 for (auto& availableTransport : response.availableTransports)
                 {
-                    if (case_insensitive_string_compare(availableTransport.transport, "WebSockets"))
+                    case_insensitive_equals comparer;
+                    if (comparer(availableTransport.transport, "WebSockets"))
                     {
                         foundWebsockets = true;
                         break;
@@ -216,7 +194,7 @@ namespace signalr
 
                 // TODO: use transfer format
 
-                if (token.is_canceled())
+                if (token->is_canceled())
                 {
                     connection->change_state(connection_state::disconnected);
                     callback(std::make_exception_ptr(signalr_exception("something")));
@@ -232,7 +210,7 @@ namespace signalr
                             return;
                         }
 
-                        if (token.is_canceled())
+                        if (token->is_canceled())
                         {
                             connection->change_state(connection_state::disconnected);
                             callback(std::make_exception_ptr(signalr_exception("canceled")));
@@ -248,18 +226,9 @@ namespace signalr
                         }
                         catch (const std::exception& e)
                         {
-                            auto task_canceled_exception = dynamic_cast<const pplx::task_canceled*>(&e);
-                            if (task_canceled_exception)
-                            {
-                                connection->m_logger.log(trace_level::info,
-                                    "starting the connection has been canceled.");
-                            }
-                            else
-                            {
-                                connection->m_logger.log(trace_level::errors,
-                                    std::string("connection could not be started due to: ")
-                                    .append(e.what()));
-                            }
+                            connection->m_logger.log(trace_level::errors,
+                                std::string("connection could not be started due to: ")
+                                .append(e.what()));
 
                             connection->m_transport = nullptr;
                             connection->change_state(connection_state::disconnected);
@@ -289,7 +258,8 @@ namespace signalr
     {
         auto connection = shared_from_this();
 
-        pplx::task_completion_event<void> connect_request_tce;
+        std::shared_ptr<bool> connect_request_done = std::make_shared<bool>();
+        std::shared_ptr<std::mutex> connect_request_lock = std::make_shared<std::mutex>();
 
         auto weak_connection = std::weak_ptr<connection_impl>(connection);
         const auto& disconnect_cts = m_disconnect_cts;
@@ -298,7 +268,7 @@ namespace signalr
         auto transport = connection->m_transport_factory->create_transport(
             transport_type::websockets, connection->m_logger, connection->m_signalr_client_config);
 
-        transport->on_receive([disconnect_cts, connect_request_tce, logger, weak_connection](const std::string& message, std::exception_ptr exception)
+        transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](const std::string& message, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
@@ -313,7 +283,7 @@ namespace signalr
                         // is immediately re-started the old transport can still invoke this callback. To prevent this we capture
                         // the disconnect_cts by value which allows distinguishing if the error is for the running connection
                         // or for the one that was already stopped. If this is the latter we just ignore it.
-                        if (disconnect_cts.get_token().is_canceled())
+                        if (disconnect_cts->is_canceled())
                         {
                             logger.log(trace_level::info,
                                 std::string{ "ignoring stray error received after connection was restarted. error: " }
@@ -322,13 +292,26 @@ namespace signalr
                             return;
                         }
 
-                        // no op after connection started successfully
-                        connect_request_tce.set_exception(exception);
+                        bool run_callback = false;
+                        {
+                            std::lock_guard<std::mutex> lock(*connect_request_lock);
+                            // no op after connection started successfully
+                            if (*connect_request_done == false)
+                            {
+                                *connect_request_done = true;
+                                run_callback = true;
+                            }
+                        }
+
+                        if (run_callback)
+                        {
+                            callback({}, exception);
+                        }
                     }
                 }
                 else
                 {
-                    if (disconnect_cts.get_token().is_canceled())
+                    if (disconnect_cts->is_canceled())
                     {
                         logger.log(trace_level::info,
                             std::string{ "ignoring stray message received after connection was restarted. message: " }
@@ -344,7 +327,7 @@ namespace signalr
                 }
             });
 
-        pplx::create_task([connect_request_tce, disconnect_cts]()
+        std::thread([connect_request_done, connect_request_lock, callback, disconnect_cts]()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
@@ -352,25 +335,68 @@ namespace signalr
             // which case we should not throw due to timeout. Instead we need to set the tce prevent the task that is
             // using this tce from hanging indifinitely. (This will eventually result in throwing the pplx::task_canceled
             // exception to the user since this is what we do in the start() function if disconnect_cts is tripped).
-            if (disconnect_cts.get_token().is_canceled())
+            if (disconnect_cts->is_canceled())
             {
-                connect_request_tce.set();
+                bool run_callback = false;
+                {
+                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+                    // no op after connection started successfully
+                    if (*connect_request_done == false)
+                    {
+                        *connect_request_done = true;
+                        run_callback = true;
+                    }
+                }
+
+                if (run_callback)
+                {
+                    // TODO: Figure out what to do here
+                    callback({}, nullptr);
+                }
             }
             else
             {
-                connect_request_tce.set_exception(signalr_exception("transport timed out when trying to connect"));
-            }
-        });
-
-        connection->send_connect_request(transport, url, [callback, transport](std::exception_ptr exception)
-            {
-                if (exception == nullptr)
+                bool run_callback = false;
                 {
-                    callback(transport, nullptr);
+                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+                    // no op after connection started successfully
+                    if (*connect_request_done == false)
+                    {
+                        *connect_request_done = true;
+                        run_callback = true;
+                    }
                 }
-                else
+
+                if (run_callback)
                 {
-                    callback({}, exception);
+                    callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
+                }
+            }
+        }).detach();
+
+        connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
+            {
+                bool run_callback = false;
+                {
+                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+                    // no op after connection started successfully
+                    if (*connect_request_done == false)
+                    {
+                        *connect_request_done = true;
+                        run_callback = true;
+                    }
+                }
+
+                if (run_callback)
+                {
+                    if (exception == nullptr)
+                    {
+                        callback(transport, nullptr);
+                    }
+                    else
+                    {
+                        callback({}, exception);
+                    }
                 }
             });
     }
@@ -381,7 +407,7 @@ namespace signalr
         auto query_string = "id=" + m_connection_id;
         auto connect_url = url_builder::build_connect(url, transport->get_transport_type(), query_string);
 
-        transport->start(connect_url, transfer_format::text, [transport, callback, logger](std::exception_ptr exception)
+        transport->start(connect_url, transfer_format::text, [callback, logger](std::exception_ptr exception)
             mutable {
                 try
                 {
@@ -479,7 +505,7 @@ namespace signalr
         auto connection = shared_from_this();
         shutdown([connection, callback](std::exception_ptr exception)
             {
-                auto t = std::thread([connection, callback, exception]()
+                std::thread([connection, callback, exception]()
                     {
                         if (exception != nullptr)
                         {
@@ -518,9 +544,7 @@ namespace signalr
                         }
 
                         callback(nullptr);
-                    });
-
-                t.detach();
+                    }).detach();
             });
     }
 
@@ -550,7 +574,7 @@ namespace signalr
             }
 
             // we request a cancellation of the ongoing start (if any) and wait until it is canceled
-            m_disconnect_cts.cancel();
+            m_disconnect_cts->cancel();
 
             while (m_start_completed_event.wait(60000) != 0)
             {

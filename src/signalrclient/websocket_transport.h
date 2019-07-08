@@ -3,11 +3,9 @@
 
 #pragma once
 
-#include "cpprest/ws_client.h"
-#include "url_builder.h"
 #include "transport.h"
 #include "logger.h"
-#include "default_websocket_client.h"
+#include "signalrclient/websocket_client.h"
 #include "connection_impl.h"
 
 namespace signalr
@@ -45,9 +43,9 @@ namespace signalr
         std::function<void(std::string, std::exception_ptr)> m_process_response_callback;
         std::function<void(std::exception_ptr)> m_close_callback;
 
-        pplx::cancellation_token_source m_receive_loop_cts;
+        std::shared_ptr<cancellation_token> m_receive_loop_cts;
 
-        void receive_loop(pplx::cancellation_token_source cts);
+        void receive_loop(std::shared_ptr<cancellation_token> cts);
 
         std::shared_ptr<websocket_client> safe_get_websocket_client();
     };

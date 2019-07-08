@@ -7,6 +7,7 @@
 #include "connection_impl.h"
 #include "callback_manager.h"
 #include "case_insensitive_comparison_utils.h"
+#include "completion_event.h"
 
 using namespace web;
 
@@ -53,7 +54,7 @@ namespace signalr
         callback_manager m_callback_manager;
         std::unordered_map<std::string, std::function<void(const json::value &)>, case_insensitive_hash, case_insensitive_equals> m_subscriptions;
         bool m_handshakeReceived;
-        pplx::task_completion_event<void> m_handshakeTask;
+        std::shared_ptr<completion_event> m_handshakeTask;
         std::function<void()> m_disconnected;
         signalr_client_config m_signalr_client_config;
 

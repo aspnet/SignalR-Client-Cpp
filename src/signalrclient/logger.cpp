@@ -3,8 +3,9 @@
 
 #include "stdafx.h"
 #include "logger.h"
-#include "cpprest/asyncrt_utils.h"
 #include <iomanip>
+#include <sstream>
+#include <iostream>
 
 namespace signalr
 {
@@ -18,8 +19,16 @@ namespace signalr
         {
             try
             {
+                time_t t;
+                tm time;
+                std::time(&t);
+                // TODO: millisecond "precision"
+                char timeString[sizeof("2019-11-23T13:23:02Z")];
+                gmtime_s(&time, &t);
+                std::strftime(timeString, sizeof(timeString), "%FT%TZ", &time);
+
                 std::stringstream os;
-                os << utility::conversions::to_utf8string(utility::datetime::utc_now().to_string(utility::datetime::date_format::ISO_8601)) << " ["
+                os << timeString << " ["
                     << std::left << std::setw(12) << translate_trace_level(level) << "] "<< entry << std::endl;
                 m_log_writer->write(os.str());
             }

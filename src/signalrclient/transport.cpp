@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include "transport.h"
-#include "connection_impl.h"
 
 namespace signalr
 {

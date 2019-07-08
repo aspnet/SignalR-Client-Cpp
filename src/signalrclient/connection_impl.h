@@ -3,17 +3,16 @@
 
 #pragma once
 
-#include <atomic>
 #include <mutex>
 #include "signalrclient/http_client.h"
 #include "signalrclient/trace_level.h"
 #include "signalrclient/connection_state.h"
 #include "signalrclient/signalr_client_config.h"
-#include "web_request_factory.h"
 #include "transport_factory.h"
 #include "logger.h"
 #include "negotiation_response.h"
 #include "event.h"
+#include "cancellation_token.h"
 
 namespace signalr
 {
@@ -58,7 +57,7 @@ namespace signalr
         std::function<void()> m_disconnected;
         signalr_client_config m_signalr_client_config;
 
-        pplx::cancellation_token_source m_disconnect_cts;
+        std::shared_ptr<cancellation_token> m_disconnect_cts;
         std::mutex m_stop_lock;
         event m_start_completed_event;
         std::string m_connection_id;

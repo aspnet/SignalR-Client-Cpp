@@ -5,7 +5,6 @@
 
 #include <functional>
 #include <cctype>
-#include "cpprest/details/basic_types.h"
 
 namespace signalr
 {
@@ -21,9 +20,9 @@ namespace signalr
                 return false;
             }
 
-            for (auto s1_iterator = s1.begin(), s2_iterator = s2.begin(); s1_iterator != s1.end(); ++s1_iterator, ++s2_iterator)
+            for (int i = 0; i < s1.size(); ++i)
             {
-                if (std::toupper(*s1_iterator) != std::toupper(*s2_iterator))
+                if (std::toupper(s1[i]) != std::toupper(s2[i]))
                 {
                     return false;
                 }
@@ -39,7 +38,7 @@ namespace signalr
         {
             size_t hash = 0;
             std::hash<size_t> hasher;
-            for (const utility::char_t& c : s)
+            for (const auto& c : s)
             {
                 hash ^= hasher(std::toupper(c)) + (hash << 5) + (hash >> 2);
             }
