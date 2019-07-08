@@ -4,8 +4,6 @@
 #pragma once
 
 #include "signalrclient/signalr_client_config.h"
-#include "signalrclient/transport_type.h"
-#include "web_request_factory.h"
 #include "negotiation_response.h"
 #include "signalrclient/http_client.h"
 
@@ -13,7 +11,8 @@ namespace signalr
 {
     namespace negotiate
     {
-        pplx::task<negotiation_response> negotiate(http_client& client, const std::string& base_url,
-            const signalr_client_config& signalr_client_config = signalr::signalr_client_config{});
+        void negotiate(http_client& client, const std::string& base_url,
+            const signalr_client_config& signalr_client_config,
+            std::function<void(const negotiation_response&, std::exception_ptr)> callback) noexcept;
     }
 }

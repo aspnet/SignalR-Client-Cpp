@@ -12,7 +12,7 @@ test_websocket_client::test_websocket_client()
     m_close_function([](std::function<void(std::exception_ptr)> callback) { callback(nullptr); })
 { }
 
-void test_websocket_client::start(std::string url, transfer_format, std::function<void(std::exception_ptr)> callback)
+void test_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
 {
     pplx::create_task([url, callback, this]()
         {
@@ -28,7 +28,7 @@ void test_websocket_client::stop(std::function<void(std::exception_ptr)> callbac
         });
 }
 
-void test_websocket_client::send(std::string payload, std::function<void(std::exception_ptr)> callback)
+void test_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
 {
     pplx::create_task([payload, callback, this]()
         {
@@ -36,7 +36,7 @@ void test_websocket_client::send(std::string payload, std::function<void(std::ex
         });
 }
 
-void test_websocket_client::receive(std::function<void(std::string, std::exception_ptr)> callback)
+void test_websocket_client::receive(std::function<void(const std::string&, std::exception_ptr)> callback)
 {
     pplx::create_task([callback, this]()
         {

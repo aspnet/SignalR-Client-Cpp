@@ -30,9 +30,9 @@ namespace signalr
         void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
         void on_close(std::function<void(std::exception_ptr)> callback) override;
 
-        void send(std::string payload, std::function<void(std::exception_ptr)> callback) noexcept override;
+        void send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept override;
 
-        void on_receive(std::function<void(std::string, std::exception_ptr)>) override;
+        void on_receive(std::function<void(const std::string&, std::exception_ptr)>) override;
 
     private:
         websocket_transport(const std::function<std::shared_ptr<websocket_client>()>& websocket_client_factory,

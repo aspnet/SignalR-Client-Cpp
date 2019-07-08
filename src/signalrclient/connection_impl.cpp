@@ -20,6 +20,22 @@ namespace signalr
     {
         // this is a workaround for a compiler bug where mutable lambdas won't sometimes compile
         static void log(const logger& logger, trace_level level, const std::string& entry);
+
+        bool case_insensitive_string_compare(const std::string& lhs, const std::string& rhs)
+        {
+            if (lhs.size() != rhs.size())
+            {
+                return false;
+            }
+
+            for (int i = 0; i < lhs.size(); ++i)
+            {
+                if (tolower(lhs[i]) != tolower(rhs[i]))
+                {
+                    return false;
+                }
+            }
+        }
     }
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
@@ -57,7 +73,20 @@ namespace signalr
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
             m_start_completed_event.set();
-            shutdown().get();
+            pplx::task_completion_event<void> tce;
+            shutdown([tce](std::exception_ptr exception)
+                {
+                    if (exception == nullptr)
+                    {
+                        tce.set();
+                    }
+                    else
+                    {
+                        tce.set_exception(exception);
+                    }
+                });
+
+            pplx::create_task(tce).get();
         }
         catch (const pplx::task_canceled&)
         {
@@ -92,162 +121,171 @@ namespace signalr
             m_connection_id = "";
         }
 
-        start_negotiate(m_base_url, 0)
-            .then([callback](pplx::task<void> prev_task)
+        start_negotiate(m_base_url, 0, [callback](std::exception_ptr exception)
         {
-            try
+            if (exception != nullptr)
             {
-                prev_task.get();
-                callback(nullptr);
+                callback(exception);
             }
-            catch (...)
+            else
             {
-                callback(std::current_exception());
+                callback(nullptr);
             }
         });
     }
 
-    pplx::task<void> connection_impl::start_negotiate(const std::string& url, int redirect_count)
+    void connection_impl::start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
     {
         if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
         {
-            return pplx::task_from_exception<void>(signalr_exception("Negotiate redirection limit exceeded."));
+            change_state(connection_state::disconnected);
+            callback(std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
+            return;
         }
-
-        pplx::task_completion_event<void> start_tce;
 
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
         auto token = m_disconnect_cts.get_token();
 
-        pplx::task_from_result()
-            .then([weak_connection, url]()
-        {
-            auto connection = weak_connection.lock();
-            if (!connection)
+        pplx::task_completion_event<negotiation_response> tce;
+        negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
+            [callback, weak_connection, redirect_count, token, url](const negotiation_response& response, std::exception_ptr exception)
             {
-                return pplx::task_from_exception<negotiation_response>("connection no longer exists");
-            }
-            return negotiate::negotiate(*connection->m_http_client, url, connection->m_signalr_client_config);
-        }, token)
-            .then([weak_connection, start_tce, redirect_count, url, token](negotiation_response negotiation_response)
-        {
-            auto connection = weak_connection.lock();
-            if (!connection)
-            {
-                return pplx::task_from_exception<void>("connection no longer exists");
-            }
-
-            if (!negotiation_response.error.empty())
-            {
-                return pplx::task_from_exception<void>(signalr_exception(negotiation_response.error));
-            }
-
-            if (!negotiation_response.url.empty())
-            {
-                if (!negotiation_response.accessToken.empty())
-                {
-                    auto headers = connection->m_signalr_client_config.get_http_headers();
-                    headers[_XPLATSTR("Authorization")] = utility::conversions::to_string_t("Bearer " + negotiation_response.accessToken);
-                    connection->m_signalr_client_config.set_http_headers(headers);
-                }
-                return connection->start_negotiate(negotiation_response.url, redirect_count + 1);
-            }
-
-            connection->m_connection_id = std::move(negotiation_response.connectionId);
-
-            // TODO: fallback logic
-
-            bool foundWebsockets = false;
-            for (auto availableTransport : negotiation_response.availableTransports)
-            {
-                if (availableTransport.transport == "WebSockets")
-                {
-                    foundWebsockets = true;
-                    break;
-                }
-            }
-
-            if (!foundWebsockets)
-            {
-                return pplx::task_from_exception<void>(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client."));
-            }
-
-            // TODO: use transfer format
-
-            if (token.is_canceled())
-            {
-                pplx::cancel_current_task();
-                return pplx::task_from_result();
-            }
-
-            return connection->start_transport(url)
-                .then([weak_connection, token](std::shared_ptr<transport> transport)
-            {
-                if (token.is_canceled())
-                {
-                    pplx::cancel_current_task();
-                    return pplx::task_from_result();
-				}
                 auto connection = weak_connection.lock();
                 if (!connection)
                 {
-                    return pplx::task_from_exception<void>("connection no longer exists");
+                    callback(std::make_exception_ptr(signalr_exception("connection no longer exists")));
+                    return;
                 }
-                connection->m_transport = transport;
 
-                if (!connection->change_state(connection_state::connecting, connection_state::connected))
+                if (exception != nullptr)
                 {
-                    connection->m_logger.log(trace_level::errors,
-                        std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
-                        .append(translate_connection_state(connection->get_connection_state())));
-
-                    _ASSERTE(false);
+                    try
+                    {
+                        std::rethrow_exception(exception);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        connection->m_logger.log(trace_level::errors,
+                            std::string("connection could not be started due to: ")
+                            .append(e.what()));
+                    }
+                    connection->change_state(connection_state::disconnected);
+                    callback(exception);
+                    return;
                 }
 
-                return pplx::task_from_result();
+                if (!response.error.empty())
+                {
+                    connection->change_state(connection_state::disconnected);
+                    callback(std::make_exception_ptr(signalr_exception(response.error)));
+                    return;
+                }
+
+                if (!response.url.empty())
+                {
+                    if (!response.accessToken.empty())
+                    {
+                        auto headers = connection->m_signalr_client_config.get_http_headers();
+                        headers[_XPLATSTR("Authorization")] = utility::conversions::to_string_t("Bearer " + response.accessToken);
+                        connection->m_signalr_client_config.set_http_headers(headers);
+                    }
+                    connection->start_negotiate(response.url, redirect_count + 1, callback);
+                    return;
+                }
+
+                connection->m_connection_id = std::move(response.connectionId);
+
+                // TODO: fallback logic
+
+                bool foundWebsockets = false;
+                for (auto& availableTransport : response.availableTransports)
+                {
+                    if (case_insensitive_string_compare(availableTransport.transport, "WebSockets"))
+                    {
+                        foundWebsockets = true;
+                        break;
+                    }
+                }
+
+                if (!foundWebsockets)
+                {
+                    connection->change_state(connection_state::disconnected);
+                    callback(std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
+                    return;
+                }
+
+                // TODO: use transfer format
+
+                if (token.is_canceled())
+                {
+                    connection->change_state(connection_state::disconnected);
+                    callback(std::make_exception_ptr(signalr_exception("something")));
+                    return;
+                }
+
+                connection->start_transport(url, [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
+                    {
+                        auto connection = weak_connection.lock();
+                        if (!connection)
+                        {
+                            callback(std::make_exception_ptr(signalr_exception("connection no longer exists")));
+                            return;
+                        }
+
+                        if (token.is_canceled())
+                        {
+                            connection->change_state(connection_state::disconnected);
+                            callback(std::make_exception_ptr(signalr_exception("canceled")));
+                            return;
+                        }
+
+                        try
+                        {
+                            if (exception != nullptr)
+                            {
+                                std::rethrow_exception(exception);
+                            }
+                        }
+                        catch (const std::exception& e)
+                        {
+                            auto task_canceled_exception = dynamic_cast<const pplx::task_canceled*>(&e);
+                            if (task_canceled_exception)
+                            {
+                                connection->m_logger.log(trace_level::info,
+                                    "starting the connection has been canceled.");
+                            }
+                            else
+                            {
+                                connection->m_logger.log(trace_level::errors,
+                                    std::string("connection could not be started due to: ")
+                                    .append(e.what()));
+                            }
+
+                            connection->m_transport = nullptr;
+                            connection->change_state(connection_state::disconnected);
+                            connection->m_start_completed_event.set();
+                            callback(std::current_exception());
+                            return;
+                        }
+
+                        connection->m_transport = transport;
+
+                        if (!connection->change_state(connection_state::connecting, connection_state::connected))
+                        {
+                            connection->m_logger.log(trace_level::errors,
+                                std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
+                                .append(translate_connection_state(connection->get_connection_state())));
+
+                            _ASSERTE(false);
+                        }
+
+                        connection->m_start_completed_event.set();
+                        callback(nullptr);
+                    });
             });
-        }, token)
-            .then([start_tce, weak_connection](pplx::task<void> previous_task)
-        {
-            auto connection = weak_connection.lock();
-            if (!connection)
-            {
-                return pplx::task_from_exception<void>(_XPLATSTR("connection no longer exists"));
-            }
-            try
-            {
-                previous_task.get();
-                connection->m_start_completed_event.set();
-                start_tce.set();
-            }
-            catch (const std::exception & e)
-            {
-                auto task_canceled_exception = dynamic_cast<const pplx::task_canceled*>(&e);
-                if (task_canceled_exception)
-                {
-                    connection->m_logger.log(trace_level::info,
-                        "starting the connection has been canceled.");
-                }
-                else
-                {
-                    connection->m_logger.log(trace_level::errors,
-                        std::string("connection could not be started due to: ")
-                        .append(e.what()));
-                }
-
-                connection->m_transport = nullptr;
-                connection->change_state(connection_state::disconnected);
-                connection->m_start_completed_event.set();
-                start_tce.set_exception(std::current_exception());
-            }
-
-            return pplx::task_from_result();
-        });
-
-        return pplx::create_task(start_tce);
     }
 
-    pplx::task<std::shared_ptr<transport>> connection_impl::start_transport(const std::string& url)
+    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
     {
         auto connection = shared_from_this();
 
@@ -260,7 +298,7 @@ namespace signalr
         auto transport = connection->m_transport_factory->create_transport(
             transport_type::websockets, connection->m_logger, connection->m_signalr_client_config);
 
-        transport->on_receive([disconnect_cts, connect_request_tce, logger, weak_connection](std::string message, std::exception_ptr exception)
+        transport->on_receive([disconnect_cts, connect_request_tce, logger, weak_connection](const std::string& message, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
@@ -306,9 +344,8 @@ namespace signalr
                 }
             });
 
-        pplx::create_task([connect_request_tce, disconnect_cts, weak_connection]()
+        pplx::create_task([connect_request_tce, disconnect_cts]()
         {
-            // TODO? std::this_thread::sleep_for(std::chrono::milliseconds(negotiation_response.transport_connect_timeout));
             std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
             // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
@@ -325,17 +362,26 @@ namespace signalr
             }
         });
 
-        return connection->send_connect_request(transport, url, connect_request_tce)
-            .then([transport](){ return pplx::task_from_result(transport); });
+        connection->send_connect_request(transport, url, [callback, transport](std::exception_ptr exception)
+            {
+                if (exception == nullptr)
+                {
+                    callback(transport, nullptr);
+                }
+                else
+                {
+                    callback({}, exception);
+                }
+            });
     }
 
-    pplx::task<void> connection_impl::send_connect_request(const std::shared_ptr<transport>& transport, const std::string& url, const pplx::task_completion_event<void>& connect_request_tce)
+    void connection_impl::send_connect_request(const std::shared_ptr<transport>& transport, const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         auto logger = m_logger;
         auto query_string = "id=" + m_connection_id;
         auto connect_url = url_builder::build_connect(url, transport->get_transport_type(), query_string);
 
-        transport->start(connect_url, transfer_format::text, [transport, connect_request_tce, logger](std::exception_ptr exception)
+        transport->start(connect_url, transfer_format::text, [transport, callback, logger](std::exception_ptr exception)
             mutable {
                 try
                 {
@@ -343,7 +389,7 @@ namespace signalr
                     {
                         std::rethrow_exception(exception);
                     }
-                    connect_request_tce.set();
+                    callback(nullptr);
                 }
                 catch (const std::exception& e)
                 {
@@ -352,11 +398,9 @@ namespace signalr
                         std::string("transport could not connect due to: ")
                             .append(e.what()));
 
-                    connect_request_tce.set_exception(std::current_exception());
+                    callback(exception);
                 }
             });
-
-        return pplx::create_task(connect_request_tce);
     }
 
     void connection_impl::process_response(const std::string& response)
@@ -433,55 +477,55 @@ namespace signalr
         m_logger.log(trace_level::info, "stopping connection");
 
         auto connection = shared_from_this();
-        shutdown()
-            .then([connection, callback](pplx::task<void> prev_task)
+        shutdown([connection, callback](std::exception_ptr exception)
             {
-                try
-                {
-                    prev_task.get();
-                }
-                catch (...)
-                {
-                    callback(std::current_exception());
-                    return;
-                }
-
-                {
-                    // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
-                    // on a different thread at the same time. In this case we must not null out the transport if we are
-                    // not in the `disconnecting` state to not affect the 'start' invocation.
-                    std::lock_guard<std::mutex> lock(connection->m_stop_lock);
-                    if (connection->change_state(connection_state::disconnecting, connection_state::disconnected))
+                auto t = std::thread([connection, callback, exception]()
                     {
-                        // we do let the exception through (especially the task_canceled exception)
-                        connection->m_transport = nullptr;
-                    }
-                }
+                        if (exception != nullptr)
+                        {
+                            callback(exception);
+                            return;
+                        }
 
-                try
-                {
-                    connection->m_disconnected();
-                }
-                catch (const std::exception &e)
-                {
-                    connection->m_logger.log(
-                        trace_level::errors,
-                        std::string("disconnected callback threw an exception: ")
-                        .append(e.what()));
-                }
-                catch (...)
-                {
-                    connection->m_logger.log(
-                        trace_level::errors,
-                        std::string("disconnected callback threw an unknown exception"));
-                }
+                        {
+                            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
+                            // on a different thread at the same time. In this case we must not null out the transport if we are
+                            // not in the `disconnecting` state to not affect the 'start' invocation.
+                            std::lock_guard<std::mutex> lock(connection->m_stop_lock);
+                            if (connection->change_state(connection_state::disconnecting, connection_state::disconnected))
+                            {
+                                // we do let the exception through (especially the task_canceled exception)
+                                connection->m_transport = nullptr;
+                            }
+                        }
 
-                callback(nullptr);
+                        try
+                        {
+                            connection->m_disconnected();
+                        }
+                        catch (const std::exception& e)
+                        {
+                            connection->m_logger.log(
+                                trace_level::errors,
+                                std::string("disconnected callback threw an exception: ")
+                                .append(e.what()));
+                        }
+                        catch (...)
+                        {
+                            connection->m_logger.log(
+                                trace_level::errors,
+                                std::string("disconnected callback threw an unknown exception"));
+                        }
+
+                        callback(nullptr);
+                    });
+
+                t.detach();
             });
     }
 
     // This function is called from the dtor so you must not use `shared_from_this` here (it will throw).
-    pplx::task<void> connection_impl::shutdown()
+    void connection_impl::shutdown(std::function<void(std::exception_ptr)> callback)
     {
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
@@ -490,7 +534,8 @@ namespace signalr
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
             {
-                return pplx::task_from_result();
+                callback(nullptr);
+                return;
             }
 
             if (current_state == connection_state::disconnecting)
@@ -498,9 +543,10 @@ namespace signalr
                 // canceled task will be returned if `stop` was called while another `stop` was already in progress.
                 // This is to prevent from resetting the `m_transport` in the upstream callers because doing so might
                 // affect the other invocation which is using it.
-                auto cts = pplx::cancellation_token_source();
-                cts.cancel();
-                return pplx::create_task([]() noexcept {}, cts.get_token());
+
+                // Review: What exception?
+                callback(std::make_exception_ptr(std::exception()));
+                return;
             }
 
             // we request a cancellation of the ongoing start (if any) and wait until it is canceled
@@ -516,7 +562,8 @@ namespace signalr
             // we must break because the transport has already been nulled out.
             if (m_connection_state == connection_state::disconnected)
             {
-                return pplx::task_from_result();
+                callback(nullptr);
+                return;
             }
 
             _ASSERTE(m_connection_state == connection_state::connected);
@@ -524,20 +571,17 @@ namespace signalr
             change_state(connection_state::disconnecting);
         }
 
-        pplx::task_completion_event<void> tce;
-        m_transport->stop([tce](std::exception_ptr exception)
+        m_transport->stop([callback](std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
-                    tce.set_exception(exception);
+                    callback(exception);
                 }
                 else
                 {
-                    tce.set();
+                    callback(nullptr);
                 }
             });
-
-        return pplx::create_task(tce);
     }
 
     connection_state connection_impl::get_connection_state() const noexcept

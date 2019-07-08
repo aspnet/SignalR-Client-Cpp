@@ -248,12 +248,12 @@ namespace signalr
         m_close_callback = callback;
     }
 
-    void websocket_transport::on_receive(std::function<void(std::string, std::exception_ptr)> callback)
+    void websocket_transport::on_receive(std::function<void(const std::string&, std::exception_ptr)> callback)
     {
         m_process_response_callback = callback;
     }
 
-    void websocket_transport::send(std::string payload, std::function<void(std::exception_ptr)> callback) noexcept
+    void websocket_transport::send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept
     {
         safe_get_websocket_client()->send(payload, [callback](std::exception_ptr exception)
             {

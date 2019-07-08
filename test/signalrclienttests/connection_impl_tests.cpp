@@ -1266,7 +1266,7 @@ TEST(connection_impl_stop, stopping_disconnected_connection_is_no_op)
     ASSERT_EQ("[info        ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[1]));
 }
 
-TEST(connection_impl_stop, stopping_disconnecting_connection_returns_cancelled_task)
+TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_task)
 {
     event close_event;
     auto writer = std::shared_ptr<log_writer>{std::make_shared<memory_log_writer>()};
@@ -1310,7 +1310,7 @@ TEST(connection_impl_stop, stopping_disconnecting_connection_returns_cancelled_t
         mre_stop.get();
         ASSERT_FALSE(true); // exception expected but not thrown
     }
-    catch (const pplx::task_canceled&)
+    catch (const std::exception&)
     { }
 
     close_event.set();
@@ -1451,7 +1451,7 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
     ASSERT_EQ("[state change] disconnecting -> disconnected\n", remove_date_from_log_entry(log_entries[3]));
 }
 
-TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
+TEST(connection_impl_stop, DISABLED_stop_cancels_ongoing_start_request)
 {
     auto disconnect_completed_event = std::make_shared<event>();
 
