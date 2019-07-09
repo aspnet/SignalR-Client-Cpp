@@ -13,6 +13,7 @@
 #include "default_http_client.h"
 #include <future>
 #include "case_insensitive_comparison_utils.h"
+#include "make_unique.h"
 
 namespace signalr
 {

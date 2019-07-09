@@ -7,7 +7,6 @@
 #include "test_transport_factory.h"
 #include "connection_impl.h"
 #include "signalrclient/trace_level.h"
-#include "trace_log_writer.h"
 #include "memory_log_writer.h"
 #include "cpprest/ws_client.h"
 #include "signalrclient/signalr_exception.h"
@@ -17,7 +16,7 @@
 using namespace signalr;
 
 static std::shared_ptr<connection_impl> create_connection(std::shared_ptr<websocket_client> websocket_client = create_test_websocket_client(),
-    std::shared_ptr<log_writer> log_writer = std::make_shared<trace_log_writer>(), trace_level trace_level = trace_level::all)
+    std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::all)
 {
     return connection_impl::create(create_uri(), trace_level, log_writer, create_test_http_client(),
         std::make_unique<test_transport_factory>(websocket_client));
@@ -26,7 +25,7 @@ static std::shared_ptr<connection_impl> create_connection(std::shared_ptr<websoc
 TEST(connection_impl_connection_state, initial_connection_state_is_disconnected)
 {
     auto connection =
-        connection_impl::create(create_uri(), trace_level::none, std::make_shared<trace_log_writer>());
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>());
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 }
@@ -115,7 +114,7 @@ TEST(connection_impl_start, connection_state_is_disconnected_when_connection_can
     });
 
     auto connection =
-        connection_impl::create(create_uri(), trace_level::none, std::make_shared<trace_log_writer>(),
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>(),
             std::move(http_client), std::make_unique<transport_factory>());
 
     auto mre = manual_reset_event<void>();
@@ -268,7 +267,7 @@ TEST(connection_impl_start, start_propagates_exceptions_from_negotiate)
     });
 
     auto connection =
-        connection_impl::create(create_uri(), trace_level::none, std::make_shared<trace_log_writer>(),
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>(),
         std::move(http_client), std::make_unique<transport_factory>());
 
     auto mre = manual_reset_event<void>();
@@ -988,7 +987,7 @@ TEST(connection_impl_send, message_sent)
 TEST(connection_impl_send, send_throws_if_connection_not_connected)
 {
     auto connection =
-        connection_impl::create(create_uri(), trace_level::none, std::make_shared<trace_log_writer>());
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>());
 
     auto mre = manual_reset_event<void>();
     connection->send("whatever", [&mre](std::exception_ptr exception)
@@ -1868,7 +1867,7 @@ TEST(connection_id, connection_id_reset_when_starting_connection)
     });
 
     auto connection =
-        connection_impl::create(create_uri(), trace_level::none, std::make_shared<trace_log_writer>(),
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>(),
             std::move(http_client), std::make_unique<test_transport_factory>(websocket_client));
 
     auto mre = manual_reset_event<void>();

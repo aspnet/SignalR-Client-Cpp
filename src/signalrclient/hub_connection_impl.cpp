@@ -6,6 +6,7 @@
 #include "signalrclient/hub_exception.h"
 #include "trace_log_writer.h"
 #include "signalrclient/signalr_exception.h"
+#include "make_unique.h"
 
 using namespace web;
 
@@ -66,7 +67,7 @@ namespace signalr
             auto connection = weak_hub_connection.lock();
             if (connection)
             {
-                connection->m_handshakeTask->set(signalr_exception("connection closed while handshake was in progress."));
+                connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
                 connection->m_disconnected();
             }
         });
@@ -217,14 +218,14 @@ namespace signalr
                         auto error = utility::conversions::to_utf8string(result.at(_XPLATSTR("error")).as_string());
                         m_logger.log(trace_level::errors, std::string("handshake error: ")
                             .append(error));
-                        m_handshakeTask->set(signalr_exception(std::string("Received an error during handshake: ").append(error)));
+                        m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
                         return;
                     }
                     else
                     {
                         if (result.has_field(_XPLATSTR("type")))
                         {
-                            m_handshakeTask->set(signalr_exception(std::string("Received unexpected message while waiting for the handshake response.")));
+                            m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
                         }
                         // TODO: Something looks wrong here
                         m_handshakeReceived = true;

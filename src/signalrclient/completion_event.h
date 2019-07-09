@@ -37,17 +37,6 @@ namespace signalr
         }
 
         // noops when already set
-        void set(const std::exception& exception)
-        {
-            std::lock_guard<std::mutex> lock(*m_mutex);
-            if (!m_isSet)
-            {
-                m_promise->set_exception(std::make_exception_ptr(exception));
-                m_isSet = true;
-            }
-        }
-
-        // noops when already set
         void set(const std::exception_ptr& exception)
         {
             std::lock_guard<std::mutex> lock(*m_mutex);
