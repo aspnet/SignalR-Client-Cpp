@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "test_websocket_client.h"
-#include "pplx/pplxtasks.h"
+#include <thread>
 
 test_websocket_client::test_websocket_client()
     : m_connect_function([](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); }),
@@ -14,34 +14,34 @@ test_websocket_client::test_websocket_client()
 
 void test_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
 {
-    pplx::create_task([url, callback, this]()
+    std::thread([url, callback, this]()
         {
             m_connect_function(url, callback);
-        });
+        }).detach();
 }
 
 void test_websocket_client::stop(std::function<void(std::exception_ptr)> callback)
 {
-    pplx::create_task([callback, this]()
+    std::thread([callback, this]()
         {
             m_close_function(callback);
-        });
+        }).detach();
 }
 
 void test_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
 {
-    pplx::create_task([payload, callback, this]()
+    std::thread([payload, callback, this]()
         {
             m_send_function(payload, callback);
-        });
+        }).detach();
 }
 
 void test_websocket_client::receive(std::function<void(const std::string&, std::exception_ptr)> callback)
 {
-    pplx::create_task([callback, this]()
+    std::thread([callback, this]()
         {
             m_receive_function(callback);
-        });
+        }).detach();
 }
 
 void test_websocket_client::set_connect_function(std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function)
