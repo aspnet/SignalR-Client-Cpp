@@ -11,9 +11,10 @@
 #include "trace_log_writer.h"
 #include "signalrclient/signalr_exception.h"
 #include "default_http_client.h"
-#include <future>
 #include "case_insensitive_comparison_utils.h"
 #include "make_unique.h"
+#include "completion_event.h"
+#include <assert.h>
 
 namespace signalr
 {
@@ -59,21 +60,21 @@ namespace signalr
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
             m_start_completed_event.set();
-            std::shared_ptr<std::promise<void>> promise = std::make_shared<std::promise<void>>();
-            shutdown([promise](std::exception_ptr exception)
+            std::shared_ptr<completion_event> completion = std::make_shared<completion_event>();
+            shutdown([completion](std::exception_ptr exception)
                 {
                     if (exception == nullptr)
                     {
-                        promise->set_value();
+                        completion->set();
                     }
                     else
                     {
                         // TODO: Log?
-                        promise->set_exception(exception);
+                        completion->set(exception);
                     }
                 });
 
-            promise->get_future().get();
+            completion->get();
         }
         catch (...) // must not throw from destructors
         { }
@@ -93,7 +94,7 @@ namespace signalr
             }
 
             // there should not be any active transport at this point
-            _ASSERTE(!m_transport);
+            assert(!m_transport);
 
             m_disconnect_cts = std::make_shared<cancellation_token>();
             m_start_completed_event.reset();
@@ -214,6 +215,7 @@ namespace signalr
                         if (token->is_canceled())
                         {
                             connection->change_state(connection_state::disconnected);
+                            connection->m_start_completed_event.set();
                             callback(std::make_exception_ptr(signalr_exception("canceled")));
                             return;
                         }
@@ -246,7 +248,7 @@ namespace signalr
                                 std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
                                 .append(translate_connection_state(connection->get_connection_state())));
 
-                            _ASSERTE(false);
+                            assert(false);
                         }
 
                         connection->m_start_completed_event.set();
@@ -374,6 +376,9 @@ namespace signalr
                 }
             }
         }).detach();
+
+        // TODO: hook up cancel callback for test "stop_cancels_ongoing_start_request"
+        // m_disconnect_cts
 
         connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {
@@ -591,7 +596,7 @@ namespace signalr
                 return;
             }
 
-            _ASSERTE(m_connection_state == connection_state::connected);
+            assert(m_connection_state == connection_state::connected);
 
             change_state(connection_state::disconnecting);
         }
@@ -701,7 +706,7 @@ namespace signalr
         case connection_state::disconnected:
             return "disconnected";
         default:
-            _ASSERTE(false);
+            assert(false);
             return "(unknown)";
         }
     }

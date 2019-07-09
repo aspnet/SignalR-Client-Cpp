@@ -227,7 +227,7 @@ namespace signalr
                         {
                             m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
                         }
-                        // TODO: Something looks wrong here
+                        // TODO: This doesn't look like it handles messages in the same payload as the handshake
                         m_handshakeReceived = true;
                         m_handshakeTask->set();
                         return;
@@ -300,7 +300,7 @@ namespace signalr
 
     void hub_connection_impl::invoke(const std::string& method_name, const json::value& arguments, std::function<void(const web::json::value&, std::exception_ptr)> callback) noexcept
     {
-        _ASSERTE(arguments.is_array());
+        assert(arguments.is_array());
 
         const auto callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const json::value& result) { callback(result, nullptr); },
@@ -312,7 +312,7 @@ namespace signalr
 
     void hub_connection_impl::send(const std::string& method_name, const json::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        _ASSERTE(arguments.is_array());
+        assert(arguments.is_array());
 
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },

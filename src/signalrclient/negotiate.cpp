@@ -38,13 +38,13 @@ namespace signalr
             {
                 if (exception != nullptr)
                 {
-                    callback(negotiation_response{}, exception);
+                    callback({}, exception);
                     return;
                 }
 
                 if (http_response.status_code != 200)
                 {
-                    callback(negotiation_response{}, std::make_exception_ptr(
+                    callback({}, std::make_exception_ptr(
                         signalr_exception("negotiate failed with status code " + std::to_string(http_response.status_code))));
                     return;
                 }
@@ -95,7 +95,7 @@ namespace signalr
 
                     if (negotiation_response_json.has_field(_XPLATSTR("ProtocolVersion")))
                     {
-                        callback(negotiation_response{}, std::make_exception_ptr(
+                        callback({}, std::make_exception_ptr(
                             signalr_exception("Detected a connection attempt to an ASP.NET SignalR Server. This client only supports connecting to an ASP.NET Core SignalR Server. See https://aka.ms/signalr-core-differences for details.")));
                         return;
                     }
@@ -104,7 +104,7 @@ namespace signalr
                 }
                 catch (...)
                 {
-                    callback(negotiation_response{}, std::current_exception());
+                    callback({}, std::current_exception());
                 }
             });
         }

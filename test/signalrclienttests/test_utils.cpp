@@ -50,7 +50,7 @@ std::string create_uri()
     auto unit_test = ::testing::UnitTest::GetInstance();
 
     // unit test will be null if this function is not called in a test
-    _ASSERTE(unit_test);
+    assert(unit_test);
 
     return std::string("http://")
         .append(unit_test->current_test_info()->name());
@@ -61,7 +61,7 @@ std::string create_uri(const std::string& query_string)
     auto unit_test = ::testing::UnitTest::GetInstance();
 
     // unit test will be null if this function is not called in a test
-    _ASSERTE(unit_test);
+    assert(unit_test);
 
     return std::string("http://")
         .append(unit_test->current_test_info()->name())

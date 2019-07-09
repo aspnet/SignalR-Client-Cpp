@@ -10,10 +10,8 @@ namespace signalr
     class completion_event
     {
     public:
-        completion_event() : m_isSet(false)
+        completion_event() : m_isSet(false), m_promise(std::make_shared<std::promise<void>>()), m_mutex(std::make_shared<std::mutex>())
         {
-            m_promise = std::make_shared<std::promise<void>>();
-            m_mutex = std::make_shared<std::mutex>();
             m_future = m_promise->get_future().share();
         }
 
@@ -25,7 +23,7 @@ namespace signalr
             m_mutex = rhs.m_mutex;
         }
 
-        // noops when already set
+        // no op when already set
         void set()
         {
             std::lock_guard<std::mutex> lock(*m_mutex);
@@ -36,7 +34,7 @@ namespace signalr
             }
         }
 
-        // noops when already set
+        // no op when already set
         void set(const std::exception_ptr& exception)
         {
             std::lock_guard<std::mutex> lock(*m_mutex);
@@ -47,8 +45,8 @@ namespace signalr
             }
         }
 
-        // returns when set or throws when an exception is set
-        void get()
+        // blocks and returns when set or throws when an exception is set
+        void get() const
         {
             m_future.get();
         }

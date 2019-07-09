@@ -145,7 +145,7 @@ namespace signalr
     void websocket_transport::start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept
     {
         web::uri uri(utility::conversions::to_string_t(url));
-        _ASSERTE(uri.scheme() == _XPLATSTR("ws") || uri.scheme() == _XPLATSTR("wss"));
+        assert(uri.scheme() == _XPLATSTR("ws") || uri.scheme() == _XPLATSTR("wss"));
 
         {
             std::lock_guard<std::mutex> stop_lock(m_start_stop_lock);
