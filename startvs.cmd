@@ -1,0 +1,1 @@
+devenv.exe %CD%
