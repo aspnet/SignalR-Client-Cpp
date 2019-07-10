@@ -60,21 +60,21 @@ namespace signalr
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
             m_start_completed_event.cancel();
-            std::shared_ptr<completion_event> completion = std::make_shared<completion_event>();
-            shutdown([completion](std::exception_ptr exception)
+            completion_event completion;
+            shutdown([&completion](std::exception_ptr exception)
                 {
                     if (exception == nullptr)
                     {
-                        completion->set();
+                        completion.set();
                     }
                     else
                     {
                         // TODO: Log?
-                        completion->set(exception);
+                        completion.set(exception);
                     }
                 });
 
-            completion->get();
+            completion.get();
         }
         catch (...) // must not throw from destructors
         { }

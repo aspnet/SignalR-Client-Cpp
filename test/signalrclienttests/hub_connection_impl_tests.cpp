@@ -183,6 +183,9 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
     }
 
     ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+
+    // Release receive function
+    tce.set("");
 }
 
 TEST(stop, stop_stops_connection)
