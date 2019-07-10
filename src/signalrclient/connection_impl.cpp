@@ -59,7 +59,7 @@ namespace signalr
             // Signaling the event is safe here. We are in the dtor so noone is using this instance. There might be some
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
-            m_start_completed_event.set();
+            m_start_completed_event.cancel();
             std::shared_ptr<completion_event> completion = std::make_shared<completion_event>();
             shutdown([completion](std::exception_ptr exception)
                 {
@@ -212,30 +212,32 @@ namespace signalr
                             return;
                         }
 
-                        if (token->is_canceled())
-                        {
-                            connection->change_state(connection_state::disconnected);
-                            connection->m_start_completed_event.set();
-                            callback(std::make_exception_ptr(signalr_exception("canceled")));
-                            return;
-                        }
-
                         try
                         {
                             if (exception != nullptr)
                             {
                                 std::rethrow_exception(exception);
                             }
+                            token->throw_if_cancellation_requested();
                         }
                         catch (const std::exception& e)
                         {
-                            connection->m_logger.log(trace_level::errors,
-                                std::string("connection could not be started due to: ")
-                                .append(e.what()));
+                            auto canceled = dynamic_cast<const canceled_exception*>(&e);
+                            if (canceled)
+                            {
+                                connection->m_logger.log(trace_level::info,
+                                    "starting the connection has been canceled.");
+                            }
+                            else
+                            {
+                                connection->m_logger.log(trace_level::errors,
+                                    std::string("connection could not be started due to: ")
+                                    .append(e.what()));
+                            }
 
                             connection->m_transport = nullptr;
                             connection->change_state(connection_state::disconnected);
-                            connection->m_start_completed_event.set();
+                            connection->m_start_completed_event.cancel();
                             callback(std::current_exception());
                             return;
                         }
@@ -251,7 +253,7 @@ namespace signalr
                             assert(false);
                         }
 
-                        connection->m_start_completed_event.set();
+                        connection->m_start_completed_event.cancel();
                         callback(nullptr);
                     });
             });
@@ -330,9 +332,9 @@ namespace signalr
                 }
             });
 
-        std::thread([connect_request_done, connect_request_lock, callback, disconnect_cts]()
+        std::thread([disconnect_cts, connect_request_done, connect_request_lock, callback, weak_connection]()
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+            disconnect_cts->wait(5000);
 
             // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
             // which case we should not throw due to timeout. Instead we need to set the tce prevent the task that is
@@ -353,7 +355,7 @@ namespace signalr
 
                 if (run_callback)
                 {
-                    // TODO: Figure out what to do here
+                    // The callback checks the token and will handle it appropriately
                     callback({}, nullptr);
                 }
             }
@@ -376,9 +378,6 @@ namespace signalr
                 }
             }
         }).detach();
-
-        // TODO: hook up cancel callback for test "stop_cancels_ongoing_start_request"
-        // m_disconnect_cts
 
         connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {

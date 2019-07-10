@@ -924,11 +924,11 @@ TEST(connection_impl_start, start_fails_if_connect_request_times_out)
 TEST(connection_impl_process_response, process_response_logs_messages)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
-    auto wait_receive = std::make_shared<event>();
+    auto wait_receive = std::make_shared<cancellation_token>();
     auto websocket_client = create_test_websocket_client(
         /* receive function */ [wait_receive](std::function<void(std::string, std::exception_ptr)> callback)
         {
-            wait_receive->set();
+            wait_receive->cancel();
             callback("{ }", nullptr);
         });
     auto connection = create_connection(websocket_client, writer, trace_level::messages);
@@ -941,7 +941,7 @@ TEST(connection_impl_process_response, process_response_logs_messages)
 
     mre.get();
     // Need to give the receive loop time to run
-    std::make_shared<event>()->wait(1000);
+    std::make_shared<cancellation_token>()->wait(1000);
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_FALSE(log_entries.empty());
@@ -1074,7 +1074,7 @@ TEST(connection_impl_set_message_received, callback_invoked_when_message_receive
 
     auto message = std::make_shared<std::string>();
 
-    auto message_received_event = std::make_shared<event>();
+    auto message_received_event = std::make_shared<cancellation_token>();
     connection->set_message_received([message, message_received_event](const std::string &m)
     {
         if (m == "Test")
@@ -1084,7 +1084,7 @@ TEST(connection_impl_set_message_received, callback_invoked_when_message_receive
 
         if (m == "release")
         {
-            message_received_event->set();
+            message_received_event->cancel();
         }
     });
 
@@ -1122,7 +1122,7 @@ TEST(connection_impl_set_message_received, exception_from_callback_caught_and_lo
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
 
-    auto message_received_event = std::make_shared<event>();
+    auto message_received_event = std::make_shared<cancellation_token>();
     connection->set_message_received([message_received_event](const std::string &m)
     {
         if (m == "throw")
@@ -1132,7 +1132,7 @@ TEST(connection_impl_set_message_received, exception_from_callback_caught_and_lo
 
         if (m == "release")
         {
-            message_received_event->set();
+            message_received_event->cancel();
         }
     });
 
@@ -1174,7 +1174,7 @@ TEST(connection_impl_set_message_received, non_std_exception_from_callback_caugh
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
 
-    auto message_received_event = std::make_shared<event>();
+    auto message_received_event = std::make_shared<cancellation_token>();
     connection->set_message_received([message_received_event](const std::string &m)
     {
         if (m == "throw")
@@ -1184,7 +1184,7 @@ TEST(connection_impl_set_message_received, non_std_exception_from_callback_caugh
 
         if (m == "release")
         {
-            message_received_event->set();
+            message_received_event->cancel();
         }
     });
 
@@ -1266,7 +1266,7 @@ TEST(connection_impl_stop, stopping_disconnected_connection_is_no_op)
 
 TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_task)
 {
-    event close_event;
+    cancellation_token close_event;
     auto writer = std::shared_ptr<log_writer>{std::make_shared<memory_log_writer>()};
 
     auto websocket_client = create_test_websocket_client(
@@ -1311,7 +1311,7 @@ TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_ta
     catch (const std::exception&)
     { }
 
-    close_event.set();
+    close_event.cancel();
     mre.get();
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
@@ -1449,9 +1449,9 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
     ASSERT_EQ("[state change] disconnecting -> disconnected\n", remove_date_from_log_entry(log_entries[3]));
 }
 
-TEST(connection_impl_stop, DISABLED_stop_cancels_ongoing_start_request)
+TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
 {
-    auto disconnect_completed_event = std::make_shared<event>();
+    auto disconnect_completed_event = std::make_shared<cancellation_token>();
 
     auto http_client = std::make_unique<test_http_client>([](const std::string& url, http_request)
     {
@@ -1464,10 +1464,13 @@ TEST(connection_impl_stop, DISABLED_stop_cancels_ongoing_start_request)
         return http_response{ 200, response_body };
     });
 
+    auto wait_for_start_mre = manual_reset_event<void>();
+
     auto websocket_client = create_test_websocket_client(
         /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::exception())); },
         [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::exception())); },
-        [disconnect_completed_event](const std::string&, std::function<void(std::exception_ptr)> callback) {
+        [disconnect_completed_event, &wait_for_start_mre](const std::string&, std::function<void(std::exception_ptr)> callback) {
+            wait_for_start_mre.set();
             disconnect_completed_event->wait();
             callback(nullptr);
         });
@@ -1482,9 +1485,11 @@ TEST(connection_impl_stop, DISABLED_stop_cancels_ongoing_start_request)
         mre.set(exception);
     });
 
+    wait_for_start_mre.get();
+
     connection->stop([disconnect_completed_event](std::exception_ptr)
     {
-        disconnect_completed_event->set();
+        disconnect_completed_event->cancel();
     });
 
     try
@@ -1492,18 +1497,19 @@ TEST(connection_impl_stop, DISABLED_stop_cancels_ongoing_start_request)
         mre.get();
         ASSERT_TRUE(false); // exception expected but not thrown
     }
-    catch (const pplx::task_canceled &)
+    catch (const std::exception &)
     { }
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(5U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(6U, log_entries.size()) << dump_vector(log_entries);
     ASSERT_EQ("[state change] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
-    ASSERT_EQ("[info        ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
-    ASSERT_EQ("[info        ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
-    ASSERT_EQ("[info        ] starting the connection has been canceled.\n", remove_date_from_log_entry(log_entries[3]));
-    ASSERT_EQ("[state change] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[4]));
+    ASSERT_EQ("[info        ] [websocket transport] connecting to: ws://stop_cancels_ongoing_start_request/?id=f7707523-307d-4cba-9abf-3eef701241e8\n", remove_date_from_log_entry(log_entries[1]));
+    ASSERT_EQ("[info        ] stopping connection\n", remove_date_from_log_entry(log_entries[2]));
+    ASSERT_EQ("[info        ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[3]));
+    ASSERT_EQ("[info        ] starting the connection has been canceled.\n", remove_date_from_log_entry(log_entries[4]));
+    ASSERT_EQ("[state change] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[5]));
 }
 
 // Test races with start and stop

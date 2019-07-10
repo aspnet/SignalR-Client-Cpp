@@ -394,11 +394,11 @@ TEST(hub_invocation, hub_connection_invokes_users_code_on_hub_invocations)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto payload = std::make_shared<std::string>();
-    auto on_broadcast_event = std::make_shared<event>();
+    auto on_broadcast_event = std::make_shared<cancellation_token>();
     hub_connection->on("broadCAST", [on_broadcast_event, payload](const json::value& message)
     {
         *payload = utility::conversions::to_utf8string(message.serialize());
-        on_broadcast_event->set();
+        on_broadcast_event->cancel();
     });
 
     auto mre = manual_reset_event<void>();
@@ -593,7 +593,7 @@ TEST(invoke, callback_not_called_if_send_throws)
 
 TEST(invoke, invoke_returns_value_returned_from_the_server)
 {
-    auto callback_registered_event = std::make_shared<event>();
+    auto callback_registered_event = std::make_shared<cancellation_token>();
 
     int call_number = -1;
     auto websocket_client = create_test_websocket_client(
@@ -638,7 +638,7 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
         }
     });
 
-    callback_registered_event->set();
+    callback_registered_event->cancel();
 
     auto result = invoke_mre.get();
 
@@ -647,7 +647,7 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
 
 TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
 {
-    auto callback_registered_event = std::make_shared<event>();
+    auto callback_registered_event = std::make_shared<cancellation_token>();
 
     int call_number = -1;
     auto websocket_client = create_test_websocket_client(
@@ -684,7 +684,7 @@ TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
         mre.set(exception);
     });
 
-    callback_registered_event->set();
+    callback_registered_event->cancel();
 
     try
     {
@@ -700,7 +700,7 @@ TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
 
 TEST(invoke, unblocks_task_when_server_completes_call)
 {
-    auto callback_registered_event = std::make_shared<event>();
+    auto callback_registered_event = std::make_shared<cancellation_token>();
 
     int call_number = -1;
     auto websocket_client = create_test_websocket_client(
@@ -737,7 +737,7 @@ TEST(invoke, unblocks_task_when_server_completes_call)
         mre.set(exception);
     });
 
-    callback_registered_event->set();
+    callback_registered_event->cancel();
 
     mre.get();
 
@@ -747,8 +747,8 @@ TEST(invoke, unblocks_task_when_server_completes_call)
 
 TEST(receive, logs_if_callback_for_given_id_not_found)
 {
-    auto message_received_event = std::make_shared<event>();
-    auto handshake_sent = std::make_shared<event>();
+    auto message_received_event = std::make_shared<cancellation_token>();
+    auto handshake_sent = std::make_shared<cancellation_token>();
 
     int call_number = -1;
     auto websocket_client = create_test_websocket_client(
@@ -767,14 +767,14 @@ TEST(receive, logs_if_callback_for_given_id_not_found)
 
         if (call_number > 1)
         {
-            message_received_event->set();
+            message_received_event->cancel();
         }
 
         callback(responses[call_number], nullptr);
     },
     [handshake_sent](const std::string&, std::function<void(std::exception_ptr)> callback)
     {
-        handshake_sent->set();
+        handshake_sent->cancel();
         callback(nullptr);
     });
 
@@ -800,7 +800,7 @@ TEST(receive, logs_if_callback_for_given_id_not_found)
 
 TEST(invoke_void, invoke_creates_runtime_error)
 {
-   auto callback_registered_event = std::make_shared<event>();
+   auto callback_registered_event = std::make_shared<cancellation_token>();
 
    int call_number = -1;
    auto websocket_client = create_test_websocket_client(
@@ -837,7 +837,7 @@ TEST(invoke_void, invoke_creates_runtime_error)
        mre.set(exception);
    });
 
-   callback_registered_event->set();
+   callback_registered_event->cancel();
 
    try
    {

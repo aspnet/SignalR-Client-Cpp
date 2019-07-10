@@ -9,6 +9,6 @@
 #endif
 
 #include "gtest/gtest.h"
-#include "../../src/signalrclient/event.h"
+#include "../../src/signalrclient/cancellation_token.h"
 #include "../../src/signalrclient/make_unique.h"
 #include <thread>
