@@ -64,7 +64,7 @@ namespace signalr
             return wait(cancellation_token::timeout_infinite);
         }
 
-        void throw_if_cancellation_requested()
+        void throw_if_cancellation_requested() const
         {
             if (m_signaled)
             {

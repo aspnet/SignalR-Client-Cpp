@@ -179,6 +179,8 @@ namespace signalr
                         {
                             std::rethrow_exception(exception);
                         }
+                        receive_loop_cts->throw_if_cancellation_requested();
+
                         transport->receive_loop(receive_loop_cts);
                         callback(nullptr);
                     }

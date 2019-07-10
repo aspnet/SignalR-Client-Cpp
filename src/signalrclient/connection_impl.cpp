@@ -572,9 +572,7 @@ namespace signalr
                 // canceled task will be returned if `stop` was called while another `stop` was already in progress.
                 // This is to prevent from resetting the `m_transport` in the upstream callers because doing so might
                 // affect the other invocation which is using it.
-
-                // Review: What exception?
-                callback(std::make_exception_ptr(std::exception()));
+                callback(std::make_exception_ptr(canceled_exception()));
                 return;
             }
 

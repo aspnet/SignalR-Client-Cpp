@@ -1308,7 +1308,7 @@ TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_ta
         mre_stop.get();
         ASSERT_FALSE(true); // exception expected but not thrown
     }
-    catch (const std::exception&)
+    catch (const signalr::canceled_exception&)
     { }
 
     close_event.cancel();
@@ -1497,7 +1497,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
         mre.get();
         ASSERT_TRUE(false); // exception expected but not thrown
     }
-    catch (const std::exception &)
+    catch (const canceled_exception &)
     { }
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());

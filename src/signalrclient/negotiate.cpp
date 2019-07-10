@@ -21,7 +21,7 @@ namespace signalr
             }
             catch (...)
             {
-                callback(negotiation_response{}, std::current_exception());
+                callback({}, std::current_exception());
                 return;
             }
 
