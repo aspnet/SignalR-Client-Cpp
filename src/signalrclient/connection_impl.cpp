@@ -61,7 +61,7 @@ namespace signalr
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
             m_start_completed_event.cancel();
             completion_event completion;
-            shutdown([&completion](std::exception_ptr exception)
+            shutdown([completion](std::exception_ptr exception) mutable
                 {
                     if (exception == nullptr)
                     {
@@ -199,7 +199,7 @@ namespace signalr
                 if (token->is_canceled())
                 {
                     connection->change_state(connection_state::disconnected);
-                    callback(std::make_exception_ptr(signalr_exception("something")));
+                    callback(std::make_exception_ptr(canceled_exception()));
                     return;
                 }
 
@@ -336,23 +336,23 @@ namespace signalr
         {
             disconnect_cts->wait(5000);
 
+            bool run_callback = false;
+            {
+                std::lock_guard<std::mutex> lock(*connect_request_lock);
+                // no op after connection started successfully
+                if (*connect_request_done == false)
+                {
+                    *connect_request_done = true;
+                    run_callback = true;
+                }
+            }
+
             // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
             // which case we should not throw due to timeout. Instead we need to set the tce prevent the task that is
             // using this tce from hanging indifinitely. (This will eventually result in throwing the pplx::task_canceled
             // exception to the user since this is what we do in the start() function if disconnect_cts is tripped).
             if (disconnect_cts->is_canceled())
             {
-                bool run_callback = false;
-                {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
-                    {
-                        *connect_request_done = true;
-                        run_callback = true;
-                    }
-                }
-
                 if (run_callback)
                 {
                     // The callback checks the token and will handle it appropriately
@@ -361,17 +361,6 @@ namespace signalr
             }
             else
             {
-                bool run_callback = false;
-                {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
-                    {
-                        *connect_request_done = true;
-                        run_callback = true;
-                    }
-                }
-
                 if (run_callback)
                 {
                     callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));

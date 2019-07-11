@@ -28,10 +28,15 @@ namespace signalr
             {
                 time_t t;
                 tm time;
+                // gets current calendar time
                 std::time(&t);
+                // convert time to utc
+                GMTIME(&time, &t);
+
                 // TODO: millisecond "precision"
                 char timeString[sizeof("2019-11-23T13:23:02Z")];
-                GMTIME(&time, &t);
+
+                // format string to ISO8601
                 std::strftime(timeString, sizeof(timeString), "%FT%TZ", &time);
 
                 std::stringstream os;
