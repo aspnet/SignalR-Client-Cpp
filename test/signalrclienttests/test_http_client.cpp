@@ -11,16 +11,19 @@ test_http_client::test_http_client(std::function<http_response(const std::string
 
 void test_http_client::send(std::string url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback)
 {
-    http_response response;
-    std::exception_ptr exception;
-    try
-    {
-        response = m_http_response(url, request);
-    }
-    catch (...)
-    {
-        exception = std::current_exception();
-    }
+    std::thread([this, url, request, callback]()
+        {
+            http_response response;
+            std::exception_ptr exception;
+            try
+            {
+                response = m_http_response(url, request);
+            }
+            catch (...)
+            {
+                exception = std::current_exception();
+            }
 
-    callback(std::move(response), exception);
+            callback(std::move(response), exception);
+        }).detach();
 }

@@ -30,11 +30,11 @@ public:
     void set_close_function(std::function<void(std::function<void(std::exception_ptr)>)> close_function);
 
 private:
-    std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> m_connect_function;
+    std::shared_ptr<std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_connect_function;
 
-    std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> m_send_function;
+    std::shared_ptr < std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_send_function;
 
-    std::function<void(std::function<void(std::string, std::exception_ptr)>)> m_receive_function;
+    std::shared_ptr < std::function<void(std::function<void(std::string, std::exception_ptr)>)>> m_receive_function;
 
-    std::function<void(std::function<void(std::exception_ptr)>)> m_close_function;
+    std::shared_ptr < std::function<void(std::function<void(std::exception_ptr)>)>> m_close_function;
 };
