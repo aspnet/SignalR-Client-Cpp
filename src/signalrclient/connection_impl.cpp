@@ -61,17 +61,33 @@ namespace signalr
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
             m_start_completed_event.cancel();
             completion_event completion;
-            shutdown([completion](std::exception_ptr exception) mutable
+            auto logger = m_logger;
+            shutdown([completion, logger](std::exception_ptr exception) mutable
                 {
-                    if (exception == nullptr)
-                    {
-                        completion.set();
-                    }
-                    else
+                    if (exception != nullptr)
                     {
                         // TODO: Log?
-                        completion.set(exception);
+                        try
+                        {
+                            std::rethrow_exception(exception);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            logger.log(
+                                trace_level::errors,
+                                std::string("shutdown threw an exception: ")
+                                .append(e.what()));
+                        }
+                        catch (...)
+                        {
+                            logger.log(
+                                trace_level::errors,
+                                std::string("shutdown threw an unknown exception."));
+                        }
                     }
+
+                    // make sure this is last as it will unblock the destructor
+                    completion.set();
                 });
 
             completion.get();
@@ -103,14 +119,7 @@ namespace signalr
 
         start_negotiate(m_base_url, 0, [callback](std::exception_ptr exception)
         {
-            if (exception != nullptr)
-            {
-                callback(exception);
-            }
-            else
-            {
-                callback(nullptr);
-            }
+            callback(exception);
         });
     }
 
@@ -275,7 +284,23 @@ namespace signalr
 
         transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](const std::string& message, std::exception_ptr exception)
             {
-                if (exception != nullptr)
+                if (exception == nullptr)
+                {
+                    if (disconnect_cts->is_canceled())
+                    {
+                        logger.log(trace_level::info,
+                            std::string{ "ignoring stray message received after connection was restarted. message: " }
+                        .append(message));
+                        return;
+                    }
+
+                    auto connection = weak_connection.lock();
+                    if (connection)
+                    {
+                        connection->process_response(message);
+                    }
+                }
+                else
                 {
                     try
                     {
@@ -312,22 +337,6 @@ namespace signalr
                         {
                             callback({}, exception);
                         }
-                    }
-                }
-                else
-                {
-                    if (disconnect_cts->is_canceled())
-                    {
-                        logger.log(trace_level::info,
-                            std::string{ "ignoring stray message received after connection was restarted. message: " }
-                        .append(message));
-                        return;
-                    }
-
-                    auto connection = weak_connection.lock();
-                    if (connection)
-                    {
-                        connection->process_response(message);
                     }
                 }
             });
@@ -589,14 +598,7 @@ namespace signalr
 
         m_transport->stop([callback](std::exception_ptr exception)
             {
-                if (exception != nullptr)
-                {
-                    callback(exception);
-                }
-                else
-                {
-                    callback(nullptr);
-                }
+                callback(exception);
             });
     }
 
