@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "trace_log_writer.h"
+#include <iostream>
 
 namespace signalr
 {

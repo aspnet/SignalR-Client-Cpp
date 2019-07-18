@@ -18,6 +18,3 @@
 
 #include <functional>
 #include <unordered_map>
-#include "cpprest/details/basic_types.h"
-#include "cpprest/json.h"
-#include "pplx/pplxtasks.h"

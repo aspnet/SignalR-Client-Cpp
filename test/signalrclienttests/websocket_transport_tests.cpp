@@ -6,6 +6,7 @@
 #include "trace_log_writer.h"
 #include "test_websocket_client.h"
 #include "websocket_transport.h"
+#include "default_websocket_client.h"
 #include "memory_log_writer.h"
 #include <future>
 
@@ -14,7 +15,7 @@ using namespace signalr;
 TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
 {
     auto connect_called = false;
-    auto receive_called = std::make_shared<event>();
+    auto receive_called = std::make_shared<cancellation_token>();
     auto client = std::make_shared<test_websocket_client>();
 
     client->set_connect_function([&connect_called](const std::string&, std::function<void(std::exception_ptr)> callback)
@@ -25,7 +26,7 @@ TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
 
     client->set_receive_function([receive_called](std::function<void(std::string, std::exception_ptr)> callback)
     {
-        receive_called->set();
+        receive_called->cancel();
         callback("", nullptr);
     });
 
@@ -397,7 +398,7 @@ TEST(websocket_transport_disconnect, exceptions_from_outstanding_receive_task_ob
 {
     auto client = std::make_shared<test_websocket_client>();
 
-    auto receive_event = std::make_shared<event>();
+    auto receive_event = std::make_shared<cancellation_token>();
     client->set_receive_function([receive_event](std::function<void(std::string, std::exception_ptr)> callback)
     {
         pplx::create_task([receive_event, callback]()
@@ -424,7 +425,7 @@ TEST(websocket_transport_disconnect, exceptions_from_outstanding_receive_task_ob
 
     // at this point the cancellation token that closes the receive loop is set to cancelled so
     // we can unblock the the receive task which throws an exception that should be observed otwherwise the test will crash
-    receive_event->set();
+    receive_event->cancel();
 }
 
 template<typename T>
@@ -457,13 +458,13 @@ TEST(websocket_transport_receive_loop, receive_loop_logs_std_exception)
 template<typename T>
 void receive_loop_logs_exception_runner(const T& e, const std::string& expected_message, trace_level trace_level)
 {
-    event receive_event;
+    cancellation_token receive_event;
     auto client = std::make_shared<test_websocket_client>();
 
     client->set_receive_function([&receive_event, &e](std::function<void(std::string, std::exception_ptr)> callback)
     {
         callback("", std::make_exception_ptr(e));
-        receive_event.set();
+        receive_event.cancel();
     });
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
@@ -497,14 +498,14 @@ TEST(websocket_transport_receive_loop, process_response_callback_called_when_mes
         callback("msg", nullptr);
     });
 
-    auto process_response_event = std::make_shared<event>();
+    auto process_response_event = std::make_shared<cancellation_token>();
     auto msg = std::make_shared<std::string>();
 
     auto process_response = [msg, process_response_event](const std::string& message, std::exception_ptr exception)
     {
         ASSERT_FALSE(exception);
         *msg = message;
-        process_response_event->set();
+        process_response_event->cancel();
     };
 
     auto ws_transport = websocket_transport::create([&](){ return client; }, logger(std::make_shared<trace_log_writer>(), trace_level::none));
@@ -537,7 +538,7 @@ TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thro
         callback(nullptr);
     });
 
-    auto error_event = std::make_shared<event>();
+    auto error_event = std::make_shared<cancellation_token>();
     auto exception_msg = std::make_shared<std::string>();
 
     auto error_callback = [exception_msg, error_event](std::exception_ptr exception)
@@ -550,7 +551,7 @@ TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thro
         {
             *exception_msg = e.what();
         }
-        error_event->set();
+        error_event->cancel();
     };
 
     auto ws_transport = websocket_transport::create([&](){ return client; }, logger(std::make_shared<trace_log_writer>(), trace_level::none));

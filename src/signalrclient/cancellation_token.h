@@ -9,22 +9,21 @@
 
 namespace signalr
 {
-    class event
+    class canceled_exception : public std::exception
     {
-    private:
-        std::mutex m_lock;
-        std::condition_variable m_condition;
-        bool m_signaled;
-    public:
+    };
 
+    class cancellation_token
+    {
+    public:
         static const unsigned int timeout_infinite = 0xFFFFFFFF;
 
-        event() noexcept
+        cancellation_token() noexcept
             : m_signaled(false)
         {
         }
 
-        void set()
+        void cancel()
         {
             std::lock_guard<std::mutex> lock(m_lock);
             m_signaled = true;
@@ -37,10 +36,15 @@ namespace signalr
             m_signaled = false;
         }
 
+        bool is_canceled() const
+        {
+            return m_signaled;
+        }
+
         unsigned int wait(unsigned int timeout)
         {
             std::unique_lock<std::mutex> lock(m_lock);
-            if (timeout == event::timeout_infinite)
+            if (timeout == cancellation_token::timeout_infinite)
             {
                 m_condition.wait(lock, [this]() noexcept { return m_signaled; });
                 return 0;
@@ -51,13 +55,25 @@ namespace signalr
                 const auto status = m_condition.wait_for(lock, period, [this]() noexcept { return m_signaled; });
                 assert(status == m_signaled);
                 // Return 0 if the wait completed as a result of signaling the event. Otherwise, return timeout_infinite
-                return status ? 0 : event::timeout_infinite;
+                return status ? 0 : cancellation_token::timeout_infinite;
             }
         }
 
         unsigned int wait()
         {
-            return wait(event::timeout_infinite);
+            return wait(cancellation_token::timeout_infinite);
         }
+
+        void throw_if_cancellation_requested() const
+        {
+            if (m_signaled)
+            {
+                throw canceled_exception();
+            }
+        }
+    private:
+        std::mutex m_lock;
+        std::condition_variable m_condition;
+        bool m_signaled;
     };
 }

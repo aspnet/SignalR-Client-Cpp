@@ -21,7 +21,7 @@ namespace signalr
         : m_underlying_client(create_client_config(signalr_client_config))
     { }
 
-    void default_websocket_client::start(std::string url, transfer_format, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
     {
         m_underlying_client.connect(utility::conversions::to_string_t(url))
             .then([callback](pplx::task<void> task)
@@ -54,7 +54,7 @@ namespace signalr
             });
     }
 
-    void default_websocket_client::send(std::string payload, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
     {
         web::websockets::client::websocket_outgoing_message msg;
         msg.set_utf8_message(payload);
@@ -73,7 +73,7 @@ namespace signalr
             });
     }
 
-    void default_websocket_client::receive(std::function<void(std::string, std::exception_ptr)> callback)
+    void default_websocket_client::receive(std::function<void(const std::string&, std::exception_ptr)> callback)
     {
         m_underlying_client.receive()
             .then([callback](pplx::task<web::websockets::client::websocket_incoming_message> task)

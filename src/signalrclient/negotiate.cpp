@@ -10,12 +10,20 @@ namespace signalr
 {
     namespace negotiate
     {
-        pplx::task<negotiation_response> negotiate(http_client& client, const std::string& base_url,
-            const signalr_client_config& config)
+        void negotiate(http_client& client, const std::string& base_url,
+            const signalr_client_config& config,
+            std::function<void(const negotiation_response&, std::exception_ptr)> callback) noexcept
         {
-            auto negotiate_url = url_builder::build_negotiate(base_url);
-
-            pplx::task_completion_event<negotiation_response> tce;
+            std::string negotiate_url;
+            try
+            {
+                negotiate_url = url_builder::build_negotiate(base_url);
+            }
+            catch (...)
+            {
+                callback({}, std::current_exception());
+                return;
+            }
 
             // TODO: signalr_client_config
             http_request request;
@@ -26,17 +34,18 @@ namespace signalr
                 request.headers.insert(std::make_pair(utility::conversions::to_utf8string(header.first), utility::conversions::to_utf8string(header.second)));
             }
 
-            client.send(negotiate_url, request, [tce](http_response http_response, std::exception_ptr exception)
+            client.send(negotiate_url, request, [callback](const http_response& http_response, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
-                    tce.set_exception(exception);
+                    callback({}, exception);
                     return;
                 }
 
                 if (http_response.status_code != 200)
                 {
-                    tce.set_exception(signalr_exception("negotiate failed with status code " + std::to_string(http_response.status_code)));
+                    callback({}, std::make_exception_ptr(
+                        signalr_exception("negotiate failed with status code " + std::to_string(http_response.status_code))));
                     return;
                 }
 
@@ -49,7 +58,7 @@ namespace signalr
                     if (negotiation_response_json.has_field(_XPLATSTR("error")))
                     {
                         response.error = utility::conversions::to_utf8string(negotiation_response_json[_XPLATSTR("error")].as_string());
-                        tce.set(std::move(response));
+                        callback(response, nullptr);
                         return;
                     }
 
@@ -86,18 +95,18 @@ namespace signalr
 
                     if (negotiation_response_json.has_field(_XPLATSTR("ProtocolVersion")))
                     {
-                        tce.set_exception(signalr_exception("Detected a connection attempt to an ASP.NET SignalR Server. This client only supports connecting to an ASP.NET Core SignalR Server. See https://aka.ms/signalr-core-differences for details."));
+                        callback({}, std::make_exception_ptr(
+                            signalr_exception("Detected a connection attempt to an ASP.NET SignalR Server. This client only supports connecting to an ASP.NET Core SignalR Server. See https://aka.ms/signalr-core-differences for details.")));
+                        return;
                     }
 
-                    tce.set(std::move(response));
+                    callback(response, nullptr);
                 }
                 catch (...)
                 {
-                    tce.set_exception(std::current_exception());
+                    callback({}, std::current_exception());
                 }
             });
-
-            return pplx::create_task(tce);
         }
     }
 }

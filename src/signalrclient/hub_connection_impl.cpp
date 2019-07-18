@@ -5,8 +5,8 @@
 #include "hub_connection_impl.h"
 #include "signalrclient/hub_exception.h"
 #include "trace_log_writer.h"
-#include "make_unique.h"
 #include "signalrclient/signalr_exception.h"
+#include "make_unique.h"
 
 using namespace web;
 
@@ -67,7 +67,7 @@ namespace signalr
             auto connection = weak_hub_connection.lock();
             if (connection)
             {
-                connection->m_handshakeTask.set_exception(signalr_exception("connection closed while handshake was in progress."));
+                connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
                 connection->m_disconnected();
             }
         });
@@ -106,7 +106,7 @@ namespace signalr
         }
 
         m_connection->set_client_config(m_signalr_client_config);
-        m_handshakeTask = pplx::task_completion_event<void>();
+        m_handshakeTask = std::make_shared<completion_event>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
         m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
@@ -131,7 +131,7 @@ namespace signalr
                                 callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
                                 return;
                             }
-                            pplx::task<void>(connection->m_handshakeTask).get();
+                            connection->m_handshakeTask->get();
                         }
                         catch (...) {}
 
@@ -160,7 +160,7 @@ namespace signalr
 
                     try
                     {
-                        pplx::task<void>(connection->m_handshakeTask).get();
+                        connection->m_handshakeTask->get();
                         callback(nullptr);
                     }
                     catch (...)
@@ -218,17 +218,18 @@ namespace signalr
                         auto error = utility::conversions::to_utf8string(result.at(_XPLATSTR("error")).as_string());
                         m_logger.log(trace_level::errors, std::string("handshake error: ")
                             .append(error));
-                        m_handshakeTask.set_exception(signalr_exception(std::string("Received an error during handshake: ").append(error)));
+                        m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
                         return;
                     }
                     else
                     {
                         if (result.has_field(_XPLATSTR("type")))
                         {
-                            m_handshakeTask.set_exception(signalr_exception(std::string("Received unexpected message while waiting for the handshake response.")));
+                            m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
                         }
+                        // TODO: This doesn't look like it handles messages in the same payload as the handshake
                         m_handshakeReceived = true;
-                        m_handshakeTask.set();
+                        m_handshakeTask->set();
                         return;
                     }
                 }
@@ -299,7 +300,7 @@ namespace signalr
 
     void hub_connection_impl::invoke(const std::string& method_name, const json::value& arguments, std::function<void(const web::json::value&, std::exception_ptr)> callback) noexcept
     {
-        _ASSERTE(arguments.is_array());
+        assert(arguments.is_array());
 
         const auto callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const json::value& result) { callback(result, nullptr); },
@@ -311,7 +312,7 @@ namespace signalr
 
     void hub_connection_impl::send(const std::string& method_name, const json::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        _ASSERTE(arguments.is_array());
+        assert(arguments.is_array());
 
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },

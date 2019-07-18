@@ -13,13 +13,13 @@ class test_websocket_client : public websocket_client
 public:
     test_websocket_client();
 
-    void start(std::string url, transfer_format format, std::function<void(std::exception_ptr)> callback);
+    void start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback);
 
     void stop(std::function<void(std::exception_ptr)> callback);
 
-    void send(std::string payload, std::function<void(std::exception_ptr)> callback);
+    void send(const std::string& payload, std::function<void(std::exception_ptr)> callback);
 
-    void receive(std::function<void(std::string, std::exception_ptr)> callback);
+    void receive(std::function<void(const std::string&, std::exception_ptr)> callback);
 
     void set_connect_function(std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function);
 
@@ -30,11 +30,11 @@ public:
     void set_close_function(std::function<void(std::function<void(std::exception_ptr)>)> close_function);
 
 private:
-    std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> m_connect_function;
+    std::shared_ptr<std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_connect_function;
 
-    std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> m_send_function;
+    std::shared_ptr < std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_send_function;
 
-    std::function<void(std::function<void(std::string, std::exception_ptr)>)> m_receive_function;
+    std::shared_ptr < std::function<void(std::function<void(std::string, std::exception_ptr)>)>> m_receive_function;
 
-    std::function<void(std::function<void(std::exception_ptr)>)> m_close_function;
+    std::shared_ptr < std::function<void(std::function<void(std::exception_ptr)>)>> m_close_function;
 };

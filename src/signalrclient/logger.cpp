@@ -3,11 +3,19 @@
 
 #include "stdafx.h"
 #include "logger.h"
-#include "cpprest/asyncrt_utils.h"
 #include <iomanip>
+#include <sstream>
+#include <iostream>
+#include <assert.h>
 
 namespace signalr
 {
+#ifdef WIN32
+#define GMTIME(r_tm, r_time_t) gmtime_s(r_tm, r_time_t)
+#else
+#define GMTIME(r_tm, r_time_t) gmtime_r(r_time_t, r_tm)
+#endif
+
     logger::logger(const std::shared_ptr<log_writer>& log_writer, trace_level trace_level) noexcept
         : m_log_writer(log_writer), m_trace_level(trace_level)
     { }
@@ -18,8 +26,21 @@ namespace signalr
         {
             try
             {
+                time_t t;
+                tm time;
+                // gets current calendar time
+                std::time(&t);
+                // convert time to utc
+                GMTIME(&time, &t);
+
+                // TODO: millisecond "precision"
+                char timeString[sizeof("2019-11-23T13:23:02Z")];
+
+                // format string to ISO8601
+                std::strftime(timeString, sizeof(timeString), "%FT%TZ", &time);
+
                 std::stringstream os;
-                os << utility::conversions::to_utf8string(utility::datetime::utc_now().to_string(utility::datetime::date_format::ISO_8601)) << " ["
+                os << timeString << " ["
                     << std::left << std::setw(12) << translate_trace_level(level) << "] "<< entry << std::endl;
                 m_log_writer->write(os.str());
             }
@@ -50,7 +71,7 @@ namespace signalr
         case signalr::trace_level::info:
             return "info";
         default:
-            _ASSERTE(false);
+            assert(false);
             return "(unknown)";
         }
     }

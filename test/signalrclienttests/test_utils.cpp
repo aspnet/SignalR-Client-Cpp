@@ -4,7 +4,6 @@
 #include "stdafx.h"
 #include "test_utils.h"
 #include "test_websocket_client.h"
-#include "test_web_request_factory.h"
 #include "test_http_client.h"
 
 using namespace signalr;
@@ -32,20 +31,6 @@ std::shared_ptr<websocket_client> create_test_websocket_client(std::function<voi
     return websocket_client;
 }
 
-std::unique_ptr<web_request_factory> create_test_web_request_factory()
-{
-    return std::make_unique<test_web_request_factory>([](const std::string& url)
-    {
-        auto response_body =
-            url.find_first_of("/negotiate") != 0
-            ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
-            "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
-            : "";
-
-        return std::unique_ptr<web_request>(new web_request_stub((unsigned short)200, "OK", response_body));
-    });
-}
-
 std::unique_ptr<http_client> create_test_http_client()
 {
     return std::make_unique<test_http_client>([](const std::string & url, http_request request)
@@ -65,7 +50,7 @@ std::string create_uri()
     auto unit_test = ::testing::UnitTest::GetInstance();
 
     // unit test will be null if this function is not called in a test
-    _ASSERTE(unit_test);
+    assert(unit_test);
 
     return std::string("http://")
         .append(unit_test->current_test_info()->name());
@@ -76,7 +61,7 @@ std::string create_uri(const std::string& query_string)
     auto unit_test = ::testing::UnitTest::GetInstance();
 
     // unit test will be null if this function is not called in a test
-    _ASSERTE(unit_test);
+    assert(unit_test);
 
     return std::string("http://")
         .append(unit_test->current_test_info()->name())

@@ -4,7 +4,6 @@ set (SOURCES
   connection_impl.cpp
   default_http_client.cpp
   default_websocket_client.cpp
-  http_sender.cpp
   hub_connection.cpp
   hub_connection_impl.cpp
   logger.cpp
@@ -15,8 +14,6 @@ set (SOURCES
   transport.cpp
   transport_factory.cpp
   url_builder.cpp
-  web_request.cpp
-  web_request_factory.cpp
   websocket_transport.cpp
 )
 

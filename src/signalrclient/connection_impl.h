@@ -3,17 +3,15 @@
 
 #pragma once
 
-#include <atomic>
 #include <mutex>
 #include "signalrclient/http_client.h"
 #include "signalrclient/trace_level.h"
 #include "signalrclient/connection_state.h"
 #include "signalrclient/signalr_client_config.h"
-#include "web_request_factory.h"
 #include "transport_factory.h"
 #include "logger.h"
 #include "negotiation_response.h"
-#include "event.h"
+#include "cancellation_token.h"
 
 namespace signalr
 {
@@ -58,23 +56,23 @@ namespace signalr
         std::function<void()> m_disconnected;
         signalr_client_config m_signalr_client_config;
 
-        pplx::cancellation_token_source m_disconnect_cts;
+        std::shared_ptr<cancellation_token> m_disconnect_cts;
         std::mutex m_stop_lock;
-        event m_start_completed_event;
+        cancellation_token m_start_completed_event;
         std::string m_connection_id;
         std::unique_ptr<http_client> m_http_client;
 
         connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
             std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory);
 
-        pplx::task<std::shared_ptr<transport>> start_transport(const std::string& url);
-        pplx::task<void> send_connect_request(const std::shared_ptr<transport>& transport,
-            const std::string& url, const pplx::task_completion_event<void>& connect_request_tce);
-        pplx::task<void> start_negotiate(const std::string& url, int redirect_count);
+        void start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback);
+        void send_connect_request(const std::shared_ptr<transport>& transport,
+            const std::string& url, std::function<void(std::exception_ptr)> callback);
+        void start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback);
 
         void process_response(const std::string& response);
 
-        pplx::task<void> shutdown();
+        void shutdown(std::function<void(std::exception_ptr)> callback);
 
         bool change_state(connection_state old_state, connection_state new_state);
         connection_state change_state(connection_state new_state);

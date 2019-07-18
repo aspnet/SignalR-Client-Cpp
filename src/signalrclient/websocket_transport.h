@@ -3,11 +3,9 @@
 
 #pragma once
 
-#include "cpprest/ws_client.h"
-#include "url_builder.h"
 #include "transport.h"
 #include "logger.h"
-#include "default_websocket_client.h"
+#include "signalrclient/websocket_client.h"
 #include "connection_impl.h"
 
 namespace signalr
@@ -30,9 +28,9 @@ namespace signalr
         void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
         void on_close(std::function<void(std::exception_ptr)> callback) override;
 
-        void send(std::string payload, std::function<void(std::exception_ptr)> callback) noexcept override;
+        void send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept override;
 
-        void on_receive(std::function<void(std::string, std::exception_ptr)>) override;
+        void on_receive(std::function<void(const std::string&, std::exception_ptr)>) override;
 
     private:
         websocket_transport(const std::function<std::shared_ptr<websocket_client>()>& websocket_client_factory,
@@ -45,9 +43,9 @@ namespace signalr
         std::function<void(std::string, std::exception_ptr)> m_process_response_callback;
         std::function<void(std::exception_ptr)> m_close_callback;
 
-        pplx::cancellation_token_source m_receive_loop_cts;
+        std::shared_ptr<cancellation_token> m_receive_loop_cts;
 
-        void receive_loop(pplx::cancellation_token_source cts);
+        void receive_loop(std::shared_ptr<cancellation_token> cts);
 
         std::shared_ptr<websocket_client> safe_get_websocket_client();
     };
