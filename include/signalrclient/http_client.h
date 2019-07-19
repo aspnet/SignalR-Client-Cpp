@@ -19,6 +19,10 @@ namespace signalr
     class http_request
     {
     public:
+        http_request()
+            : method(http_method::GET), timeout(std::chrono::seconds(120))
+        { }
+
         http_method method;
         std::map<std::string, std::string> headers;
         std::string content;
