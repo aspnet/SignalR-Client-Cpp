@@ -47,4 +47,8 @@ if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
+if(BUILD_SAMPLES)
+  add_subdirectory(samples/HubConnectionSample)
+endif()
+
 install(DIRECTORY include/ DESTINATION include/)
