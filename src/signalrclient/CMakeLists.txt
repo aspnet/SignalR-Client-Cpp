@@ -19,21 +19,25 @@ set (SOURCES
 
 add_library (signalrclient SHARED ${SOURCES})
 
-if(APPLE)
-  target_link_libraries(signalrclient
-    PUBLIC ${CPPREST_LIB}
-    PRIVATE OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread
-  )
-elseif(NOT WIN32)
-  target_link_libraries(signalrclient
-    PUBLIC ${CPPREST_LIB}
-    PRIVATE OpenSSL::SSL
-  )
+if(NOT USE_CPPRESTSDK)
+  target_link_libraries(signalrclient)
 else()
-  target_link_libraries(signalrclient
-    PUBLIC ${CPPREST_LIB}
-  )
-endif()
+  if(APPLE)
+    target_link_libraries(signalrclient
+      PUBLIC ${CPPREST_LIB}
+      PRIVATE OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread
+    )
+  elseif(NOT WIN32)
+    target_link_libraries(signalrclient
+      PUBLIC ${CPPREST_LIB}
+      PRIVATE OpenSSL::SSL
+    )
+  else()
+    target_link_libraries(signalrclient
+      PUBLIC ${CPPREST_LIB}
+    )
+  endif()
+endif() # USE_CPPRESTSDK
 
 include(GNUInstallDirs)
 

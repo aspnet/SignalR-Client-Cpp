@@ -4,7 +4,6 @@
 #pragma once
 
 #include "signalrclient/http_client.h"
-#include "cpprest/http_client.h"
 
 namespace signalr
 {

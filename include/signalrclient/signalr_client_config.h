@@ -3,14 +3,18 @@
 
 #pragma once
 
+#ifdef USE_CPPRESTSDK
 #include "cpprest/http_client.h"
 #include "cpprest/ws_client.h"
+#endif
+
 #include "_exports.h"
 
 namespace signalr
 {
     class signalr_client_config
     {
+#ifdef USE_CPPRESTSDK
     public:
         SIGNALRCLIENT_API void __cdecl set_proxy(const web::web_proxy &proxy);
         // Please note that setting credentials does not work in all cases.
@@ -32,5 +36,6 @@ namespace signalr
         web::http::client::http_client_config m_http_client_config;
         web::websockets::client::websocket_client_config m_websocket_client_config;
         web::http::http_headers m_http_headers;
+#endif
     };
 }

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef USE_CPPRESTSDK
+
 #include "cpprest/ws_client.h"
 #include "signalrclient/signalr_client_config.h"
 #include "signalrclient/websocket_client.h"
@@ -22,3 +24,5 @@ namespace signalr
         web::websockets::client::websocket_client m_underlying_client;
     };
 }
+
+#endif

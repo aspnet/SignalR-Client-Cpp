@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 #include "stdafx.h"
+
+#ifdef USE_CPPRESTSDK
 #include "default_websocket_client.h"
 
 namespace signalr
@@ -91,3 +93,4 @@ namespace signalr
             });
     }
 }
+#endif

@@ -70,7 +70,7 @@ TEST(connection_impl_start, connection_state_is_connecting_when_connection_is_be
 		/* connect function */[&state_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
 		{
 			state_mre.get();
-			callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+			callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
 		});
 
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
@@ -171,8 +171,8 @@ TEST(connection_impl_start, start_sets_id_query_string)
         /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked")));  },
         /* connect function */[&query_string](const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
-        query_string = utility::conversions::to_utf8string(url.substr(url.find('?') + 1));
-        callback(std::make_exception_ptr(web::websockets::client::websocket_exception("connecting failed")));
+        query_string = url.substr(url.find('?') + 1);
+        callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
     });
 
     auto connection = connection_impl::create(create_uri(""), trace_level::errors, writer, create_test_http_client(), std::make_unique<test_transport_factory>(websocket_client));
@@ -203,8 +203,8 @@ TEST(connection_impl_start, start_appends_id_query_string)
         /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked")));  },
         /* connect function */[&query_string](const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
-        query_string = utility::conversions::to_utf8string(url.substr(url.find('?') + 1));
-        callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+        query_string = url.substr(url.find('?') + 1);
+        callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
     });
 
     auto connection = connection_impl::create(create_uri("a=b&c=d"), trace_level::errors, writer, create_test_http_client(), std::make_unique<test_transport_factory>(websocket_client));
@@ -296,7 +296,7 @@ TEST(connection_impl_start, start_fails_if_transport_connect_throws)
         /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback){ callback(std::make_exception_ptr(std::runtime_error("should not be invoked")));  },
         /* connect function */[](const std::string&, std::function<void(std::exception_ptr)> callback)
         {
-            callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+            callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
         });
 
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
@@ -314,7 +314,7 @@ TEST(connection_impl_start, start_fails_if_transport_connect_throws)
     }
     catch (const std::exception &e)
     {
-        ASSERT_EQ(_XPLATSTR("connecting failed"), utility::conversions::to_string_t(e.what()));
+        ASSERT_STREQ("connecting failed", e.what());
     }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
@@ -839,7 +839,7 @@ TEST(connection_impl_start, negotiate_redirect_uses_own_query_string)
         /* connect function */[&query_string](const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         query_string = url.substr(url.find('?') + 1);
-        callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+        callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
     });
 
     auto http_client = std::make_unique<test_http_client>([](const std::string& url, http_request)
@@ -1554,7 +1554,7 @@ TEST(connection_impl_stop, DISABLED_ongoing_start_request_canceled_if_connection
         mre.get();
         ASSERT_TRUE(false); // exception expected but not thrown
     }
-    catch (const pplx::task_canceled &)
+    catch (const std::exception&)
     { }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
@@ -1771,7 +1771,7 @@ TEST(connection_id, connection_id_is_set_if_start_fails_but_negotiate_request_su
         /* send function */ [](const std::string, std::function<void(std::exception_ptr)> callback){ callback(std::make_exception_ptr(std::runtime_error("should not be invoked")));  },
         /* connect function */[](const std::string&, std::function<void(std::exception_ptr)> callback)
         {
-            callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+            callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
         });
 
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
