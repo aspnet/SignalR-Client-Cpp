@@ -8,6 +8,16 @@ namespace signalr
     class value
     {
     public:
+        enum type
+        {
+            MAP,
+            ARRAY,
+            STRING,
+            NUMBER,
+            NULL,
+            BOOL
+        };
+
         value();
         value(int val);
         value(double val);
@@ -33,5 +43,6 @@ namespace signalr
 
         std::vector<value> get_properties() const;
         std::string get_property_name() const;
+        type get_type() const;
     };
 }
