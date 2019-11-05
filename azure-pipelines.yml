@@ -14,7 +14,7 @@ jobs:
   parameters:
     agentOs: macOs
     beforeBuild:
-    - script: brew install gcc6
+    - script: brew install gcc
     - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
       displayName: Bootstrap vcpkg
     - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
