@@ -14,7 +14,7 @@ jobs:
   parameters:
     agentOs: macOs
     beforeBuild:
-    - sudo xcode-select --switch /Applications/Xcode_9.4.1.app
+    - script: sudo xcode-select --switch /Applications/Xcode_9.4.1.app
     - script: brew install gcc
     - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
       displayName: Bootstrap vcpkg
