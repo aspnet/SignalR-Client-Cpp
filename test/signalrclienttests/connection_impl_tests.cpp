@@ -89,7 +89,10 @@ TEST(connection_impl_start, connection_state_is_connecting_when_connection_is_be
         mre.get();
         ASSERT_TRUE(false);
     }
-    catch (...) { }
+    catch (const std::runtime_error& ex)
+    {
+        ASSERT_STREQ("connecting failed", ex.what());
+    }
 }
 
 TEST(connection_impl_start, connection_state_is_connected_when_connection_established_succesfully)
@@ -188,7 +191,10 @@ TEST(connection_impl_start, start_sets_id_query_string)
         mre.get();
         ASSERT_TRUE(false);
     }
-    catch (...) { }
+    catch (const std::runtime_error& ex)
+    {
+        ASSERT_STREQ("connecting failed", ex.what());
+    }
 
     ASSERT_EQ("id=f7707523-307d-4cba-9abf-3eef701241e8", query_string);
 }
@@ -220,7 +226,10 @@ TEST(connection_impl_start, start_appends_id_query_string)
         mre.get();
         ASSERT_TRUE(false);
     }
-    catch (...) { }
+    catch (const std::runtime_error& ex)
+    {
+        ASSERT_STREQ("connecting failed", ex.what());
+    }
 
     ASSERT_EQ("a=b&c=d&id=f7707523-307d-4cba-9abf-3eef701241e8", query_string);
 }
@@ -872,9 +881,11 @@ TEST(connection_impl_start, negotiate_redirect_uses_own_query_string)
     try
     {
         mre.get();
+        ASSERT_TRUE(false);
     }
-    catch (...)
+    catch (const std::runtime_error& ex)
     {
+        ASSERT_STREQ("connecting failed", ex.what());
     }
 
     ASSERT_EQ("customQuery=1&id=f7707523-307d-4cba-9abf-3eef701241e8", query_string);
@@ -1789,7 +1800,10 @@ TEST(connection_id, connection_id_is_set_if_start_fails_but_negotiate_request_su
         mre.get();
         ASSERT_TRUE(false);
     }
-    catch (...) { }
+    catch (const std::runtime_error& ex)
+    {
+        ASSERT_STREQ("connecting failed", ex.what());
+    }
 
     ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", connection->get_connection_id());
 }
