@@ -23,7 +23,7 @@ namespace signalr
     };
 
     /**
-     * The Object Model class for storing values being passed by the user to the serializer or from the deserializer to the user.
+     * Represents a value to be provided to a SignalR method as a parameter, or returned as a return value.
      */
     class value
     {
