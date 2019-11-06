@@ -17,7 +17,7 @@ namespace signalr
         MAP,
         ARRAY,
         STRING,
-        NUMBER,
+        DOUBLE,
         NULL,
         BOOL
     };
@@ -41,9 +41,9 @@ namespace signalr
         bool is_map() const;
 
         /**
-         * True if the object stored is a number (int, float, char).
+         * True if the object stored is double.
          */
-        bool is_number() const;
+        bool is_double() const;
 
         /**
          * True if the object stored is a string.
@@ -64,26 +64,6 @@ namespace signalr
          * True if the object stored is a bool.
          */
         bool is_bool() const;
-
-        /**
-         * Returns the stored object as a double. The value will be cast to a double if the underlying object is a signalr::type::NUMBER otherwise it will throw
-         */
-        double as_double() const;
-
-        /**
-         * Returns the stored object as a float. The value will be cast to a float if the underlying object is a signalr::type::NUMBER otherwise it will throw.
-         */
-        float as_float() const;
-
-        /**
-         * Returns the stored object as an int. The value will be cast to an int if the underlying object is a signalr::type::NUMBER otherwise it will throw.
-         */
-        int as_int() const;
-
-        /**
-         * Returns the stored object as a long. The value will be cast to a long if the underlying object is a signalr::type::NUMBER otherwise it will throw
-         */
-        long as_long() const;
 
         /**
          * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::type::BOOL.
