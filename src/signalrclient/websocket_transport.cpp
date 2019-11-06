@@ -5,6 +5,7 @@
 #include "websocket_transport.h"
 #include "logger.h"
 #include "signalrclient/signalr_exception.h"
+#include "base_uri.h"
 #include <future>
 
 namespace signalr
@@ -144,8 +145,8 @@ namespace signalr
 
     void websocket_transport::start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        web::uri uri(utility::conversions::to_string_t(url));
-        assert(uri.scheme() == _XPLATSTR("ws") || uri.scheme() == _XPLATSTR("wss"));
+        signalr::uri uri(url);
+        assert(uri.scheme() == "ws" || uri.scheme() == "wss");
 
         {
             std::lock_guard<std::mutex> stop_lock(m_start_stop_lock);
