@@ -3,11 +3,14 @@
 
 #include "stdafx.h"
 #include "signalrclient/signalr_client_config.h"
+#ifdef USE_CPPRESTSDK
 #include "cpprest/http_client.h"
 #include "cpprest/ws_client.h"
+#endif
 
 namespace signalr
 {
+#ifdef USE_CPPRESTSDK
     void signalr_client_config::set_proxy(const web::web_proxy &proxy)
     {
         m_http_client_config.set_proxy(proxy);
@@ -49,4 +52,5 @@ namespace signalr
     {
         m_http_headers = http_headers;
     }
+#endif
 }

@@ -14,7 +14,10 @@ jobs:
   parameters:
     agentOs: macOs
     beforeBuild:
-    - script: brew install gcc6
+    # XCode 11 doesn't play nicely with gcc workaround by using XCode 10. We can try updating to a newer XCode in the future
+    # Once the problem has been resolved
+    - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
+    - script: brew install gcc
     - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
       displayName: Bootstrap vcpkg
     - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"

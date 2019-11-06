@@ -4,6 +4,7 @@
 #pragma once
 
 #include <mutex>
+#include <atomic>
 #include "signalrclient/http_client.h"
 #include "signalrclient/trace_level.h"
 #include "signalrclient/connection_state.h"

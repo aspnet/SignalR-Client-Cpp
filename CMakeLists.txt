@@ -14,11 +14,17 @@ else()
   set(EXTRA_FLAGS "-DSIGNALRCLIENT_EXPORTS")
 endif()
 
+if(USE_CPPRESTSDK)
+  string(APPEND EXTRA_FLAGS " -DUSE_CPPRESTSDK")
+endif()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_LDFLAGS}")
 
-find_package(cpprestsdk REQUIRED)
-set(CPPREST_LIB "cpprestsdk::cpprest")
+if(USE_CPPRESTSDK)
+  find_package(cpprestsdk REQUIRED)
+  set(CPPREST_LIB "cpprestsdk::cpprest")
+endif()
 
 include_directories (include)
 
