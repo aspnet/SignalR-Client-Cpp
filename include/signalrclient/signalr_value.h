@@ -66,6 +66,11 @@ namespace signalr
         bool is_bool() const;
 
         /**
+         * Returns the stored object as a double. This will throw if the underlying object is not a signalr::type::DOUBLE.
+         */
+        double as_double() const;
+
+        /**
          * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::type::BOOL.
          */
         bool as_bool() const;
