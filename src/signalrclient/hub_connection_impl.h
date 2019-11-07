@@ -8,6 +8,7 @@
 #include "callback_manager.h"
 #include "case_insensitive_comparison_utils.h"
 #include "completion_event.h"
+#include "signalrclient/signalr_value.h"
 
 using namespace web;
 
@@ -31,10 +32,10 @@ namespace signalr
         hub_connection_impl(const hub_connection_impl&) = delete;
         hub_connection_impl& operator=(const hub_connection_impl&) = delete;
 
-        void on(const std::string& event_name, const std::function<void(const json::value &)>& handler);
+        void on(const std::string& event_name, const std::function<void(const signalr::value &)>& handler);
 
-        void invoke(const std::string& method_name, const json::value& arguments, std::function<void(const json::value&, std::exception_ptr)> callback) noexcept;
-        void send(const std::string& method_name, const json::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept;
+        void invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept;
+        void send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept;
 
         void start(std::function<void(std::exception_ptr)> callback) noexcept;
         void stop(std::function<void(std::exception_ptr)> callback) noexcept;
@@ -52,7 +53,7 @@ namespace signalr
         std::shared_ptr<connection_impl> m_connection;
         logger m_logger;
         callback_manager m_callback_manager;
-        std::unordered_map<std::string, std::function<void(const json::value &)>, case_insensitive_hash, case_insensitive_equals> m_subscriptions;
+        std::unordered_map<std::string, std::function<void(const signalr::value&)>, case_insensitive_hash, case_insensitive_equals> m_subscriptions;
         bool m_handshakeReceived;
         std::shared_ptr<completion_event> m_handshakeTask;
         std::function<void()> m_disconnected;
@@ -62,8 +63,8 @@ namespace signalr
 
         void process_message(const std::string& message);
 
-        void invoke_hub_method(const std::string& method_name, const json::value& arguments, const std::string& callback_id,
+        void invoke_hub_method(const std::string& method_name, const signalr::value& arguments, const std::string& callback_id,
             std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept;
-        bool invoke_callback(const web::json::value& message);
+        bool invoke_callback(const signalr::value& message);
     };
 }

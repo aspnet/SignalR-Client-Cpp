@@ -47,18 +47,18 @@ namespace signalr
         return m_pImpl->on(event_name, handler);
     }
 
-    void hub_connection::invoke(const std::string& method_name, const web::json::value& arguments, std::function<void(const web::json::value&, std::exception_ptr)> callback) noexcept
+    void hub_connection::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
         if (!m_pImpl)
         {
-            callback(web::json::value(), std::make_exception_ptr(signalr_exception("invoke() cannot be called on destructed hub_connection instance")));
+            callback(signalr::value(), std::make_exception_ptr(signalr_exception("invoke() cannot be called on destructed hub_connection instance")));
             return;
         }
 
         return m_pImpl->invoke(method_name, arguments, callback);
     }
 
-    void hub_connection::send(const std::string& method_name, const web::json::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
         if (!m_pImpl)
         {

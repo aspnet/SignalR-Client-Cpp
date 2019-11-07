@@ -73,7 +73,7 @@ namespace signalr
         });
     }
 
-    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const json::value &)>& handler)
+    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const signalr::value &)>& handler)
     {
         if (event_name.length() == 0)
         {
@@ -93,7 +93,7 @@ namespace signalr
                 "an action for this event has already been registered. event name: " + event_name);
         }
 
-        m_subscriptions.insert(std::pair<std::string, std::function<void(const json::value &)>> {event_name, handler});
+        m_subscriptions.insert(std::pair<std::string, std::function<void(const signalr::value &)>> {event_name, handler});
     }
 
     void hub_connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
@@ -192,6 +192,11 @@ namespace signalr
         Close,
     };
 
+    signalr::value createValue(const web::json::value v)
+    {
+        return signalr::value();
+    }
+
     void hub_connection_impl::process_message(const std::string& response)
     {
         try
@@ -243,7 +248,9 @@ namespace signalr
                     auto event = m_subscriptions.find(method);
                     if (event != m_subscriptions.end())
                     {
-                        event->second(result.at(_XPLATSTR("arguments")));
+                        auto args = result.at(_XPLATSTR("arguments"));
+                        auto s = createValue(args);
+                        event->second(s);
                     }
                     break;
                 }
@@ -259,7 +266,7 @@ namespace signalr
                     {
                         // TODO: error
                     }
-                    invoke_callback(result);
+                    invoke_callback(createValue(result));
                     break;
                 }
                 case MessageType::CancelInvocation:
@@ -286,7 +293,7 @@ namespace signalr
         }
     }
 
-    bool hub_connection_impl::invoke_callback(const web::json::value& message)
+    bool hub_connection_impl::invoke_callback(const signalr::value& message)
     {
         auto id = utility::conversions::to_utf8string(message.at(_XPLATSTR("invocationId")).as_string());
         if (!m_callback_manager.invoke_callback(id, message, true))
@@ -298,19 +305,19 @@ namespace signalr
         return true;
     }
 
-    void hub_connection_impl::invoke(const std::string& method_name, const json::value& arguments, std::function<void(const web::json::value&, std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
         assert(arguments.is_array());
 
         const auto callback_id = m_callback_manager.register_callback(
-            create_hub_invocation_callback(m_logger, [callback](const json::value& result) { callback(result, nullptr); },
-                [callback](const std::exception_ptr e) { callback(json::value(), e); }));
+            create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
+                [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
 
         invoke_hub_method(method_name, arguments, callback_id, nullptr,
-            [callback](const std::exception_ptr e){ callback(json::value(), e); });
+            [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
     }
 
-    void hub_connection_impl::send(const std::string& method_name, const json::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
         assert(arguments.is_array());
 
@@ -319,7 +326,7 @@ namespace signalr
             [callback](const std::exception_ptr e){ callback(e); });
     }
 
-    void hub_connection_impl::invoke_hub_method(const std::string& method_name, const json::value& arguments,
+    void hub_connection_impl::invoke_hub_method(const std::string& method_name, const signalr::value& arguments,
         const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept
     {
         json::value request;

@@ -6,11 +6,11 @@
 #include "_exports.h"
 #include <memory>
 #include <functional>
-#include "cpprest/json.h"
 #include "connection_state.h"
 #include "trace_level.h"
 #include "log_writer.h"
 #include "signalr_client_config.h"
+#include "signalr_value.h"
 
 namespace signalr
 {
@@ -42,9 +42,9 @@ namespace signalr
 
         SIGNALRCLIENT_API void __cdecl on(const std::string& event_name, const method_invoked_handler& handler);
 
-        SIGNALRCLIENT_API void invoke(const std::string& method_name, const web::json::value& arguments = web::json::value::array(), std::function<void(const web::json::value&, std::exception_ptr)> callback = [](const web::json::value&, std::exception_ptr) {}) noexcept;
+        SIGNALRCLIENT_API void invoke(const std::string& method_name, const signalr::value& arguments = signalr::value(), std::function<void(const signalr::value&, std::exception_ptr)> callback = [](const signalr::value&, std::exception_ptr) {}) noexcept;
 
-        SIGNALRCLIENT_API void send(const std::string& method_name, const web::json::value& arguments = web::json::value::array(), std::function<void(std::exception_ptr)> callback = [](std::exception_ptr) {}) noexcept;
+        SIGNALRCLIENT_API void send(const std::string& method_name, const signalr::value& arguments = signalr::value(), std::function<void(std::exception_ptr)> callback = [](std::exception_ptr) {}) noexcept;
 
     private:
         std::shared_ptr<hub_connection_impl> m_pImpl;
