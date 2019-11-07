@@ -10,8 +10,6 @@
 #include "completion_event.h"
 #include "signalrclient/signalr_value.h"
 
-using namespace web;
-
 namespace signalr
 {
     // Note:

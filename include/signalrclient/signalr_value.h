@@ -28,27 +28,161 @@ namespace signalr
     class value
     {
     public:
-        value();
-        value(int val);
-        value(double val);
-        value(const std::string& val);
-        value(const std::vector<value>& val);
-        value(const std::map<std::string, value>& map);
+        value() : mType(type::null) {}
+
+        value(type t) : mType(t)
+        {
+            switch (mType)
+            {
+            case type::array:
+                new (&mStorage.arr) std::vector<value>();
+                break;
+            case type::string:
+                new (&mStorage.str) std::string();
+                break;
+            case type::float64:
+                mStorage.number = 0;
+                break;
+            case type::boolean:
+                mStorage.boolean = false;
+                break;
+            case type::map:
+                new (&mStorage.map) std::map<std::string, value>();
+                break;
+            }
+        }
+
+        value(bool val) : mType(type::boolean)
+        {
+            mStorage.boolean = val;
+        }
+
+        value(int val) : mType(type::float64)
+        {
+            mStorage.number = val;
+        }
+
+        value(double val) : mType(type::float64)
+        {
+            mStorage.number = val;
+        }
+
+        value(const std::string& val) : mType(type::string)
+        {
+            new (&mStorage.str) std::string(val);
+        }
+
+        value(const std::vector<value>& val) : mType(type::array)
+        {
+            new (&mStorage.arr) std::vector<value>(val);
+        }
+
+        value(const std::map<std::string, value>& map) : mType(type::map)
+        {
+            new (&mStorage.map) std::map<std::string, value>(map);
+        }
+
+        value(const value& rhs)
+        {
+            mType = rhs.mType;
+            switch (mType)
+            {
+            case type::array:
+                new (&mStorage.arr) std::vector<value>(rhs.mStorage.arr);
+                break;
+            case type::string:
+                new (&mStorage.str) std::string(rhs.mStorage.str);
+                break;
+            case type::float64:
+                mStorage.number = rhs.mStorage.number;
+                break;
+            case type::boolean:
+                mStorage.boolean = rhs.mStorage.boolean;
+                break;
+            case type::map:
+                new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
+                break;
+            }
+        }
+
+        value(value&& rhs)
+        {
+            mType = std::move(rhs.mType);
+            switch (mType)
+            {
+            case type::array:
+                new (&mStorage.arr) std::vector<signalr::value>(std::move(rhs.mStorage.arr));
+                break;
+            case type::string:
+                new (&mStorage.str) std::string(std::move(rhs.mStorage.str));
+                break;
+            case type::float64:
+                mStorage.number = std::move(rhs.mStorage.number);
+                break;
+            case type::boolean:
+                mStorage.boolean = std::move(rhs.mStorage.boolean);
+                break;
+            case type::map:
+                new (&mStorage.map) std::map<std::string, signalr::value>(std::move(rhs.mStorage.map));
+                break;
+            }
+        }
+
+        ~value()
+        {
+            switch (mType)
+            {
+            case type::array:
+                mStorage.arr.~vector();
+                break;
+            case type::string:
+                mStorage.str.~basic_string();
+                break;
+            case type::map:
+                mStorage.map.~map();
+                break;
+            }
+        }
+
+        value& operator=(const value& rhs)
+        {
+            mType = rhs.mType;
+            switch (mType)
+            {
+            case type::array:
+                new (&mStorage.arr) std::vector<value>(rhs.mStorage.arr);
+                break;
+            case type::string:
+                new (&mStorage.str) std::string(rhs.mStorage.str);
+                break;
+            case type::float64:
+                mStorage.number = rhs.mStorage.number;
+                break;
+            case type::boolean:
+                mStorage.boolean = rhs.mStorage.boolean;
+                break;
+            case type::map:
+                new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
+                break;
+            }
+
+            return *this;
+        }
 
         /**
          * True if the object stored is a Key-Value pair.
          */
         bool is_map() const
         {
-            return mType == signalr::type::MAP;
+            return mType == signalr::type::map;
         }
 
         /**
-         * True if the object stored is double.
+         * True if the object stored is a double.
          */
         bool is_double() const
         {
-            return mType == signalr::type::DOUBLE;
+            return mType == signalr::type::float64;
         }
 
         /**
@@ -56,7 +190,7 @@ namespace signalr
          */
         bool is_string() const
         {
-            return mType == signalr::type::STRING;
+            return mType == signalr::type::string;
         }
 
         /**
@@ -64,7 +198,7 @@ namespace signalr
          */
         bool is_null() const
         {
-            return mType == signalr::type::NULL;
+            return mType == signalr::type::null;
         }
 
         /**
@@ -72,7 +206,7 @@ namespace signalr
          */
         bool is_array() const
         {
-            return mType == signalr::type::ARRAY;
+            return mType == signalr::type::array;
         }
 
         /**
@@ -80,13 +214,21 @@ namespace signalr
          */
         bool is_bool() const
         {
-            return mType == signalr::type::BOOL;
+            return mType == signalr::type::boolean;
         }
 
         /**
          * Returns the stored object as a double. This will throw if the underlying object is not a signalr::type::float64.
          */
-        double as_double() const;
+        double as_double() const
+        {
+            if (!is_double())
+            {
+                throw std::exception();
+            }
+
+            return mStorage.number;
+        }
 
         /**
          * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::type::boolean.
@@ -98,20 +240,7 @@ namespace signalr
                 throw std::exception();
             }
 
-            return false;
-        }
-
-        /**
-         * Returns the stored object as a double. The value will be cast to a double if the underlying object is a signalr::type::NUMBER otherwise it will throw
-         */
-        double as_double() const
-        {
-            if (!is_double())
-            {
-                throw std::exception();
-            }
-
-            return 1.0;
+            return mStorage.boolean;
         }
 
         /**
@@ -124,7 +253,7 @@ namespace signalr
                 throw std::exception();
             }
 
-            return "";
+            return mStorage.str;
         }
 
         /**
@@ -137,7 +266,7 @@ namespace signalr
                 throw std::exception();
             }
 
-            return std::vector<value>();
+            return mStorage.arr;
         }
 
         /**
@@ -150,7 +279,7 @@ namespace signalr
                 throw std::exception();
             }
 
-            return std::map<std::string, value>();
+            return mStorage.map;
         }
 
         /**
@@ -164,15 +293,18 @@ namespace signalr
     private:
         signalr::type mType;
 
-        union storage
+        union S
         {
             bool boolean;
             std::string str;
             std::vector<value> arr;
             double number;
             std::map<std::string, value> map;
+
+            S() {}
+            ~S() {}
         };
 
-        storage mStorage;
+        S mStorage;
     };
 }

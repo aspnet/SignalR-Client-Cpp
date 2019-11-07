@@ -19,7 +19,7 @@ namespace signalr
     class hub_connection
     {
     public:
-        typedef std::function<void __cdecl (const web::json::value&)> method_invoked_handler;
+        typedef std::function<void __cdecl (const signalr::value&)> method_invoked_handler;
 
         SIGNALRCLIENT_API explicit hub_connection(const std::string& url, trace_level trace_level = trace_level::all,
             std::shared_ptr<log_writer> log_writer = nullptr);
