@@ -14,12 +14,12 @@ namespace signalr
      */
     enum class type
     {
-        MAP,
-        ARRAY,
-        STRING,
-        DOUBLE,
-        NULL,
-        BOOL
+        map,
+        array,
+        string,
+        float64,
+        null,
+        boolean
     };
 
     /**
@@ -66,27 +66,27 @@ namespace signalr
         bool is_bool() const;
 
         /**
-         * Returns the stored object as a double. This will throw if the underlying object is not a signalr::type::DOUBLE.
+         * Returns the stored object as a double. This will throw if the underlying object is not a signalr::type::float64.
          */
         double as_double() const;
 
         /**
-         * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::type::BOOL.
+         * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::type::boolean.
          */
         bool as_bool() const;
 
         /**
-         * Returns the stored object as a string. This will throw if the underlying object is not a signalr::type::STRING.
+         * Returns the stored object as a string. This will throw if the underlying object is not a signalr::type::string.
          */
         const std::string& as_string() const;
 
         /**
-         * Returns the stored object as an array of signalr::value's. This will throw if the underlying object is not a signalr::type::ARRAY.
+         * Returns the stored object as an array of signalr::value's. This will throw if the underlying object is not a signalr::type::array.
          */
         std::vector<value> as_array() const;
 
         /**
-         * Returns the stored object as a map of property name to signalr::value. This will throw if the underlying object is not a signalr::type::MAP.
+         * Returns the stored object as a map of property name to signalr::value. This will throw if the underlying object is not a signalr::type::map.
          */
         std::map<std::string, value> as_map() const;
 
