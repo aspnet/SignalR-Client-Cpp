@@ -26,3 +26,10 @@ TEST(url_builder_connect_webSockets, url_correct_if_query_string_not_empty)
         "ws://fake/?q1=1&q2=2",
         url_builder::build_connect("http://fake/", transport_type::websockets, "q1=1&q2=2"));
 }
+
+TEST(url_builder_connect, url_correct_if_query_string_not_empty_and_adding_query_string)
+{
+    ASSERT_EQ(
+        "ws://fake/?q=0&q1=1&q2=2",
+        url_builder::build_connect("http://fake/?q=0", transport_type::websockets, "q1=1&q2=2"));
+}
