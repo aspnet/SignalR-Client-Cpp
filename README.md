@@ -11,7 +11,7 @@ PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
 PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk:x64-windows
 PS> mkdir build.release
 PS> cd build.release
-PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE="..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release
+PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE="..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
 PS> cmake --build . --config Release
 ```
 Output will be in `build.release\bin\Release\`
@@ -24,7 +24,7 @@ $ ./submodules/vcpkg/bootstrap-vcpkg.sh
 $ ./submodules/vcpkg/vcpkg install cpprestsdk
 $ mkdir build.release
 $ cd build.release
-$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
 $ cmake --build . --config Release
 ```
 Output will be in `build.release/bin/`
@@ -37,7 +37,7 @@ $ ./submodules/vcpkg/bootstrap-vcpkg.sh
 $ ./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread
 $ mkdir build.release
 $ cd build.release
-$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
 $ cmake --build . --config Release
 ```
 Output will be in `build.release/bin/`

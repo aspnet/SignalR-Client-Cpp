@@ -169,6 +169,31 @@ namespace signalr
             return *this;
         }
 
+        value& operator=(value&& rhs)
+        {
+            mType = std::move(rhs.mType);
+            switch (mType)
+            {
+            case type::array:
+                new (&mStorage.arr) std::vector<value>(std::move(rhs.mStorage.arr));
+                break;
+            case type::string:
+                new (&mStorage.str) std::string(std::move(rhs.mStorage.str));
+                break;
+            case type::float64:
+                mStorage.number = std::move(rhs.mStorage.number);
+                break;
+            case type::boolean:
+                mStorage.boolean = std::move(rhs.mStorage.boolean);
+                break;
+            case type::map:
+                new (&mStorage.map) std::map<std::string, value>(std::move(rhs.mStorage.map));
+                break;
+            }
+
+            return *this;
+        }
+
         /**
          * True if the object stored is a Key-Value pair.
          */
