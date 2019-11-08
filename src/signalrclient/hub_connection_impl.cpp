@@ -461,7 +461,7 @@ namespace signalr
             {
                 assert(message.is_map());
                 const auto& map = message.as_map();
-                auto& found = map.find("result");
+                auto found = map.find("result");
                 if (found != map.end())
                 {
                     set_result(found->second);
