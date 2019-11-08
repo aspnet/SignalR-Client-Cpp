@@ -305,7 +305,7 @@ TEST(stop, stop_cancels_pending_callbacks)
     mre.get();
 
     auto invoke_mre = manual_reset_event<void>();
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
     {
         invoke_mre.set(exception);
     });
@@ -360,7 +360,7 @@ TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
 
         mre.get();
 
-        hub_connection->invoke("method", signalr::value(signalr::type::array), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
+        hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
         {
             invoke_mre.set(exception);
         });
@@ -447,7 +447,7 @@ TEST(send, creates_correct_payload)
 
     mre.get();
 
-    hub_connection->send("method", signalr::value(signalr::type::array), [&mre](std::exception_ptr exception)
+    hub_connection->send("method", signalr::value(signalr::value_type::array), [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -492,7 +492,7 @@ TEST(send, does_not_wait_for_server_response)
     mre.get();
 
     // wont block waiting for server response
-    hub_connection->send("method", signalr::value(signalr::type::array), [&mre](std::exception_ptr exception)
+    hub_connection->send("method", signalr::value(signalr::value_type::array), [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -528,7 +528,7 @@ TEST(invoke, creates_correct_payload)
 
     mre.get();
 
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -571,7 +571,7 @@ TEST(invoke, callback_not_called_if_send_throws)
 
     mre.get();
 
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -632,7 +632,7 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
     mre.get();
 
     auto invoke_mre = manual_reset_event<signalr::value>();
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
     {
         if (exception)
         {
@@ -697,7 +697,7 @@ TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
 
     mre.get();
 
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -750,7 +750,7 @@ TEST(invoke, unblocks_task_when_server_completes_call)
 
     mre.get();
 
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -850,7 +850,7 @@ TEST(invoke_void, invoke_creates_runtime_error)
 
    mre.get();
 
-   hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+   hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
    {
        mre.set(exception);
    });
@@ -960,7 +960,7 @@ TEST(invoke, invoke_throws_when_the_underlying_connection_is_not_valid)
     auto hub_connection = create_hub_connection();
 
     auto mre = manual_reset_event<void>();
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -981,7 +981,7 @@ TEST(invoke, send_throws_when_the_underlying_connection_is_not_valid)
     auto hub_connection = create_hub_connection();
 
     auto mre = manual_reset_event<void>();
-    hub_connection->invoke("method", signalr::value(signalr::type::array), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", signalr::value(signalr::value_type::array), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });

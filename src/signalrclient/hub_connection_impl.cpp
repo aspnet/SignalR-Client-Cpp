@@ -230,15 +230,15 @@ namespace signalr
     {
         switch (v.type())
         {
-        case signalr::type::boolean:
+        case signalr::value_type::boolean:
             return web::json::value(v.as_bool());
-        case signalr::type::float64:
+        case signalr::value_type::float64:
             return web::json::value(v.as_double());
-        case signalr::type::string:
+        case signalr::value_type::string:
             return web::json::value(utility::conversions::to_string_t(v.as_string()));
-        case signalr::type::array:
+        case signalr::value_type::array:
         {
-            auto& array = v.as_array();
+            const auto& array = v.as_array();
             auto vec = std::vector<web::json::value>();
             for (auto& val : array)
             {
@@ -246,9 +246,9 @@ namespace signalr
             }
             return web::json::value::array(vec);
         }
-        case signalr::type::map:
+        case signalr::value_type::map:
         {
-            auto& obj = v.as_map();
+            const auto& obj = v.as_map();
             auto o = web::json::value::object();
             for (auto& val : obj)
             {
@@ -256,7 +256,7 @@ namespace signalr
             }
             return o;
         }
-        case signalr::type::null:
+        case signalr::value_type::null:
         default:
             return web::json::value::null();
         }
@@ -460,7 +460,7 @@ namespace signalr
             return [logger, set_result, set_exception](const signalr::value& message)
             {
                 assert(message.is_map());
-                auto& map = message.as_map();
+                const auto& map = message.as_map();
                 auto& found = map.find("result");
                 if (found != map.end())
                 {
