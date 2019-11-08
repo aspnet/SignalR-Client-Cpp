@@ -18,6 +18,7 @@
 #include <string>
 #include <locale>
 #include <sstream>
+#include <limits.h>
 
 namespace signalr
 {
