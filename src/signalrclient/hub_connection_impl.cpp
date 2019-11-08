@@ -190,7 +190,7 @@ namespace signalr
         Close,
     };
 
-    signalr::value createValue(const web::json::value v)
+    signalr::value createValue(const web::json::value& v)
     {
         switch (v.type())
         {
@@ -208,7 +208,7 @@ namespace signalr
             {
                 vec.push_back(createValue(val));
             }
-            return signalr::value(vec);
+            return signalr::value(std::move(vec));
         }
         case web::json::value::Object:
         {
@@ -218,7 +218,7 @@ namespace signalr
             {
                 map.insert({ utility::conversions::to_utf8string(val.first), createValue(val.second) });
             }
-            return signalr::value(map);
+            return signalr::value(std::move(map));
         }
         case web::json::value::Null:
         default:
@@ -226,7 +226,7 @@ namespace signalr
         }
     }
 
-    web::json::value createJson(const signalr::value v)
+    web::json::value createJson(const signalr::value& v)
     {
         switch (v.type())
         {

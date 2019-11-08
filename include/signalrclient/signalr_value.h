@@ -72,14 +72,29 @@ namespace signalr
             new (&mStorage.str) std::string(val);
         }
 
+        value(std::string&& val) : mType(type::string)
+        {
+            new (&mStorage.str) std::string(std::move(val));
+        }
+
         value(const std::vector<value>& val) : mType(type::array)
         {
             new (&mStorage.arr) std::vector<value>(val);
         }
 
+        value(std::vector<value>&& val) : mType(type::array)
+        {
+            new (&mStorage.arr) std::vector<value>(std::move(val));
+        }
+
         value(const std::map<std::string, value>& map) : mType(type::map)
         {
             new (&mStorage.map) std::map<std::string, value>(map);
+        }
+
+        value(std::map<std::string, value>&& map) : mType(type::map)
+        {
+            new (&mStorage.map) std::map<std::string, value>(std::move(map));
         }
 
         value(const value& rhs)
