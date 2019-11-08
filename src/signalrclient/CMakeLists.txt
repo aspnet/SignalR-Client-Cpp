@@ -15,12 +15,12 @@ set (SOURCES
   transport_factory.cpp
   url_builder.cpp
   websocket_transport.cpp
-  ../../third_party_code/src/uri.cpp
-  ../../third_party_code/src/uri_builder.cpp
+  ../../third_party_code/cpprestsdk/uri.cpp
+  ../../third_party_code/cpprestsdk/uri_builder.cpp
 )
 
 include_directories(
-    ../../third_party_code/include)
+    ../../third_party_code/cpprestsdk)
 
 add_library (signalrclient SHARED ${SOURCES})
 
