@@ -141,7 +141,7 @@ namespace signalr
         /// </summary>
         /// <param name="raw">The URI as a string.</param>
         /// <returns>The encoded string.</returns>
-        static std::string __cdecl encode_uri(const std::string& raw,
+        static std::string encode_uri(const std::string& raw,
             uri::components::component = components::full_uri);
 
         /// <summary>
@@ -149,21 +149,21 @@ namespace signalr
         /// hexadecimal representation.
         /// </summary>
         /// <returns>The encoded string.</returns>
-        static std::string __cdecl encode_data_string(const std::string& data);
+        static std::string encode_data_string(const std::string& data);
 
         /// <summary>
         /// Decodes an encoded string.
         /// </summary>
         /// <param name="encoded">The URI as a string.</param>
         /// <returns>The decoded string.</returns>
-        static std::string __cdecl decode(const std::string& encoded);
+        static std::string decode(const std::string& encoded);
 
         /// <summary>
         /// Splits a path into its hierarchical components.
         /// </summary>
         /// <param name="path">The path as a string</param>
         /// <returns>A <c>std::vector&lt;std::string&gt;</c> containing the segments in the path.</returns>
-        static std::vector<std::string> __cdecl split_path(const std::string& path);
+        static std::vector<std::string> split_path(const std::string& path);
 
         /// <summary>
         /// Splits a query into its key-value components.
@@ -171,7 +171,7 @@ namespace signalr
         /// <param name="query">The query string</param>
         /// <returns>A <c>std::map&lt;std::string, std::string&gt;</c> containing the key-value components of
         /// the query.</returns>
-        static std::map<std::string, std::string> __cdecl split_query(
+        static std::map<std::string, std::string> split_query(
             const std::string& query);
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace signalr
         /// </remarks>
         /// <param name="uri_string">The URI string to be validated.</param>
         /// <returns><c>true</c> if the given string represents a valid URI, <c>false</c> otherwise.</returns>
-        static bool __cdecl validate(const std::string& uri_string);
+        static bool validate(const std::string& uri_string);
 
         /// <summary>
         /// Creates an empty uri
@@ -382,7 +382,7 @@ namespace signalr
         uri(const details::uri_components& components);
 
         // Used by uri_builder
-        static std::string __cdecl encode_query_impl(const std::string& raw);
+        static std::string encode_query_impl(const std::string& raw);
 
         std::string m_uri;
         details::uri_components m_components;

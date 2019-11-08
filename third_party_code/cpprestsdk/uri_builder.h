@@ -262,9 +262,9 @@ namespace signalr
         uri_builder& append_query(const std::string& name, const T& value, bool do_encoding = true)
         {
             if (do_encoding)
-                append_query_encode_impl(name, utility::conversions::details::print_utf8string(value));
+                append_query_encode_impl(name, value);
             else
-                append_query_no_encode_impl(name, utility::conversions::details::print_string(value));
+                append_query_no_encode_impl(name, value);
             return *this;
         }
 
