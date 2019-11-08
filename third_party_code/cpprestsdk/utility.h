@@ -17,6 +17,7 @@
 
 #include <string>
 #include <locale>
+#include <sstream>
 
 namespace signalr
 {
@@ -65,7 +66,7 @@ namespace signalr
         /// Our own implementation of alpha numeric instead of std::isalnum to avoid
         /// taking global lock for performance reasons.
         /// </summary>
-        inline bool __cdecl is_alnum(const unsigned char uch) noexcept
+        inline bool is_alnum(const unsigned char uch) noexcept
         {
             // test if uch is an alnum character
             // special casing char to avoid branches
