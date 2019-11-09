@@ -6,6 +6,7 @@ set (SOURCES
   default_websocket_client.cpp
   hub_connection.cpp
   hub_connection_impl.cpp
+  json_hub_protocol.cpp
   logger.cpp
   negotiate.cpp
   signalr_client_config.cpp
