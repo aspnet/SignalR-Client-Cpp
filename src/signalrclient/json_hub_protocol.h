@@ -13,5 +13,11 @@ namespace signalr
     public:
         std::string write_message(const signalr::value&);
         signalr::value parse_message(const std::string&);
+        const std::string& name()
+        {
+            return m_protocol_name;
+        }
+    private:
+        std::string m_protocol_name = "json";
     };
 }

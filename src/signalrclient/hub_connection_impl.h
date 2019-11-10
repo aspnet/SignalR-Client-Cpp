@@ -9,6 +9,7 @@
 #include "case_insensitive_comparison_utils.h"
 #include "completion_event.h"
 #include "signalrclient/signalr_value.h"
+#include "hub_protocol.h"
 
 namespace signalr
 {
@@ -56,6 +57,7 @@ namespace signalr
         std::shared_ptr<completion_event> m_handshakeTask;
         std::function<void()> m_disconnected;
         signalr_client_config m_signalr_client_config;
+        std::shared_ptr<hub_protocol> m_protocol;
 
         void initialize();
 

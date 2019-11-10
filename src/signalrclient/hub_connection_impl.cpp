@@ -7,6 +7,7 @@
 #include "trace_log_writer.h"
 #include "signalrclient/signalr_exception.h"
 #include "make_unique.h"
+#include "json_hub_protocol.h"
 
 namespace signalr
 {
@@ -43,7 +44,7 @@ namespace signalr
         : m_connection(connection_impl::create(url, trace_level, log_writer,
         std::move(http_client), std::move(transport_factory))), m_logger(log_writer, trace_level),
         m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),
-        m_disconnected([]() noexcept {}), m_handshakeReceived(false)
+        m_disconnected([]() noexcept {}), m_handshakeReceived(false), m_protocol(std::shared_ptr<hub_protocol>(new json_hub_protocol()))
     { }
 
     void hub_connection_impl::initialize()
@@ -138,8 +139,11 @@ namespace signalr
                     return;
                 }
 
-                // TODO: Generate this later when we have the protocol abstraction
-                auto handshake_request = "{\"protocol\":\"json\",\"version\":1}\x1e";
+                auto map = std::map<std::string, signalr::value>();
+                map["protocol"] = signalr::value(connection->m_protocol->name());
+                map["version"] = signalr::value(1);
+                auto handshake_request = connection->m_protocol->write_message(signalr::value(map));
+
                 connection->m_connection->send(handshake_request, [weak_connection, callback](std::exception_ptr exception)
                 {
                     auto connection = weak_connection.lock();
@@ -190,78 +194,6 @@ namespace signalr
         Close,
     };
 
-    signalr::value createValue(const web::json::value& v)
-    {
-        switch (v.type())
-        {
-        case web::json::value::Boolean:
-            return signalr::value(v.as_bool());
-        case web::json::value::Number:
-            return signalr::value(v.as_double());
-        case web::json::value::String:
-            return signalr::value(utility::conversions::to_utf8string(v.as_string()));
-        case web::json::value::Array:
-        {
-            auto& array = v.as_array();
-            std::vector<signalr::value> vec;
-            for (auto& val : array)
-            {
-                vec.push_back(createValue(val));
-            }
-            return signalr::value(std::move(vec));
-        }
-        case web::json::value::Object:
-        {
-            auto& obj = v.as_object();
-            std::map<std::string, signalr::value> map;
-            for (auto& val : obj)
-            {
-                map.insert({ utility::conversions::to_utf8string(val.first), createValue(val.second) });
-            }
-            return signalr::value(std::move(map));
-        }
-        case web::json::value::Null:
-        default:
-            return signalr::value();
-        }
-    }
-
-    web::json::value createJson(const signalr::value& v)
-    {
-        switch (v.type())
-        {
-        case signalr::value_type::boolean:
-            return web::json::value(v.as_bool());
-        case signalr::value_type::float64:
-            return web::json::value(v.as_double());
-        case signalr::value_type::string:
-            return web::json::value(utility::conversions::to_string_t(v.as_string()));
-        case signalr::value_type::array:
-        {
-            const auto& array = v.as_array();
-            auto vec = std::vector<web::json::value>();
-            for (auto& val : array)
-            {
-                vec.push_back(createJson(val));
-            }
-            return web::json::value::array(vec);
-        }
-        case signalr::value_type::map:
-        {
-            const auto& obj = v.as_map();
-            auto o = web::json::value::object();
-            for (auto& val : obj)
-            {
-                o[utility::conversions::to_string_t(val.first)] = createJson(val.second);
-            }
-            return o;
-        }
-        case signalr::value_type::null:
-        default:
-            return web::json::value::null();
-        }
-    }
-
     void hub_connection_impl::process_message(const std::string& response)
     {
         try
@@ -271,9 +203,9 @@ namespace signalr
             while (pos != std::string::npos)
             {
                 auto message = response.substr(lastPos, pos - lastPos);
-                const auto result = web::json::value::parse(utility::conversions::to_string_t(message));
+                auto val = m_protocol->parse_message(message);
 
-                if (!result.is_object())
+                if (!val.is_map())
                 {
                     m_logger.log(trace_level::info, std::string("unexpected response received from the server: ")
                         .append(message));
@@ -281,11 +213,14 @@ namespace signalr
                     return;
                 }
 
+                auto obj = val.as_map();
+
                 if (!m_handshakeReceived)
                 {
-                    if (result.has_field(_XPLATSTR("error")))
+                    auto found = obj.find("error");
+                    if (found != obj.end())
                     {
-                        auto error = utility::conversions::to_utf8string(result.at(_XPLATSTR("error")).as_string());
+                        auto error = found->second.as_string();
                         m_logger.log(trace_level::errors, std::string("handshake error: ")
                             .append(error));
                         m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
@@ -293,7 +228,8 @@ namespace signalr
                     }
                     else
                     {
-                        if (result.has_field(_XPLATSTR("type")))
+                        found = obj.find("type");
+                        if (found != obj.end())
                         {
                             m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
                         }
@@ -304,18 +240,24 @@ namespace signalr
                     }
                 }
 
-                auto messageType = result.at(_XPLATSTR("type"));
-                switch (messageType.as_integer())
+                auto found = obj.find("type");
+                if (found == obj.end())
+                {
+                    throw signalr_exception("Field 'type' not found.");
+                }
+                auto messageType = found->second;
+                switch ((int)messageType.as_double())
                 {
                 case MessageType::Invocation:
                 {
-                    auto method = utility::conversions::to_utf8string(result.at(_XPLATSTR("target")).as_string());
+                    found = obj.find("target");
+                    auto method = found->second.as_string();
                     auto event = m_subscriptions.find(method);
                     if (event != m_subscriptions.end())
                     {
-                        auto args = result.at(_XPLATSTR("arguments"));
-                        auto s = createValue(args);
-                        event->second(s);
+                        found = obj.find("arguments");
+                        auto args = found->second;
+                        event->second(args);
                     }
                     else
                     {
@@ -331,11 +273,13 @@ namespace signalr
                     break;
                 case MessageType::Completion:
                 {
-                    if (result.has_field(_XPLATSTR("error")) && result.has_field(_XPLATSTR("result")))
+                    auto error = obj.find("error");
+                    auto result = obj.find("result");
+                    if (error != obj.end() && result != obj.end())
                     {
                         // TODO: error
                     }
-                    invoke_callback(createValue(result));
+                    invoke_callback(obj);
                     break;
                 }
                 case MessageType::CancelInvocation:
@@ -417,19 +361,24 @@ namespace signalr
     void hub_connection_impl::invoke_hub_method(const std::string& method_name, const signalr::value& arguments,
         const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept
     {
-        web::json::value request;
-        request[_XPLATSTR("type")] = web::json::value(1);
+        auto map = std::map<std::string, signalr::value>
+        {
+            { "type", signalr::value(MessageType::Invocation) },
+            { "target", signalr::value(method_name) },
+            { "arguments", arguments }
+        };
+
         if (!callback_id.empty())
         {
-            request[_XPLATSTR("invocationId")] = web::json::value::string(utility::conversions::to_string_t(callback_id));
+            map["invocationId"] = signalr::value(callback_id);
         }
-        request[_XPLATSTR("target")] = web::json::value::string(utility::conversions::to_string_t(method_name));
-        request[_XPLATSTR("arguments")] = createJson(arguments);
+
+        auto message = m_protocol->write_message(signalr::value(map));
 
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
 
-        m_connection->send(utility::conversions::to_utf8string(request.serialize() + _XPLATSTR('\x1e')), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+        m_connection->send(message, [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
         {
             if (exception)
             {

@@ -12,5 +12,6 @@ namespace signalr
     public:
         virtual std::string write_message(const signalr::value&) = 0;
         virtual signalr::value parse_message(const std::string&) = 0;
+        virtual const std::string& name() = 0;
     };
 }
