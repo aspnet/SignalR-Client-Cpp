@@ -317,6 +317,10 @@ namespace signalr
                         auto s = createValue(args);
                         event->second(s);
                     }
+                    else
+                    {
+                        m_logger.log(trace_level::info, "handler not found");
+                    }
                     break;
                 }
                 case MessageType::StreamInvocation:
@@ -360,8 +364,18 @@ namespace signalr
 
     bool hub_connection_impl::invoke_callback(const signalr::value& message)
     {
-        assert(message.is_map());
-        auto id = message.as_map()["invocationId"].as_string();
+        if (!message.is_map())
+        {
+            throw std::exception("expected object");
+        }
+
+        auto invocationId = message.as_map()["invocationId"];
+        if (!invocationId.is_string())
+        {
+            throw std::exception("invocationId is not a string");
+        }
+
+        auto id = invocationId.as_string();
         if (!m_callback_manager.invoke_callback(id, message, true))
         {
             m_logger.log(trace_level::info, std::string("no callback found for id: ").append(id));
@@ -373,7 +387,11 @@ namespace signalr
 
     void hub_connection_impl::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
-        assert(arguments.is_array());
+        if (!arguments.is_array())
+        {
+            callback(signalr::value(), std::make_exception_ptr(std::exception("arguments should be an array")));
+            return;
+        }
 
         const auto& callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
@@ -385,7 +403,11 @@ namespace signalr
 
     void hub_connection_impl::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        assert(arguments.is_array());
+        if (!arguments.is_array())
+        {
+            callback(std::make_exception_ptr(std::exception("arguments should be an array")));
+            return;
+        }
 
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },

@@ -500,6 +500,59 @@ TEST(send, does_not_wait_for_server_response)
     waitForSend.set();
 }
 
+TEST(send, passing_non_array_arguments_fails)
+{
+    int call_number = -1;
+    pplx::task_completion_event<void> waitForSend;
+
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [waitForSend, call_number](std::function<void(std::string, std::exception_ptr)> callback) mutable
+        {
+            std::string responses[]
+            {
+                "{ }\x1e",
+                "{}"
+            };
+
+            call_number = std::min(call_number + 1, 1);
+
+            if (call_number == 1)
+            {
+                pplx::task<void>(waitForSend).get();
+            }
+
+            callback(responses[call_number], nullptr);
+        });
+
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+
+    // wont block waiting for server response
+    hub_connection->send("method", signalr::value(true), [&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception & ex)
+    {
+        ASSERT_STREQ("arguments should be an array", ex.what());
+    }
+
+    waitForSend.set();
+}
+
 TEST(invoke, creates_correct_payload)
 {
     std::string payload;
@@ -654,7 +707,7 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
 
 TEST(temporary, test_memory)
 {
-    for (int i = 0; i < 1000000; ++i)
+    for (int i = 0; i < 1000; ++i)
     {
         auto s = signalr::value(std::map<std::string, signalr::value>());
         auto s2 = signalr::value(std::string());
@@ -758,9 +811,58 @@ TEST(invoke, unblocks_task_when_server_completes_call)
     callback_registered_event->cancel();
 
     mre.get();
+}
 
-    // should not block
-    ASSERT_TRUE(true);
+TEST(invoke, passing_non_array_arguments_fails)
+{
+    auto callback_registered_event = std::make_shared<cancellation_token>();
+
+    int call_number = -1;
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [call_number, callback_registered_event](std::function<void(std::string, std::exception_ptr)> callback)
+        mutable {
+            std::string responses[]
+            {
+                "{ }\x1e",
+                "{ \"type\": 3, \"invocationId\": \"0\" }\x1e"
+            };
+
+            call_number = std::min(call_number + 1, 1);
+
+            if (call_number > 0)
+            {
+                callback_registered_event->wait();
+            }
+
+            callback(responses[call_number], nullptr);
+        });
+
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+
+    hub_connection->invoke("method", signalr::value(true), [&mre](const signalr::value&, std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception & ex)
+    {
+        ASSERT_STREQ("arguments should be an array", ex.what());
+    }
+
+    callback_registered_event->cancel();
 }
 
 TEST(receive, logs_if_callback_for_given_id_not_found)
