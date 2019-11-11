@@ -11,9 +11,9 @@ namespace signalr
     class json_hub_protocol : public hub_protocol
     {
     public:
-        std::string write_message(const signalr::value&);
-        signalr::value parse_message(const std::string&);
-        const std::string& name()
+        std::string write_message(const signalr::value&) const;
+        std::vector<signalr::value> parse_messages(const std::string&) const;
+        const std::string& name() const
         {
             return m_protocol_name;
         }

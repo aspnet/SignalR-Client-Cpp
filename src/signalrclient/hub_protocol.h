@@ -10,8 +10,8 @@ namespace signalr
     class hub_protocol
     {
     public:
-        virtual std::string write_message(const signalr::value&) = 0;
-        virtual signalr::value parse_message(const std::string&) = 0;
-        virtual const std::string& name() = 0;
+        virtual std::string write_message(const signalr::value&) const = 0;
+        virtual std::vector<signalr::value> parse_messages(const std::string&) const = 0;
+        virtual const std::string& name() const = 0;
     };
 }

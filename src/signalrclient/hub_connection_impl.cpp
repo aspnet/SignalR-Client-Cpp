@@ -139,10 +139,12 @@ namespace signalr
                     return;
                 }
 
-                auto map = std::map<std::string, signalr::value>();
-                map["protocol"] = signalr::value(connection->m_protocol->name());
-                map["version"] = signalr::value(1);
-                auto handshake_request = connection->m_protocol->write_message(signalr::value(map));
+                auto map = std::map<std::string, signalr::value>
+                {
+                    { "protocol", signalr::value(connection->m_protocol->name()) },
+                    { "version", signalr::value(1.0) }
+                };
+                auto handshake_request = connection->m_protocol->write_message(signalr::value(std::move(map)));
 
                 connection->m_connection->send(handshake_request, [weak_connection, callback](std::exception_ptr exception)
                 {
@@ -198,17 +200,14 @@ namespace signalr
     {
         try
         {
-            auto pos = response.find('\x1e');
-            std::size_t lastPos = 0;
-            while (pos != std::string::npos)
-            {
-                auto message = response.substr(lastPos, pos - lastPos);
-                auto val = m_protocol->parse_message(message);
+            auto messages = m_protocol->parse_messages(response);
 
+            for (auto val : messages)
+            {
                 if (!val.is_map())
                 {
                     m_logger.log(trace_level::info, std::string("unexpected response received from the server: ")
-                        .append(message));
+                        .append(response));
 
                     return;
                 }
@@ -279,7 +278,7 @@ namespace signalr
                     {
                         // TODO: error
                     }
-                    invoke_callback(obj);
+                    invoke_callback(std::move(obj));
                     break;
                 }
                 case MessageType::CancelInvocation:
@@ -292,9 +291,6 @@ namespace signalr
                     // TODO
                     break;
                 }
-
-                lastPos = pos + 1;
-                pos = response.find('\x1e', lastPos);
             }
         }
         catch (const std::exception &e)
@@ -373,7 +369,7 @@ namespace signalr
             map["invocationId"] = signalr::value(callback_id);
         }
 
-        auto message = m_protocol->write_message(signalr::value(map));
+        auto message = m_protocol->write_message(signalr::value(std::move(map)));
 
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());

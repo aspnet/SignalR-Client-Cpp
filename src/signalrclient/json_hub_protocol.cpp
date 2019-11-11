@@ -79,14 +79,27 @@ namespace signalr
         }
     }
 
-    std::string signalr::json_hub_protocol::write_message(const signalr::value& hub_message)
+    static constexpr char record_separator = '\x1e';
+
+    std::string signalr::json_hub_protocol::write_message(const signalr::value& hub_message) const
     {
-        return utility::conversions::to_utf8string(createJson(hub_message).serialize()) + '\x1e';
+        return utility::conversions::to_utf8string(createJson(hub_message).serialize()) + record_separator;
     }
 
-    signalr::value json_hub_protocol::parse_message(const std::string& message)
+    std::vector<signalr::value> json_hub_protocol::parse_messages(const std::string& message) const
     {
-        const auto result = web::json::value::parse(utility::conversions::to_string_t(message));
-        return createValue(result);
+        std::vector<signalr::value> vec;
+        size_t offset = 0;
+        auto pos = message.find(record_separator, offset);
+        while (pos != std::string::npos)
+        {
+            auto result = web::json::value::parse(utility::conversions::to_string_t(message.substr(offset, pos - offset)));
+            vec.push_back(std::move(createValue(result)));
+            offset = pos + 1;
+            pos = message.find(record_separator, offset);
+        }
+        // if offset < message.size()
+        // log or close connection because we got an incomplete message
+        return vec;
     }
 }
