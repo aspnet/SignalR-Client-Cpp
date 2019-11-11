@@ -27,6 +27,8 @@ namespace signalr
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>();
             break;
+        default:
+            break;
         }
     }
 
@@ -90,6 +92,8 @@ namespace signalr
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
             break;
+        default:
+            break;
         }
     }
 
@@ -113,6 +117,8 @@ namespace signalr
         case value_type::map:
             new (&mStorage.map) std::map<std::string, signalr::value>(std::move(rhs.mStorage.map));
             break;
+        default:
+            break;
         }
     }
 
@@ -128,6 +134,8 @@ namespace signalr
             break;
         case value_type::map:
             mStorage.map.~map();
+            break;
+        default:
             break;
         }
     }
@@ -151,6 +159,8 @@ namespace signalr
             break;
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
+            break;
+        default:
             break;
         }
 
@@ -176,6 +186,8 @@ namespace signalr
             break;
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>(std::move(rhs.mStorage.map));
+            break;
+        default:
             break;
         }
 

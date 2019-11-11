@@ -24,7 +24,7 @@ TEST(callback_manager_invoke_callback, invoke_callback_invokes_and_removes_callb
     auto callback_id = callback_mgr.register_callback(
         [&callback_argument](const signalr::value& argument)
         {
-            callback_argument = argument.as_double();
+            callback_argument = (int)argument.as_double();
         });
 
     auto callback_found = callback_mgr.invoke_callback(callback_id, signalr::value(42.0), true);
@@ -43,7 +43,7 @@ TEST(callback_manager_invoke_callback, invoke_callback_invokes_and_does_not_remo
     auto callback_id = callback_mgr.register_callback(
         [&callback_argument](const signalr::value& argument)
     {
-        callback_argument = argument.as_double();
+        callback_argument = (int)argument.as_double();
     });
 
     auto callback_found = callback_mgr.invoke_callback(callback_id, signalr::value(42.0), false);
