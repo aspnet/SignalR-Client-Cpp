@@ -44,7 +44,7 @@ namespace signalr
         : m_connection(connection_impl::create(url, trace_level, log_writer,
         std::move(http_client), std::move(transport_factory))), m_logger(log_writer, trace_level),
         m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),
-        m_disconnected([]() noexcept {}), m_handshakeReceived(false), m_protocol(std::shared_ptr<hub_protocol>(new json_hub_protocol()))
+        m_disconnected([]() noexcept {}), m_handshakeReceived(false), m_protocol(std::make_shared<json_hub_protocol>())
     { }
 
     void hub_connection_impl::initialize()
@@ -92,7 +92,7 @@ namespace signalr
                 "an action for this event has already been registered. event name: " + event_name);
         }
 
-        m_subscriptions.insert(std::pair<std::string, std::function<void(const signalr::value &)>> {event_name, handler});
+        m_subscriptions.insert({event_name, handler});
     }
 
     void hub_connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
@@ -202,7 +202,7 @@ namespace signalr
         {
             auto messages = m_protocol->parse_messages(response);
 
-            for (auto val : messages)
+            for (const auto& val : messages)
             {
                 if (!val.is_map())
                 {
@@ -242,7 +242,7 @@ namespace signalr
                 auto found = obj.find("type");
                 if (found == obj.end())
                 {
-                    throw signalr_exception("Field 'type' not found.");
+                    throw signalr_exception("Field 'type' not found");
                 }
                 auto messageType = found->second;
                 switch ((int)messageType.as_double())
@@ -250,11 +250,19 @@ namespace signalr
                 case MessageType::Invocation:
                 {
                     found = obj.find("target");
+                    if (found == obj.end())
+                    {
+                        throw signalr_exception("Field 'target' not found for Invocation message");
+                    }
                     auto method = found->second.as_string();
                     auto event = m_subscriptions.find(method);
                     if (event != m_subscriptions.end())
                     {
                         found = obj.find("arguments");
+                        if (found == obj.end())
+                        {
+                            throw signalr_exception("Field 'arguments' not found for Invocation message");
+                        }
                         auto args = found->second;
                         event->second(args);
                     }
@@ -266,7 +274,7 @@ namespace signalr
                 }
                 case MessageType::StreamInvocation:
                     // Sent to server only, should not be received by client
-                    throw std::runtime_error("Received unexpected message type 'StreamInvocation'.");
+                    throw std::runtime_error("Received unexpected message type 'StreamInvocation'");
                 case MessageType::StreamItem:
                     // TODO
                     break;

@@ -419,6 +419,59 @@ TEST(hub_invocation, hub_connection_invokes_users_code_on_hub_invocations)
     ASSERT_EQ(1, array[1].as_double());
 }
 
+TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
+{
+    int call_number = -1;
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [call_number](std::function<void(std::string, std::exception_ptr)> callback)
+        mutable {
+            std::string responses[]
+            {
+                "{ }\x1e",
+                "{ \"type\": 1, \"target\": \"broadcast\" }\x1e",
+                "{ \"type\": 1, \"arguments\": [] }\x1e",
+                "{ \"type\": 1, \"target\": \"broadcast\", \"arguments\": [] }\x1e",
+                "{ \"type\": 3 }\x1e",
+            };
+
+            call_number = std::min(call_number + 1, 3);
+
+            callback(responses[call_number], nullptr);
+        });
+
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::errors);
+
+    auto payload = std::make_shared<signalr::value>();
+    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    hub_connection->on("broadcast", [on_broadcast_event, payload](const signalr::value& message)
+        {
+            *payload = message;
+            on_broadcast_event->cancel();
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+    ASSERT_FALSE(on_broadcast_event->wait(5000));
+
+    auto array = payload->as_array();
+    ASSERT_EQ(0, array.size());
+
+    auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
+    ASSERT_TRUE(log_entries.size() == 2);
+
+    auto entry = remove_date_from_log_entry(log_entries[0]);
+    ASSERT_EQ("[error       ] error occured when parsing response: Field 'arguments' not found for Invocation message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", entry) << dump_vector(log_entries);
+
+    entry = remove_date_from_log_entry(log_entries[1]);
+    ASSERT_EQ("[error       ] error occured when parsing response: Field 'target' not found for Invocation message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", entry) << dump_vector(log_entries);
+}
+
 TEST(send, creates_correct_payload)
 {
     std::string payload;
