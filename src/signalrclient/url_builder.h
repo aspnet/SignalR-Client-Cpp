@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "cpprest/http_client.h"
 #include "signalrclient/transport_type.h"
 
 namespace signalr
@@ -12,6 +11,5 @@ namespace signalr
     {
         std::string build_negotiate(const std::string& base_url);
         std::string build_connect(const std::string& base_url, transport_type transport, const std::string& query_string);
-        std::string build_start(const std::string& base_url, const std::string& query_string);
     }
 }
