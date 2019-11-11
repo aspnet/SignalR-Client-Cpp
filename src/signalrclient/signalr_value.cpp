@@ -3,9 +3,32 @@
 
 #include "stdafx.h"
 #include "signalrclient/signalr_value.h"
+#include "signalrclient/signalr_exception.h"
+#include <string>
 
 namespace signalr
 {
+    std::string value_type_to_string(value_type v)
+    {
+        switch (v)
+        {
+        case signalr::value_type::map:
+            return "map";
+        case signalr::value_type::array:
+            return "array";
+        case signalr::value_type::string:
+            return "string";
+        case signalr::value_type::float64:
+            return "float64";
+        case signalr::value_type::null:
+            return "null";
+        case signalr::value_type::boolean:
+            return "boolean";
+        default:
+            return std::to_string((int)v);
+        }
+    }
+
     value::value() : mType(value_type::null) {}
 
     value::value(value_type t) : mType(t)
@@ -228,7 +251,7 @@ namespace signalr
     {
         if (!is_double())
         {
-            throw std::exception();
+            throw signalr_exception("object is a '" + value_type_to_string(mType) + "' expected it to be a 'float64'");
         }
 
         return mStorage.number;
@@ -238,7 +261,7 @@ namespace signalr
     {
         if (!is_bool())
         {
-            throw std::exception();
+            throw signalr_exception("object is a '" + value_type_to_string(mType) + "' expected it to be a 'boolean'");
         }
 
         return mStorage.boolean;
@@ -248,7 +271,7 @@ namespace signalr
     {
         if (!is_string())
         {
-            throw std::exception();
+            throw signalr_exception("object is a '" + value_type_to_string(mType) + "' expected it to be a 'string'");
         }
 
         return mStorage.string;
@@ -258,7 +281,7 @@ namespace signalr
     {
         if (!is_array())
         {
-            throw std::exception();
+            throw signalr_exception("object is a '" + value_type_to_string(mType) + "' expected it to be a 'array'");
         }
 
         return mStorage.array;
@@ -268,7 +291,7 @@ namespace signalr
     {
         if (!is_map())
         {
-            throw std::exception();
+            throw signalr_exception("object is a '" + value_type_to_string(mType) + "' expected it to be a 'map'");
         }
 
         return mStorage.map;
