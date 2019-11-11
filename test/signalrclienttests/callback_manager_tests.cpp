@@ -27,7 +27,7 @@ TEST(callback_manager_invoke_callback, invoke_callback_invokes_and_removes_callb
             callback_argument = argument.as_double();
         });
 
-    auto callback_found = callback_mgr.invoke_callback(callback_id, signalr::value(42), true);
+    auto callback_found = callback_mgr.invoke_callback(callback_id, signalr::value(42.0), true);
 
     ASSERT_TRUE(callback_found);
     ASSERT_EQ(42, callback_argument);
@@ -46,7 +46,7 @@ TEST(callback_manager_invoke_callback, invoke_callback_invokes_and_does_not_remo
         callback_argument = argument.as_double();
     });
 
-    auto callback_found = callback_mgr.invoke_callback(callback_id, signalr::value(42), false);
+    auto callback_found = callback_mgr.invoke_callback(callback_id, signalr::value(42.0), false);
 
     ASSERT_TRUE(callback_found);
     ASSERT_EQ(42, callback_argument);
@@ -101,7 +101,7 @@ TEST(callback_manager_clear, clear_invokes_all_callbacks)
         });
     }
 
-    callback_mgr.clear(signalr::value(42));
+    callback_mgr.clear(signalr::value(42.0));
 
     ASSERT_EQ(10, invocation_count);
 }
@@ -112,7 +112,7 @@ TEST(callback_manager_dtor, clear_invokes_all_callbacks)
     bool parameter_correct = true;
 
     {
-        callback_manager callback_mgr{ signalr::value(42) };
+        callback_manager callback_mgr{ signalr::value(42.0) };
         for (auto i = 0; i < 10; i++)
         {
             callback_mgr.register_callback(

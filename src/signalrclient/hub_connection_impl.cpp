@@ -366,13 +366,13 @@ namespace signalr
     {
         if (!message.is_map())
         {
-            throw std::exception("expected object");
+            throw signalr_exception("expected object");
         }
 
-        auto invocationId = message.as_map()["invocationId"];
+        auto invocationId = message.as_map().at("invocationId");
         if (!invocationId.is_string())
         {
-            throw std::exception("invocationId is not a string");
+            throw signalr_exception("invocationId is not a string");
         }
 
         auto id = invocationId.as_string();
@@ -389,7 +389,7 @@ namespace signalr
     {
         if (!arguments.is_array())
         {
-            callback(signalr::value(), std::make_exception_ptr(std::exception("arguments should be an array")));
+            callback(signalr::value(), std::make_exception_ptr(signalr_exception("arguments should be an array")));
             return;
         }
 
@@ -405,7 +405,7 @@ namespace signalr
     {
         if (!arguments.is_array())
         {
-            callback(std::make_exception_ptr(std::exception("arguments should be an array")));
+            callback(std::make_exception_ptr(signalr_exception("arguments should be an array")));
             return;
         }
 
