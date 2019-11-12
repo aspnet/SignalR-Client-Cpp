@@ -9,6 +9,7 @@ set (SOURCES
   logger.cpp
   negotiate.cpp
   signalr_client_config.cpp
+  signalr_value.cpp
   stdafx.cpp
   trace_log_writer.cpp
   transport.cpp

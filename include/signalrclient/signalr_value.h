@@ -12,7 +12,7 @@ namespace signalr
     /**
      * An enum defining the types a signalr::value may be.
      */
-    enum class type
+    enum class value_type
     {
         map,
         array,
@@ -28,12 +28,80 @@ namespace signalr
     class value
     {
     public:
+        /**
+         * Create an object representing a value_type::null value.
+         */
         value();
-        value(int val);
+
+        /**
+         * Create an object representing a default value for the given value_type.
+         */
+        value(value_type t);
+
+        /**
+         * Create an object representing a value_type::boolean with the given bool value.
+         */
+        value(bool val);
+
+        /**
+         * Create an object representing a value_type::float64 with the given double value.
+         */
         value(double val);
+
+        /**
+         * Create an object representing a value_type::string with the given string value.
+         */
         value(const std::string& val);
+
+        /**
+         * Create an object representing a value_type::string with the given string value.
+         */
+        value(std::string&& val);
+
+        /**
+         * Create an object representing a value_type::array with the given vector of value's.
+         */
         value(const std::vector<value>& val);
+
+        /**
+         * Create an object representing a value_type::array with the given vector of value's.
+         */
+        value(std::vector<value>&& val);
+
+        /**
+         * Create an object representing a value_type::map with the given map of string-value's.
+         */
         value(const std::map<std::string, value>& map);
+
+        /**
+         * Create an object representing a value_type::map with the given map of string-value's.
+         */
+        value(std::map<std::string, value>&& map);
+
+        /**
+         * Copies an existing value.
+         */
+        value(const value& rhs);
+
+        /**
+         * Moves an existing value.
+         */
+        value(value&& rhs) noexcept;
+
+        /**
+         * Cleans up the resources associated with the value.
+         */
+        ~value();
+
+        /**
+         * Copies an existing value.
+         */
+        value& operator=(const value& rhs);
+
+        /**
+         * Moves an existing value.
+         */
+        value& operator=(value&& rhs) noexcept;
 
         /**
          * True if the object stored is a Key-Value pair.
@@ -41,7 +109,7 @@ namespace signalr
         bool is_map() const;
 
         /**
-         * True if the object stored is double.
+         * True if the object stored is a double.
          */
         bool is_double() const;
 
@@ -83,16 +151,33 @@ namespace signalr
         /**
          * Returns the stored object as an array of signalr::value's. This will throw if the underlying object is not a signalr::type::array.
          */
-        std::vector<value> as_array() const;
+        const std::vector<value>& as_array() const;
 
         /**
          * Returns the stored object as a map of property name to signalr::value. This will throw if the underlying object is not a signalr::type::map.
          */
-        std::map<std::string, value> as_map() const;
+        const std::map<std::string, value>& as_map() const;
 
         /**
          * Returns the signalr::type that represents the stored object.
          */
-        type type() const;
+        value_type type() const;
+
+    private:
+        value_type mType;
+
+        union storage
+        {
+            bool boolean;
+            std::string string;
+            std::vector<value> array;
+            double number;
+            std::map<std::string, value> map;
+
+            storage() {}
+            ~storage() {}
+        };
+
+        storage mStorage;
     };
 }
