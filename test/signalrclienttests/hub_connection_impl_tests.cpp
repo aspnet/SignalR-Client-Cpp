@@ -192,7 +192,7 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
         mre.get();
         ASSERT_TRUE(false);
     }
-    catch (std::exception ex)
+    catch (const std::exception& ex)
     {
         ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
     }
