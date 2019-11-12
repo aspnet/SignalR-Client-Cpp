@@ -8,6 +8,8 @@
 #include "signalrclient/signalr_exception.h"
 #include "make_unique.h"
 #include "json_hub_protocol.h"
+#include "message_type.h"
+#include "handshake_protocol.h"
 
 namespace signalr
 {
@@ -52,12 +54,12 @@ namespace signalr
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         std::weak_ptr<hub_connection_impl> weak_hub_connection = shared_from_this();
 
-        m_connection->set_message_received([weak_hub_connection](const std::string& message)
+        m_connection->set_message_received([weak_hub_connection](std::string&& message)
         {
             auto connection = weak_hub_connection.lock();
             if (connection)
             {
-                connection->process_message(message);
+                connection->process_message(std::move(message));
             }
         });
 
@@ -139,12 +141,7 @@ namespace signalr
                     return;
                 }
 
-                auto map = std::map<std::string, signalr::value>
-                {
-                    { "protocol", signalr::value(connection->m_protocol->name()) },
-                    { "version", signalr::value(1.0) }
-                };
-                auto handshake_request = connection->m_protocol->write_message(signalr::value(std::move(map)));
+                auto handshake_request = write_handshake(connection->m_protocol);
 
                 connection->m_connection->send(handshake_request, [weak_connection, callback](std::exception_ptr exception)
                 {
@@ -185,21 +182,44 @@ namespace signalr
         m_connection->stop(callback);
     }
 
-    enum MessageType
-    {
-        Invocation = 1,
-        StreamItem,
-        Completion,
-        StreamInvocation,
-        CancelInvocation,
-        Ping,
-        Close,
-    };
-
-    void hub_connection_impl::process_message(const std::string& response)
+    void hub_connection_impl::process_message(std::string&& response)
     {
         try
         {
+            if (!m_handshakeReceived)
+            {
+                signalr::value handshake;
+                std::tie(response, handshake) = parse_handshake(response);
+
+                auto obj = handshake.as_map();
+                auto found = obj.find("error");
+                if (found != obj.end())
+                {
+                    auto error = found->second.as_string();
+                    m_logger.log(trace_level::errors, std::string("handshake error: ")
+                        .append(error));
+                    m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
+                    return;
+                }
+                else
+                {
+                    found = obj.find("type");
+                    if (found != obj.end())
+                    {
+                        m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
+                    }
+
+                    m_handshakeReceived = true;
+                    m_handshakeTask->set();
+
+                    // TODO: Add test, this should handle messages in the same payload as the handshake now
+                    if (response.size() == 0)
+                    {
+                        return;
+                    }
+                }
+            }
+
             auto messages = m_protocol->parse_messages(response);
 
             for (const auto& val : messages)
@@ -212,58 +232,17 @@ namespace signalr
                     return;
                 }
 
-                auto obj = val.as_map();
+                const auto &obj = val.as_map();
 
-                if (!m_handshakeReceived)
+                switch ((int)obj.at("type").as_double())
                 {
-                    auto found = obj.find("error");
-                    if (found != obj.end())
-                    {
-                        auto error = found->second.as_string();
-                        m_logger.log(trace_level::errors, std::string("handshake error: ")
-                            .append(error));
-                        m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
-                        return;
-                    }
-                    else
-                    {
-                        found = obj.find("type");
-                        if (found != obj.end())
-                        {
-                            m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
-                        }
-                        // TODO: This doesn't look like it handles messages in the same payload as the handshake
-                        m_handshakeReceived = true;
-                        m_handshakeTask->set();
-                        return;
-                    }
-                }
-
-                auto found = obj.find("type");
-                if (found == obj.end())
+                case message_type::invocation:
                 {
-                    throw signalr_exception("Field 'type' not found");
-                }
-                auto messageType = found->second;
-                switch ((int)messageType.as_double())
-                {
-                case MessageType::Invocation:
-                {
-                    found = obj.find("target");
-                    if (found == obj.end())
-                    {
-                        throw signalr_exception("Field 'target' not found for Invocation message");
-                    }
-                    auto method = found->second.as_string();
+                    auto method = obj.at("target").as_string();
                     auto event = m_subscriptions.find(method);
                     if (event != m_subscriptions.end())
                     {
-                        found = obj.find("arguments");
-                        if (found == obj.end())
-                        {
-                            throw signalr_exception("Field 'arguments' not found for Invocation message");
-                        }
-                        auto args = found->second;
+                        const auto& args = obj.at("arguments");
                         event->second(args);
                     }
                     else
@@ -272,13 +251,13 @@ namespace signalr
                     }
                     break;
                 }
-                case MessageType::StreamInvocation:
+                case message_type::stream_invocation:
                     // Sent to server only, should not be received by client
                     throw std::runtime_error("Received unexpected message type 'StreamInvocation'");
-                case MessageType::StreamItem:
+                case message_type::stream_item:
                     // TODO
                     break;
-                case MessageType::Completion:
+                case message_type::completion:
                 {
                     auto error = obj.find("error");
                     auto result = obj.find("result");
@@ -286,16 +265,16 @@ namespace signalr
                     {
                         // TODO: error
                     }
-                    invoke_callback(std::move(obj));
+                    invoke_callback(obj);
                     break;
                 }
-                case MessageType::CancelInvocation:
+                case message_type::cancel_invocation:
                     // Sent to server only, should not be received by client
                     throw std::runtime_error("Received unexpected message type 'CancelInvocation'.");
-                case MessageType::Ping:
+                case message_type::ping:
                     // TODO
                     break;
-                case MessageType::Close:
+                case message_type::close:
                     // TODO
                     break;
                 }
@@ -367,7 +346,7 @@ namespace signalr
     {
         auto map = std::map<std::string, signalr::value>
         {
-            { "type", signalr::value((double)MessageType::Invocation) },
+            { "type", signalr::value((double)message_type::invocation) },
             { "target", signalr::value(method_name) },
             { "arguments", arguments }
         };

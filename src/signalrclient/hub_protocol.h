@@ -13,5 +13,6 @@ namespace signalr
         virtual std::string write_message(const signalr::value&) const = 0;
         virtual std::vector<signalr::value> parse_messages(const std::string&) const = 0;
         virtual const std::string& name() const = 0;
+        virtual int version() const = 0;
     };
 }

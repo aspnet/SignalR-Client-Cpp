@@ -251,7 +251,7 @@ namespace signalr
         m_close_callback = callback;
     }
 
-    void websocket_transport::on_receive(std::function<void(const std::string&, std::exception_ptr)> callback)
+    void websocket_transport::on_receive(std::function<void(std::string&&, std::exception_ptr)> callback)
     {
         m_process_response_callback = callback;
     }

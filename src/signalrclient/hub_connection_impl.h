@@ -61,7 +61,7 @@ namespace signalr
 
         void initialize();
 
-        void process_message(const std::string& message);
+        void process_message(std::string&& message);
 
         void invoke_hub_method(const std::string& method_name, const signalr::value& arguments, const std::string& callback_id,
             std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept;

@@ -19,6 +19,18 @@ std::shared_ptr<hub_connection_impl> create_hub_connection(std::shared_ptr<webso
         create_test_http_client(), std::make_unique<test_transport_factory>(websocket_client));
 }
 
+void default_receive_func(int& number, std::function<void(std::string, std::exception_ptr)> callback)
+{
+    std::string responses[]
+    {
+        "{ }\x1e",
+        "{\"type\":6}\x1e"
+    };
+
+    callback(responses[number], nullptr);
+    number = std::min(1, number + 1);
+}
+
 TEST(url, negotiate_appended_to_url)
 {
     std::string base_urls[] = { "http://fakeuri", "http://fakeuri/" };
@@ -55,8 +67,9 @@ TEST(url, negotiate_appended_to_url)
 
 TEST(start, start_starts_connection)
 {
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); });
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
@@ -72,9 +85,10 @@ TEST(start, start_starts_connection)
 
 TEST(start, start_sends_handshake)
 {
+    int number = 0;
     auto message = std::make_shared<std::string>();
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); },
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); },
         /* send function */ [message](const std::string& msg, std::function<void(std::exception_ptr)> callback) { *message = msg; callback(nullptr); });
     auto hub_connection = create_hub_connection(websocket_client);
 
@@ -93,14 +107,15 @@ TEST(start, start_sends_handshake)
 
 TEST(start, start_waits_for_handshake_response)
 {
+    int number = 0;
     pplx::task_completion_event<void> tce;
     pplx::task_completion_event<void> tceWaitForSend;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [tce, tceWaitForSend](std::function<void(std::string, std::exception_ptr)> callback)
+        /* receive function */ [tce, tceWaitForSend, &number](std::function<void(std::string, std::exception_ptr)> callback)
         {
             tceWaitForSend.set();
             pplx::task<void>(tce).get();
-            callback("{ }\x1e", nullptr);
+            default_receive_func(number, callback);
         });
     auto hub_connection = create_hub_connection(websocket_client);
 
@@ -190,8 +205,9 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
 
 TEST(stop, stop_stops_connection)
 {
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); });
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
@@ -214,8 +230,9 @@ TEST(stop, stop_stops_connection)
 
 TEST(stop, disconnected_callback_called_when_hub_connection_stops)
 {
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); });
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto disconnected_invoked = false;
@@ -244,8 +261,9 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
     {
+        int number = 0;
         auto websocket_client = create_test_websocket_client(
-            /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); });
+            /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
         auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::state_changes);
 
         auto mre = manual_reset_event<void>();
@@ -277,23 +295,9 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
 
 TEST(stop, stop_cancels_pending_callbacks)
 {
-    int call_number = -1;
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [call_number](std::function<void(std::string, std::exception_ptr)> callback)
-        mutable {
-        std::string responses[]
-        {
-            "{ }\x1e",
-            "{}"
-        };
-
-        if (call_number < 1)
-        {
-            call_number++;
-        }
-
-        callback(responses[call_number], nullptr);
-    });
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
 
     auto hub_connection = create_hub_connection(websocket_client);
     auto mre = manual_reset_event<void>();
@@ -330,23 +334,9 @@ TEST(stop, stop_cancels_pending_callbacks)
 
 TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
 {
-    int call_number = -1;
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [call_number](std::function<void(std::string, std::exception_ptr)> callback)
-        mutable {
-        std::string responses[]
-        {
-            "{ }\x1e",
-            "{}"
-        };
-
-        if (call_number < 1)
-        {
-            call_number++;
-        }
-
-        callback(responses[call_number], nullptr);
-    });
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
 
     auto invoke_mre = manual_reset_event<void>();
 
@@ -466,19 +456,20 @@ TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
     ASSERT_TRUE(log_entries.size() == 2);
 
     auto entry = remove_date_from_log_entry(log_entries[0]);
-    ASSERT_EQ("[error       ] error occured when parsing response: Field 'arguments' not found for Invocation message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", entry) << dump_vector(log_entries);
+    ASSERT_EQ("[error       ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", entry) << dump_vector(log_entries);
 
     entry = remove_date_from_log_entry(log_entries[1]);
-    ASSERT_EQ("[error       ] error occured when parsing response: Field 'target' not found for Invocation message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", entry) << dump_vector(log_entries);
+    ASSERT_EQ("[error       ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", entry) << dump_vector(log_entries);
 }
 
 TEST(send, creates_correct_payload)
 {
     std::string payload;
     bool handshakeReceived = false;
+    int number = 0;
 
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); },
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); },
         /* send function */[&payload, &handshakeReceived](const std::string& m, std::function<void(std::exception_ptr)> callback)
         {
             if (handshakeReceived)
@@ -521,7 +512,7 @@ TEST(send, does_not_wait_for_server_response)
         std::string responses[]
         {
             "{ }\x1e",
-            "{}"
+            "{\"type\":6}\x1e"
         };
 
         call_number = std::min(call_number + 1, 1);
@@ -564,7 +555,7 @@ TEST(send, passing_non_array_arguments_fails)
             std::string responses[]
             {
                 "{ }\x1e",
-                "{}"
+                "{\"type\":6}\x1e"
             };
 
             call_number = std::min(call_number + 1, 1);
@@ -610,9 +601,10 @@ TEST(invoke, creates_correct_payload)
 {
     std::string payload;
     bool handshakeReceived = false;
+    int number = 0;
 
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); },
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); },
         /* send function */[&payload, &handshakeReceived](const std::string& m, std::function<void(std::exception_ptr)> callback)
     {
         if (handshakeReceived)
@@ -655,8 +647,9 @@ TEST(invoke, creates_correct_payload)
 TEST(invoke, callback_not_called_if_send_throws)
 {
     bool handshakeReceived = false;
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); },
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); },
         /* send function */[handshakeReceived](const std::string&, std::function<void(std::exception_ptr)> callback) mutable
         {
             if (handshakeReceived)
@@ -931,7 +924,7 @@ TEST(receive, logs_if_callback_for_given_id_not_found)
         {
             "{ }\x1e",
             "{ \"type\": 3, \"invocationId\": \"0\" }\x1e",
-            "{}"
+            "{\"type\":6}\x1e"
         };
 
         handshake_sent->wait();
@@ -1027,8 +1020,9 @@ TEST(invoke_void, invoke_creates_runtime_error)
 
 TEST(connection_id, can_get_connection_id)
 {
+    int number = 0;
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); });
+        /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
     auto hub_connection = create_hub_connection(websocket_client);
 
     ASSERT_EQ("", hub_connection->get_connection_id());
@@ -1088,8 +1082,9 @@ TEST(on, cannot_register_handler_if_connection_not_in_disconnected_state)
 {
     try
     {
+        int number = 0;
         auto websocket_client = create_test_websocket_client(
-            /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{ }\x1e", nullptr); });
+            /* receive function */ [&number](std::function<void(std::string, std::exception_ptr)> callback) { default_receive_func(number, callback); });
         auto hub_connection = create_hub_connection(websocket_client);
 
         auto mre = manual_reset_event<void>();

@@ -3,84 +3,12 @@
 
 #include "stdafx.h"
 #include "json_hub_protocol.h"
-#include <cpprest\json.h>
+#include "message_type.h"
+#include "json_helpers.h"
+#include "signalrclient/signalr_exception.h"
 
 namespace signalr
 {
-    signalr::value createValue(const web::json::value& v)
-    {
-        switch (v.type())
-        {
-        case web::json::value::Boolean:
-            return signalr::value(v.as_bool());
-        case web::json::value::Number:
-            return signalr::value(v.as_double());
-        case web::json::value::String:
-            return signalr::value(utility::conversions::to_utf8string(v.as_string()));
-        case web::json::value::Array:
-        {
-            auto& array = v.as_array();
-            std::vector<signalr::value> vec;
-            for (auto& val : array)
-            {
-                vec.push_back(createValue(val));
-            }
-            return signalr::value(std::move(vec));
-        }
-        case web::json::value::Object:
-        {
-            auto& obj = v.as_object();
-            std::map<std::string, signalr::value> map;
-            for (auto& val : obj)
-            {
-                map.insert({ utility::conversions::to_utf8string(val.first), createValue(val.second) });
-            }
-            return signalr::value(std::move(map));
-        }
-        case web::json::value::Null:
-        default:
-            return signalr::value();
-        }
-    }
-
-    web::json::value createJson(const signalr::value& v)
-    {
-        switch (v.type())
-        {
-        case signalr::value_type::boolean:
-            return web::json::value(v.as_bool());
-        case signalr::value_type::float64:
-            return web::json::value(v.as_double());
-        case signalr::value_type::string:
-            return web::json::value(utility::conversions::to_string_t(v.as_string()));
-        case signalr::value_type::array:
-        {
-            const auto& array = v.as_array();
-            auto vec = std::vector<web::json::value>();
-            for (auto& val : array)
-            {
-                vec.push_back(createJson(val));
-            }
-            return web::json::value::array(vec);
-        }
-        case signalr::value_type::map:
-        {
-            const auto& obj = v.as_map();
-            auto o = web::json::value::object();
-            for (auto& val : obj)
-            {
-                o[utility::conversions::to_string_t(val.first)] = createJson(val.second);
-            }
-            return o;
-        }
-        case signalr::value_type::null:
-        default:
-            return web::json::value::null();
-        }
-    }
-
-    static constexpr char record_separator = '\x1e';
-
     std::string signalr::json_hub_protocol::write_message(const signalr::value& hub_message) const
     {
         return utility::conversions::to_utf8string(createJson(hub_message).serialize()) + record_separator;
@@ -93,13 +21,58 @@ namespace signalr
         auto pos = message.find(record_separator, offset);
         while (pos != std::string::npos)
         {
-            auto result = web::json::value::parse(utility::conversions::to_string_t(message.substr(offset, pos - offset)));
-            vec.push_back(std::move(createValue(result)));
+            auto hub_message = parse_message(message.substr(offset, pos - offset));
+            vec.push_back(std::move(hub_message));
+
             offset = pos + 1;
             pos = message.find(record_separator, offset);
         }
         // if offset < message.size()
         // log or close connection because we got an incomplete message
         return vec;
+    }
+
+    signalr::value json_hub_protocol::parse_message(const std::string& message) const
+    {
+        auto result = web::json::value::parse(utility::conversions::to_string_t(message));
+        auto value = createValue(result);
+
+        if (!value.is_map())
+        {
+            throw signalr_exception("Message was not a 'map' type");
+        }
+
+        const auto& obj = value.as_map();
+
+        auto found = obj.find("type");
+        if (found == obj.end())
+        {
+            throw signalr_exception("Field 'type' not found");
+        }
+
+        switch ((int)found->second.as_double())
+        {
+        case message_type::invocation:
+        {
+            found = obj.find("target");
+            if (found == obj.end())
+            {
+                throw signalr_exception("Field 'target' not found for 'invocation' message");
+            }
+            found = obj.find("arguments");
+            if (found == obj.end())
+            {
+                throw signalr_exception("Field 'arguments' not found for 'invocation' message");
+            }
+
+            break;
+        }
+        default:
+            // Future protocol changes can add message types, old clients can ignore them
+            // TODO: null
+            break;
+        }
+
+        return std::move(value);
     }
 }
