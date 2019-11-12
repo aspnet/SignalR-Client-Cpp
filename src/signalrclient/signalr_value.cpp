@@ -75,6 +75,11 @@ namespace signalr
         new (&mStorage.string) std::string(std::move(val));
     }
 
+    value::value(const char* val) : mType(value_type::string)
+    {
+        new (&mStorage.string) std::string(val);
+    }
+
     value::value(const std::vector<value>& val) : mType(value_type::array)
     {
         new (&mStorage.array) std::vector<value>(val);

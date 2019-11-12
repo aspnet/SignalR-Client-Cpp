@@ -367,7 +367,7 @@ namespace signalr
     {
         auto map = std::map<std::string, signalr::value>
         {
-            { "type", signalr::value(MessageType::Invocation) },
+            { "type", signalr::value((double)MessageType::Invocation) },
             { "target", signalr::value(method_name) },
             { "arguments", arguments }
         };

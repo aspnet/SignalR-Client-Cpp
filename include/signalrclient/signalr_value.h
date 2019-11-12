@@ -58,11 +58,10 @@ namespace signalr
          */
         value(std::string&& val);
 
-
-        value(const char* val) : mType(value_type::string)
-        {
-            new (&mStorage.str) std::string(val);
-        }
+        /**
+         * Create an object representing a value_type::string with the given string value.
+         */
+        value(const char* val);
 
         /**
          * Create an object representing a value_type::array with the given vector of value's.
