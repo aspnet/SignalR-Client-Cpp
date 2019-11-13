@@ -141,7 +141,7 @@ namespace signalr
                     return;
                 }
 
-                auto handshake_request = write_handshake(connection->m_protocol);
+                auto handshake_request = handshake::write_handshake(connection->m_protocol);
 
                 connection->m_connection->send(handshake_request, [weak_connection, callback](std::exception_ptr exception)
                 {
@@ -189,7 +189,7 @@ namespace signalr
             if (!m_handshakeReceived)
             {
                 signalr::value handshake;
-                std::tie(response, handshake) = parse_handshake(response);
+                std::tie(response, handshake) = handshake::parse_handshake(response);
 
                 auto obj = handshake.as_map();
                 auto found = obj.find("error");
