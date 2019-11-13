@@ -5,7 +5,6 @@
 
 namespace signalr
 {
-
     enum message_type
     {
         invocation = 1,

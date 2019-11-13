@@ -409,6 +409,48 @@ TEST(hub_invocation, hub_connection_invokes_users_code_on_hub_invocations)
     ASSERT_EQ(1, array[1].as_double());
 }
 
+TEST(hub_invocation, hub_connection_can_receive_handshake_and_message_in_same_payload)
+{
+    int call_number = -1;
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [call_number](std::function<void(std::string, std::exception_ptr)> callback)
+        mutable {
+            std::string responses[]
+            {
+                "{ }\x1e{ \"type\": 1, \"target\": \"BROADcast\", \"arguments\": [ \"message\", 1 ] }\x1e",
+                "{\"type\":6}\x1e"
+            };
+
+            call_number = std::min(call_number + 1, 1);
+
+            callback(responses[call_number], nullptr);
+        });
+
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto payload = std::make_shared<signalr::value>();
+    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    hub_connection->on("broadCAST", [on_broadcast_event, payload](const signalr::value& message)
+        {
+            *payload = message;
+            on_broadcast_event->cancel();
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+    ASSERT_FALSE(on_broadcast_event->wait(5000));
+
+    auto array = payload->as_array();
+    ASSERT_EQ(2, array.size());
+    ASSERT_EQ("message", array[0].as_string());
+    ASSERT_EQ(1, array[1].as_double());
+}
+
 TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
 {
     int call_number = -1;

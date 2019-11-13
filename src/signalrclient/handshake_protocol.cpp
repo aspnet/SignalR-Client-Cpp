@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "handshake_protocol.h"
 #include "json_helpers.h"
-#include "signalrclient/signalr_exception.h""
+#include "signalrclient/signalr_exception.h"
 
 namespace signalr
 {

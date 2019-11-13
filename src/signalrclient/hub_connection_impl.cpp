@@ -212,7 +212,6 @@ namespace signalr
                     m_handshakeReceived = true;
                     m_handshakeTask->set();
 
-                    // TODO: Add test, this should handle messages in the same payload as the handshake now
                     if (response.size() == 0)
                     {
                         return;
