@@ -285,6 +285,9 @@ namespace signalr
                 .append(e.what())
                 .append(". response: ")
                 .append(response));
+
+            // TODO: Consider passing "reason" exception to stop
+            m_connection->stop([](std::exception_ptr) {});
         }
     }
 

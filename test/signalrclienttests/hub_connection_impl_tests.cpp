@@ -161,6 +161,31 @@ TEST(start, start_fails_for_handshake_response_with_error)
     ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
+TEST(start, start_fails_for_incomplete_handshake_response)
+{
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("{}", nullptr); });
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception & ex)
+    {
+        ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
+    }
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+}
+
 TEST(start, start_fails_if_stop_called_before_handshake_response)
 {
     pplx::task_completion_event<std::string> tce;
@@ -451,7 +476,7 @@ TEST(hub_invocation, hub_connection_can_receive_handshake_and_message_in_same_pa
     ASSERT_EQ(1, array[1].as_double());
 }
 
-TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
+TEST(hub_invocation, hub_connection_closes_when_response_missing_arguments)
 {
     int call_number = -1;
     auto websocket_client = create_test_websocket_client(
@@ -460,10 +485,7 @@ TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
             std::string responses[]
             {
                 "{ }\x1e",
-                "{ \"type\": 1, \"target\": \"broadcast\" }\x1e",
-                "{ \"type\": 1, \"arguments\": [] }\x1e",
-                "{ \"type\": 1, \"target\": \"broadcast\", \"arguments\": [] }\x1e",
-                "{ \"type\": 3 }\x1e",
+                "{ \"type\": 1, \"target\": \"broadcast\" }\x1e"
             };
 
             call_number = std::min(call_number + 1, 3);
@@ -482,6 +504,12 @@ TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
             on_broadcast_event->cancel();
         });
 
+    auto on_closed_event = std::make_shared<cancellation_token>();
+    hub_connection->set_disconnected([on_closed_event]()
+        {
+            on_closed_event->cancel();
+        });
+
     auto mre = manual_reset_event<void>();
     hub_connection->start([&mre](std::exception_ptr exception)
         {
@@ -489,18 +517,62 @@ TEST(hub_invocation, hub_connection_throws_when_missing_arguments_or_target)
         });
 
     mre.get();
-    ASSERT_FALSE(on_broadcast_event->wait(5000));
-
-    auto array = payload->as_array();
-    ASSERT_EQ(0, array.size());
+    ASSERT_FALSE(on_closed_event->wait(5000));
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_TRUE(log_entries.size() == 2);
+    ASSERT_TRUE(log_entries.size() == 1);
 
     auto entry = remove_date_from_log_entry(log_entries[0]);
     ASSERT_EQ("[error       ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", entry) << dump_vector(log_entries);
+}
 
-    entry = remove_date_from_log_entry(log_entries[1]);
+TEST(hub_invocation, hub_connection_closes_when_response_missing_target)
+{
+    int call_number = -1;
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [call_number](std::function<void(std::string, std::exception_ptr)> callback)
+        mutable {
+            std::string responses[]
+            {
+                "{ }\x1e",
+                "{ \"type\": 1, \"arguments\": [] }\x1e"
+            };
+
+            call_number = std::min(call_number + 1, 3);
+
+            callback(responses[call_number], nullptr);
+        });
+
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::errors);
+
+    auto payload = std::make_shared<signalr::value>();
+    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    hub_connection->on("broadcast", [on_broadcast_event, payload](const signalr::value& message)
+        {
+            *payload = message;
+            on_broadcast_event->cancel();
+        });
+
+    auto on_closed_event = std::make_shared<cancellation_token>();
+    hub_connection->set_disconnected([on_closed_event]()
+        {
+            on_closed_event->cancel();
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+    ASSERT_FALSE(on_closed_event->wait(5000));
+
+    auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
+    ASSERT_TRUE(log_entries.size() == 1);
+
+    auto entry = remove_date_from_log_entry(log_entries[0]);
     ASSERT_EQ("[error       ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", entry) << dump_vector(log_entries);
 }
 

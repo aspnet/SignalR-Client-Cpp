@@ -25,7 +25,7 @@ namespace signalr
             auto pos = response.find(record_separator);
             if (pos == std::string::npos)
             {
-                throw signalr_exception("incomplete or invalid message received");
+                throw signalr_exception("incomplete message received");
             }
             auto message = response.substr(0, pos);
             auto result = web::json::value::parse(utility::conversions::to_string_t(message));

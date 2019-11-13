@@ -41,7 +41,7 @@ TEST(handshake, throws_for_incomplete_message)
     }
     catch (const signalr_exception& ex)
     {
-        ASSERT_STREQ("incomplete or invalid message received", ex.what());
+        ASSERT_STREQ("incomplete message received", ex.what());
     }
 }
 
