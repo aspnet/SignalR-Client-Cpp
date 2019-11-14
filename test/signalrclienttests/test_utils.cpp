@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include "test_utils.h"
-#include "test_websocket_client.h"
 #include "test_http_client.h"
 
 using namespace signalr;
@@ -15,20 +14,6 @@ std::string remove_date_from_log_entry(const std::string &log_entry)
 
     // date is followed by a whitespace hence +1
     return log_entry.substr(date_end_index + 1);
-}
-
-std::shared_ptr<websocket_client> create_test_websocket_client(std::function<void(std::function<void(std::string, std::exception_ptr)>)> receive_function,
-    std::function<void(const std::string& msg, std::function<void(std::exception_ptr)>)> send_function,
-    std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function,
-    std::function<void(std::function<void(std::exception_ptr)>)> close_function)
-{
-    auto websocket_client = std::make_shared<test_websocket_client>();
-    websocket_client->set_receive_function(receive_function);
-    websocket_client->set_send_function(send_function);
-    websocket_client->set_connect_function(connect_function);
-    websocket_client->set_close_function(close_function);
-
-    return websocket_client;
 }
 
 std::unique_ptr<http_client> create_test_http_client()

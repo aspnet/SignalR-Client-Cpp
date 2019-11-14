@@ -10,12 +10,6 @@
 
 std::string remove_date_from_log_entry(const std::string &log_entry);
 
-std::shared_ptr<signalr::websocket_client> create_test_websocket_client(
-    std::function<void(std::function<void(std::string, std::exception_ptr)>)> receive_function = [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", nullptr); },
-    std::function<void(const std::string& msg, std::function<void(std::exception_ptr)>)> send_function = [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
-    std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function = [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
-    std::function<void(std::function<void(std::exception_ptr)>)> close_function = [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); });
-
 std::unique_ptr<signalr::http_client> create_test_http_client();
 std::string create_uri();
 std::string create_uri(const std::string& query_string);
