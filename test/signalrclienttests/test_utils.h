@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "cpprest/details/basic_types.h"
 #include "signalrclient/websocket_client.h"
 #include "signalrclient/http_client.h"
 #include <future>

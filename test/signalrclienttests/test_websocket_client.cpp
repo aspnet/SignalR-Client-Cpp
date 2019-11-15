@@ -36,7 +36,14 @@ test_websocket_client::~test_websocket_client()
         if (!m_stopped)
         {
             m_stopped = true;
-            m_receive_message_event.set(false);
+
+            try
+            {
+                m_receive_message_event.set(false);
+            }
+            // we don't care if someone already set the promise
+            // we're just trying to end the receive loop
+            catch (std::future_error) {}
         }
 
         m_receive_loop_not_running.wait(1000);
@@ -68,7 +75,14 @@ void test_websocket_client::stop(std::function<void(std::exception_ptr)> callbac
         if (!m_stopped)
         {
             m_stopped = true;
-            m_receive_message_event.set(false);
+
+            try
+            {
+                m_receive_message_event.set(false);
+            }
+            // we don't care if someone already set the promise
+            // we're just trying to end the receive loop
+            catch (std::future_error) {}
         }
 
         m_receive_loop_not_running.wait(1000);
