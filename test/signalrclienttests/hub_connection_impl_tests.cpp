@@ -446,7 +446,48 @@ TEST(hub_invocation, hub_connection_can_receive_handshake_and_message_in_same_pa
     ASSERT_EQ(1, array[1].as_double());
 }
 
-TEST(hub_invocation, hub_connection_closes_when_response_missing_arguments)
+TEST(hub_invocation, hub_connection_can_receive_multiple_messages_in_same_payload)
+{
+    auto websocket_client = create_test_websocket_client();
+
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto payload = std::make_shared<signalr::value>();
+    int count = 0;
+    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    hub_connection->on("broadCAST", [&count, on_broadcast_event, payload](const signalr::value& message)
+        {
+            ++count;
+            *payload = message;
+            if (count == 2)
+            {
+                on_broadcast_event->cancel();
+            }
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+    websocket_client->receive_message("{ \"type\": 1, \"target\": \"BROADcast\", \"arguments\": [ \"message\", 1 ] }\x1e{ \"type\": 1, \"target\": \"BROADcast\", \"arguments\": [ \"message\", 1 ] }\x1e");
+
+    mre.get();
+    ASSERT_FALSE(on_broadcast_event->wait(5000));
+
+    auto array = payload->as_array();
+    ASSERT_EQ(2, array.size());
+    ASSERT_EQ("message", array[0].as_string());
+    ASSERT_EQ(1, array[1].as_double());
+
+    ASSERT_EQ(2, count);
+}
+
+TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_arguments)
 {
     auto websocket_client = create_test_websocket_client();
 
@@ -481,7 +522,7 @@ TEST(hub_invocation, hub_connection_closes_when_response_missing_arguments)
     ASSERT_EQ("[error       ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", entry) << dump_vector(log_entries);
 }
 
-TEST(hub_invocation, hub_connection_closes_when_response_missing_target)
+TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_target)
 {
     auto websocket_client = create_test_websocket_client();
 
@@ -761,17 +802,6 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
 
     ASSERT_TRUE(result.is_string());
     ASSERT_EQ("abc", result.as_string());
-}
-
-TEST(temporary, test_memory)
-{
-    for (int i = 0; i < 1000; ++i)
-    {
-        auto s = signalr::value(std::map<std::string, signalr::value>());
-        auto s2 = signalr::value(std::string());
-        auto s3 = signalr::value(std::vector<signalr::value>());
-        auto s4 = std::move(s3);
-    }
 }
 
 TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
