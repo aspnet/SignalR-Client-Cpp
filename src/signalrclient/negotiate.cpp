@@ -10,14 +10,17 @@ namespace signalr
 {
     namespace negotiate
     {
+        const int negotiate_version = 1;
+
         void negotiate(http_client& client, const std::string& base_url,
             const signalr_client_config& config,
-            std::function<void(const negotiation_response&, std::exception_ptr)> callback) noexcept
+            std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept
         {
             std::string negotiate_url;
             try
             {
                 negotiate_url = url_builder::build_negotiate(base_url);
+                negotiate_url = url_builder::add_query_string(negotiate_url, "negotiateVersion=" + std::to_string(negotiate_version));
             }
             catch (...)
             {
@@ -58,13 +61,29 @@ namespace signalr
                     if (negotiation_response_json.has_field(_XPLATSTR("error")))
                     {
                         response.error = utility::conversions::to_utf8string(negotiation_response_json[_XPLATSTR("error")].as_string());
-                        callback(response, nullptr);
+                        callback(std::move(response), nullptr);
                         return;
+                    }
+
+                    int server_negotiate_version = 0;
+                    if (negotiation_response_json.has_field(_XPLATSTR("negotiateVersion")))
+                    {
+                        server_negotiate_version = negotiation_response_json[_XPLATSTR("negotiateVersion")].as_integer();
                     }
 
                     if (negotiation_response_json.has_field(_XPLATSTR("connectionId")))
                     {
                         response.connectionId = utility::conversions::to_utf8string(negotiation_response_json[_XPLATSTR("connectionId")].as_string());
+                    }
+
+                    if (negotiation_response_json.has_field(_XPLATSTR("connectionToken")))
+                    {
+                        response.connectionToken = utility::conversions::to_utf8string(negotiation_response_json[_XPLATSTR("connectionToken")].as_string());
+                    }
+
+                    if (server_negotiate_version == 0)
+                    {
+                        response.connectionToken = response.connectionId;
                     }
 
                     if (negotiation_response_json.has_field(_XPLATSTR("availableTransports")))
@@ -100,7 +119,7 @@ namespace signalr
                         return;
                     }
 
-                    callback(response, nullptr);
+                    callback(std::move(response), nullptr);
                 }
                 catch (...)
                 {

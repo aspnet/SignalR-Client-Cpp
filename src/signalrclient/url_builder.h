@@ -11,5 +11,6 @@ namespace signalr
     {
         std::string build_negotiate(const std::string& base_url);
         std::string build_connect(const std::string& base_url, transport_type transport, const std::string& query_string);
+        std::string add_query_string(const std::string& base_url, const std::string& query_string);
     }
 }

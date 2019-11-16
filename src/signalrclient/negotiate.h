@@ -13,6 +13,6 @@ namespace signalr
     {
         void negotiate(http_client& client, const std::string& base_url,
             const signalr_client_config& signalr_client_config,
-            std::function<void(const negotiation_response&, std::exception_ptr)> callback) noexcept;
+            std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept;
     }
 }

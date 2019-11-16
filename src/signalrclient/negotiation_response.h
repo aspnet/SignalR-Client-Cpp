@@ -14,6 +14,7 @@ namespace signalr
     struct negotiation_response
     {
         std::string connectionId;
+        std::string connectionToken;
         std::vector<available_transport> availableTransports;
         std::string url;
         std::string accessToken;
