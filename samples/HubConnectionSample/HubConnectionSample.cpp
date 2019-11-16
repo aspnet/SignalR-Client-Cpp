@@ -6,23 +6,24 @@
 #include "hub_connection.h"
 #include "log_writer.h"
 #include <future>
+#include "signalr_value.h"
 
 class logger : public signalr::log_writer
 {
     // Inherited via log_writer
     virtual void __cdecl write(const std::string & entry) override
     {
-        //std::cout << utility::conversions::to_utf8string(entry) << std::endl;
+        std::cout << entry << std::endl;
     }
 };
 
 void send_message(signalr::hub_connection& connection, const std::string& message)
 {
-    web::json::value args{};
-    args[0] = web::json::value(utility::conversions::to_string_t(message));
+    std::vector<signalr::value> arr { std::string("c++"), message };
+    signalr::value args(arr);
 
     // if you get an internal compiler error uncomment the lambda below or install VS Update 4
-    connection.invoke("Send", args, [](const web::json::value& value, std::exception_ptr exception)
+    connection.invoke("Send", args, [](const signalr::value& value, std::exception_ptr exception)
     {
         try
         {
@@ -31,11 +32,18 @@ void send_message(signalr::hub_connection& connection, const std::string& messag
                 std::rethrow_exception(exception);
             }
 
-            ucout << U("Received: ") << value.serialize() << std::endl;
+            if (value.is_string())
+            {
+                std::cout << "Received: " << value.as_string() << std::endl;
+            }
+            else
+            {
+                std::cout << "hub method invocation has completed" << std::endl;
+            }
         }
         catch (const std::exception &e)
         {
-            ucout << U("Error while sending data: ") << e.what() << std::endl;
+            std::cout << "Error while sending data: " << e.what() << std::endl;
         }
     });
 }
@@ -43,9 +51,9 @@ void send_message(signalr::hub_connection& connection, const std::string& messag
 void chat()
 {
     signalr::hub_connection connection("http://localhost:5000/default", signalr::trace_level::all, std::make_shared<logger>());
-    connection.on("Send", [](const web::json::value & m)
+    connection.on("Send", [](const signalr::value & m)
     {
-        ucout << std::endl << m.at(0).as_string() << /*U(" wrote:") << m.at(1).as_string() <<*/ std::endl << U("Enter your message: ");
+        std::cout << std::endl << m.as_array()[0].as_string() << std::endl << "Enter your message: ";
     });
 
     std::promise<void> task;
@@ -59,13 +67,13 @@ void chat()
             }
             catch (const std::exception & ex)
             {
-                ucout << U("exception when starting connection: ") << ex.what() << std::endl;
+                std::cout << "exception when starting connection: " << ex.what() << std::endl;
             }
             task.set_value();
             return;
         }
 
-        ucout << U("Enter your message:");
+        std::cout << "Enter your message:";
         for (;;)
         {
             std::string message;
@@ -88,11 +96,11 @@ void chat()
                     std::rethrow_exception(exception);
                 }
 
-                ucout << U("connection stopped successfully") << std::endl;
+                std::cout << "connection stopped successfully" << std::endl;
             }
             catch (const std::exception & e)
             {
-                ucout << U("exception when stopping connection: ") << e.what() << std::endl;
+                std::cout << "exception when stopping connection: " << e.what() << std::endl;
             }
 
             task.set_value();
