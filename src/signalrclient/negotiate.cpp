@@ -81,7 +81,7 @@ namespace signalr
                         response.connectionToken = utility::conversions::to_utf8string(negotiation_response_json[_XPLATSTR("connectionToken")].as_string());
                     }
 
-                    if (server_negotiate_version == 0)
+                    if (server_negotiate_version <= 0)
                     {
                         response.connectionToken = response.connectionId;
                     }
