@@ -49,7 +49,7 @@ TEST(url, negotiate_appended_to_url)
         }
         catch (const std::exception&) {}
 
-        ASSERT_EQ("http://fakeuri/negotiate", requested_url);
+        ASSERT_EQ("http://fakeuri/negotiate?negotiateVersion=1", requested_url);
     }
 }
 

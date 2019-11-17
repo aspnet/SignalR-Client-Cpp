@@ -1,6 +1,6 @@
 
 
-set (SOURCES 
+set (SOURCES
   callback_manager_tests.cpp
   case_insensitive_comparison_utils_tests.cpp
   connection_impl_tests.cpp
@@ -8,6 +8,7 @@ set (SOURCES
   hub_exception_tests.cpp
   logger_tests.cpp
   memory_log_writer.cpp
+  negotiate_tests.cpp
   signalrclienttests.cpp
   stdafx.cpp
   test_http_client.cpp
@@ -20,7 +21,7 @@ set (SOURCES
 
 include_directories(
     ../../src/signalrclient)
- 
+
 add_executable (signalrclienttests ${SOURCES})
 
 target_link_libraries(signalrclienttests gtest signalrclient ${CPPREST_LIB})
