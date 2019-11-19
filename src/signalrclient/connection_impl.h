@@ -61,6 +61,7 @@ namespace signalr
         std::mutex m_stop_lock;
         cancellation_token m_start_completed_event;
         std::string m_connection_id;
+        std::string m_connection_token;
         std::unique_ptr<http_client> m_http_client;
 
         connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,

@@ -136,7 +136,7 @@ namespace signalr
         const auto& token = m_disconnect_cts;
 
         negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
-            [callback, weak_connection, redirect_count, token, url](const negotiation_response& response, std::exception_ptr exception)
+            [callback, weak_connection, redirect_count, token, url](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -182,6 +182,7 @@ namespace signalr
                 }
 
                 connection->m_connection_id = std::move(response.connectionId);
+                connection->m_connection_token = std::move(response.connectionToken);
 
                 // TODO: fallback logic
 
@@ -407,7 +408,7 @@ namespace signalr
     void connection_impl::send_connect_request(const std::shared_ptr<transport>& transport, const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         auto logger = m_logger;
-        auto query_string = "id=" + m_connection_id;
+        auto query_string = "id=" + m_connection_token;
         auto connect_url = url_builder::build_connect(url, transport->get_transport_type(), query_string);
 
         transport->start(connect_url, transfer_format::text, [callback, logger](std::exception_ptr exception)

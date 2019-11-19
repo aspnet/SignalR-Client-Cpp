@@ -49,5 +49,11 @@ namespace signalr
             auto builder = build_uri(base_url, "", query_string);
             return convert_to_websocket_url(builder, transport).to_string();
         }
+
+        std::string add_query_string(const std::string& base_url, const std::string& query_string)
+        {
+            uri_builder builder(base_url);
+            return builder.append_query(query_string).to_string();
+        }
     }
 }

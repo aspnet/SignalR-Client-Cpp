@@ -891,6 +891,92 @@ TEST(connection_impl_start, negotiate_redirect_uses_own_query_string)
     ASSERT_EQ("customQuery=1&id=f7707523-307d-4cba-9abf-3eef701241e8", query_string);
 }
 
+TEST(connection_impl_start, negotiate_with_negotiateVersion_uses_connectionToken)
+{
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    std::string query_string;
+
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+        /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+        /* connect function */[&query_string](const std::string& url, std::function<void(std::exception_ptr)> callback)
+        {
+            query_string = url.substr(url.find('?') + 1);
+            callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
+        });
+
+    auto http_client = std::make_unique<test_http_client>([](const std::string& url, http_request)
+        {
+            std::string response_body = "";
+            if (url.find("/negotiate") != std::string::npos)
+            {
+                response_body = "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                    "\"connectionToken\":\"1122334455\", \"negotiateVersion\": 1, "
+                    "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }";
+            }
+
+            return http_response{ 200, response_body };
+        });
+
+    auto connection = connection_impl::create(create_uri(), trace_level::errors, writer, std::move(http_client), std::make_unique<test_transport_factory>(websocket_client));
+
+    auto mre = manual_reset_event<void>();
+    connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::runtime_error & ex)
+    {
+        ASSERT_STREQ("connecting failed", ex.what());
+    }
+
+    ASSERT_EQ("id=1122334455", query_string);
+}
+
+TEST(connection_impl_start, correct_connection_id_returned_with_negotiateVersion_one)
+{
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+
+    auto websocket_client = create_test_websocket_client(
+        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+        /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+        /* connect function */[](const std::string& url, std::function<void(std::exception_ptr)> callback)
+        {
+            callback(nullptr);
+        });
+
+    auto http_client = std::make_unique<test_http_client>([](const std::string& url, http_request)
+        {
+            std::string response_body = "";
+            if (url.find("/negotiate") != std::string::npos)
+            {
+                response_body = "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                    "\"connectionToken\":\"1122334455\", \"negotiateVersion\": 1, "
+                    "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }";
+            }
+
+            return http_response{ 200, response_body };
+        });
+
+    auto connection = connection_impl::create(create_uri(), trace_level::errors, writer, std::move(http_client), std::make_unique<test_transport_factory>(websocket_client));
+
+    auto mre = manual_reset_event<void>();
+    connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+
+    ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", connection->get_connection_id());
+}
+
 TEST(connection_impl_start, start_fails_if_connect_request_times_out)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
