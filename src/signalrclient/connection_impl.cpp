@@ -311,6 +311,17 @@ namespace signalr
         auto transport = connection->m_transport_factory->create_transport(
             transport_type::websockets, connection->m_logger, connection->m_signalr_client_config);
 
+        transport->on_close([weak_connection](std::exception_ptr exception)
+            {
+                auto connection = weak_connection.lock();
+                if (!connection)
+                {
+                    return;
+                }
+
+                connection->stop_connection(exception);
+            });
+
         transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
             {
                 if (exception == nullptr)
@@ -535,46 +546,52 @@ namespace signalr
         auto connection = shared_from_this();
         shutdown([connection, callback](std::exception_ptr exception)
             {
-                std::thread([connection, callback, exception]()
-                    {
-                        if (exception != nullptr)
-                        {
-                            callback(exception);
-                            return;
-                        }
+                callback(exception);
+                //std::thread([connection, callback, exception]()
+                //    {
+                //        if (exception != nullptr)
+                //        {
+                //            callback(exception);
+                //            return;
+                //        }
 
-                        {
-                            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
-                            // on a different thread at the same time. In this case we must not null out the transport if we are
-                            // not in the `disconnecting` state to not affect the 'start' invocation.
-                            std::lock_guard<std::mutex> lock(connection->m_stop_lock);
-                            if (connection->change_state(connection_state::disconnecting, connection_state::disconnected))
-                            {
-                                // we do let the exception through (especially the task_canceled exception)
-                                connection->m_transport = nullptr;
-                            }
-                        }
+                //        if (connection->m_transport)
+                //        {
+                //            connection->stop_connection(exception);
+                //        }
 
-                        try
-                        {
-                            connection->m_disconnected();
-                        }
-                        catch (const std::exception& e)
-                        {
-                            connection->m_logger.log(
-                                trace_level::errors,
-                                std::string("disconnected callback threw an exception: ")
-                                .append(e.what()));
-                        }
-                        catch (...)
-                        {
-                            connection->m_logger.log(
-                                trace_level::errors,
-                                std::string("disconnected callback threw an unknown exception"));
-                        }
+                //        {
+                //            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
+                //            // on a different thread at the same time. In this case we must not null out the transport if we are
+                //            // not in the `disconnecting` state to not affect the 'start' invocation.
+                //            std::lock_guard<std::mutex> lock(connection->m_stop_lock);
+                //            if (connection->change_state(connection_state::disconnecting, connection_state::disconnected))
+                //            {
+                //                // we do let the exception through (especially the task_canceled exception)
+                //                connection->m_transport = nullptr;
+                //            }
+                //        }
 
-                        callback(nullptr);
-                    }).detach();
+                //        try
+                //        {
+                //            connection->m_disconnected();
+                //        }
+                //        catch (const std::exception& e)
+                //        {
+                //            connection->m_logger.log(
+                //                trace_level::errors,
+                //                std::string("disconnected callback threw an exception: ")
+                //                .append(e.what()));
+                //        }
+                //        catch (...)
+                //        {
+                //            connection->m_logger.log(
+                //                trace_level::errors,
+                //                std::string("disconnected callback threw an unknown exception"));
+                //        }
+
+                //        callback(nullptr);
+                //    }).detach();
             });
     }
 
@@ -623,10 +640,78 @@ namespace signalr
             change_state(connection_state::disconnecting);
         }
 
-        m_transport->stop([callback](std::exception_ptr exception)
+        if (m_transport)
+        {
+            m_transport->stop([callback](std::exception_ptr exception)
+                {
+                    callback(exception);
+                });
+        }
+        else
+        {
+            stop_connection(nullptr);
+        }
+    }
+
+    void connection_impl::stop_connection(std::exception_ptr error)
+    {
+        {
+            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
+            // on a different thread at the same time. In this case we must not null out the transport if we are
+            // not in the `disconnecting` state to not affect the 'start' invocation.
+            std::lock_guard<std::mutex> lock(m_stop_lock);
+
+            if (m_connection_state == connection_state::connecting)
             {
-                callback(exception);
-            });
+                // TODO
+                return;
+            }
+
+            if (m_connection_state == connection_state::disconnected)
+            {
+                // TODO: log
+                return;
+            }
+
+            if (m_connection_state == connection_state::disconnecting)
+            {
+                // TODO
+            }
+
+            change_state(connection_state::disconnected);
+            // we do let the exception through (especially the task_canceled exception)
+            m_transport = nullptr;
+        }
+
+        if (error)
+        {
+            try
+            {
+                std::rethrow_exception(error);
+            }
+            catch (const std::exception & ex)
+            {
+                m_logger.log(trace_level::errors, std::string("Connection closed with error: ").append(ex.what()));
+            }
+        }
+
+        try
+        {
+            m_disconnected();
+        }
+        catch (const std::exception & e)
+        {
+            m_logger.log(
+                trace_level::errors,
+                std::string("disconnected callback threw an exception: ")
+                .append(e.what()));
+        }
+        catch (...)
+        {
+            m_logger.log(
+                trace_level::errors,
+                std::string("disconnected callback threw an unknown exception"));
+        }
     }
 
     connection_state connection_impl::get_connection_state() const noexcept

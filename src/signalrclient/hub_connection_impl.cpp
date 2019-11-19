@@ -125,7 +125,7 @@ namespace signalr
                                 callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
                                 return;
                             }
-                            connection->m_handshakeTask->get();
+                            //connection->m_handshakeTask->get();
                         }
                         catch (...) {}
 
