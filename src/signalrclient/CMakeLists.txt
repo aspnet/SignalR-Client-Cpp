@@ -4,8 +4,11 @@ set (SOURCES
   connection_impl.cpp
   default_http_client.cpp
   default_websocket_client.cpp
+  handshake_protocol.cpp
   hub_connection.cpp
   hub_connection_impl.cpp
+  json_helpers.cpp
+  json_hub_protocol.cpp
   logger.cpp
   negotiate.cpp
   signalr_client_config.cpp

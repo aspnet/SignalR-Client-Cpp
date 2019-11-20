@@ -22,7 +22,7 @@ namespace signalr
 
         virtual void send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept = 0;
 
-        virtual void on_receive(std::function<void(const std::string&, std::exception_ptr)> callback) = 0;
+        virtual void on_receive(std::function<void(std::string&&, std::exception_ptr)> callback) = 0;
 
     protected:
         transport(const logger& logger);

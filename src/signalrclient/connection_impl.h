@@ -42,7 +42,7 @@ namespace signalr
         connection_state get_connection_state() const noexcept;
         std::string get_connection_id() const noexcept;
 
-        void set_message_received(const std::function<void(const std::string&)>& message_received);
+        void set_message_received(const std::function<void(std::string&&)>& message_received);
         void set_disconnected(const std::function<void()>& disconnected);
         void set_client_config(const signalr_client_config& config);
 
@@ -53,7 +53,7 @@ namespace signalr
         std::shared_ptr<transport> m_transport;
         std::unique_ptr<transport_factory> m_transport_factory;
 
-        std::function<void(const std::string&)> m_message_received;
+        std::function<void(std::string&&)> m_message_received;
         std::function<void()> m_disconnected;
         signalr_client_config m_signalr_client_config;
 
@@ -72,14 +72,14 @@ namespace signalr
             const std::string& url, std::function<void(std::exception_ptr)> callback);
         void start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback);
 
-        void process_response(const std::string& response);
+        void process_response(std::string&& response);
 
         void shutdown(std::function<void(std::exception_ptr)> callback);
 
         bool change_state(connection_state old_state, connection_state new_state);
         connection_state change_state(connection_state new_state);
         void handle_connection_state_change(connection_state old_state, connection_state new_state);
-        void invoke_message_received(const std::string& message);
+        void invoke_message_received(std::string&& message);
 
         static std::string translate_connection_state(connection_state state);
         void ensure_disconnected(const std::string& error_message) const;

@@ -283,7 +283,7 @@ namespace signalr
         auto transport = connection->m_transport_factory->create_transport(
             transport_type::websockets, connection->m_logger, connection->m_signalr_client_config);
 
-        transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](const std::string& message, std::exception_ptr exception)
+        transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
             {
                 if (exception == nullptr)
                 {
@@ -298,7 +298,7 @@ namespace signalr
                     auto connection = weak_connection.lock();
                     if (connection)
                     {
-                        connection->process_response(message);
+                        connection->process_response(std::move(message));
                     }
                 }
                 else
@@ -433,19 +433,19 @@ namespace signalr
             });
     }
 
-    void connection_impl::process_response(const std::string& response)
+    void connection_impl::process_response(std::string&& response)
     {
         m_logger.log(trace_level::messages,
             std::string("processing message: ").append(response));
 
-        invoke_message_received(response);
+        invoke_message_received(std::move(response));
     }
 
-    void connection_impl::invoke_message_received(const std::string& message)
+    void connection_impl::invoke_message_received(std::string&& message)
     {
         try
         {
-            m_message_received(message);
+            m_message_received(std::move(message));
         }
         catch (const std::exception &e)
         {
@@ -618,7 +618,7 @@ namespace signalr
         return m_connection_id;
     }
 
-    void connection_impl::set_message_received(const std::function<void(const std::string&)>& message_received)
+    void connection_impl::set_message_received(const std::function<void(std::string&&)>& message_received)
     {
         ensure_disconnected("cannot set the callback when the connection is not in the disconnected state. ");
         m_message_received = message_received;

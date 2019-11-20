@@ -15,19 +15,12 @@ using namespace signalr;
 TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
 {
     auto connect_called = false;
-    auto receive_called = std::make_shared<cancellation_token>();
     auto client = std::make_shared<test_websocket_client>();
 
     client->set_connect_function([&connect_called](const std::string&, std::function<void(std::exception_ptr)> callback)
     {
         connect_called = true;
         callback(nullptr);
-    });
-
-    client->set_receive_function([receive_called](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        receive_called->cancel();
-        callback("", nullptr);
     });
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
@@ -43,7 +36,7 @@ TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
     mre.get();
 
     ASSERT_TRUE(connect_called);
-    ASSERT_FALSE(receive_called->wait(5000));
+    ASSERT_FALSE(client->receive_loop_started.wait(5000));
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_FALSE(log_entries.empty());
@@ -83,7 +76,7 @@ TEST(websocket_transport_connect, connect_logs_exceptions)
     auto client = std::make_shared<test_websocket_client>();
     client->set_connect_function([](const std::string&, std::function<void(std::exception_ptr)> callback)
     {
-        callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+        callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
     });
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
@@ -307,30 +300,9 @@ TEST(websocket_transport_disconnect, receive_not_called_after_disconnect)
 {
     auto client = std::make_shared<test_websocket_client>();
 
-    pplx::task_completion_event<std::string> receive_task_tce;
-    pplx::task_completion_event<void> receive_task_started_tce;
-
-    // receive_task_tce is captured by reference since we assign it a new value after the first disconnect. This is
-    // safe here because we are blocking on disconnect and therefore we won't get into a state where we would be using
-    // an invalid reference because the tce went out of scope and was destroyed.
-    client->set_close_function([&receive_task_tce](std::function<void(std::exception_ptr)> callback)
+    client->set_close_function([](std::function<void(std::exception_ptr)> callback)
     {
-        // unblock receive
-        receive_task_tce.set(std::string(""));
         callback(nullptr);
-    });
-
-    int num_called = 0;
-    client->set_receive_function([&receive_task_tce, &receive_task_started_tce, &num_called](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        num_called++;
-        receive_task_started_tce.set();
-        pplx::create_task(receive_task_tce)
-            .then([callback](pplx::task<std::string> prev)
-        {
-            prev.get();
-            callback("", nullptr);
-        });
     });
 
     auto ws_transport = websocket_transport::create([&](){ return client; }, logger(std::make_shared<trace_log_writer>(), trace_level::none));
@@ -342,24 +314,20 @@ TEST(websocket_transport_disconnect, receive_not_called_after_disconnect)
     });
     mre.get();
 
-    pplx::create_task(receive_task_started_tce).get();
+    ASSERT_FALSE(client->receive_loop_started.wait(5000));
 
     ws_transport->stop([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
     mre.get();
-
-    receive_task_tce = pplx::task_completion_event<std::string>();
-    receive_task_started_tce = pplx::task_completion_event<void>();
 
     ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
     mre.get();
-
-    pplx::create_task(receive_task_started_tce).get();
+    ASSERT_FALSE(client->receive_loop_started.wait(5000));
 
     ws_transport->stop([&mre](std::exception_ptr exception)
     {
@@ -367,7 +335,7 @@ TEST(websocket_transport_disconnect, receive_not_called_after_disconnect)
     });
     mre.get();
 
-    ASSERT_EQ(2, num_called);
+    ASSERT_EQ(2, client->receive_count);
 }
 
 TEST(websocket_transport_disconnect, disconnect_is_no_op_if_transport_not_started)
@@ -394,58 +362,8 @@ TEST(websocket_transport_disconnect, disconnect_is_no_op_if_transport_not_starte
     ASSERT_FALSE(close_called);
 }
 
-TEST(websocket_transport_disconnect, exceptions_from_outstanding_receive_task_observed_after_websocket_transport_disconnected)
-{
-    auto client = std::make_shared<test_websocket_client>();
-
-    auto receive_event = std::make_shared<cancellation_token>();
-    client->set_receive_function([receive_event](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        pplx::create_task([receive_event, callback]()
-        {
-            receive_event->wait();
-            callback("", std::make_exception_ptr(std::runtime_error("exception from receive")));
-        });
-    });
-
-    auto ws_transport = websocket_transport::create([&](){ return client; }, logger(std::make_shared<trace_log_writer>(), trace_level::none));
-
-    auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
-    {
-        mre.set(exception);
-    });
-    mre.get();
-
-    ws_transport->stop([&mre](std::exception_ptr exception)
-    {
-        mre.set(exception);
-    });
-    mre.get();
-
-    // at this point the cancellation token that closes the receive loop is set to cancelled so
-    // we can unblock the the receive task which throws an exception that should be observed otwherwise the test will crash
-    receive_event->cancel();
-}
-
 template<typename T>
 void receive_loop_logs_exception_runner(const T& e, const std::string& expected_message, trace_level trace_level);
-
-TEST(websocket_transport_receive_loop, receive_loop_logs_websocket_exceptions)
-{
-    receive_loop_logs_exception_runner(
-        web::websockets::client::websocket_exception(_XPLATSTR("receive failed")),
-        "[error       ] [websocket transport] error receiving response from websocket: receive failed\n",
-        trace_level::errors);
-}
-
-TEST(websocket_transport_receive_loop, receive_loop_logs_if_receive_task_canceled)
-{
-    receive_loop_logs_exception_runner(
-        pplx::task_canceled("canceled"),
-        "[error       ] [websocket transport] error receiving response from websocket: canceled\n",
-        trace_level::errors);
-}
 
 TEST(websocket_transport_receive_loop, receive_loop_logs_std_exception)
 {
@@ -458,15 +376,7 @@ TEST(websocket_transport_receive_loop, receive_loop_logs_std_exception)
 template<typename T>
 void receive_loop_logs_exception_runner(const T& e, const std::string& expected_message, trace_level trace_level)
 {
-    cancellation_token receive_event;
     auto client = std::make_shared<test_websocket_client>();
-
-    client->set_receive_function([&receive_event, &e](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        callback("", std::make_exception_ptr(e));
-        receive_event.cancel();
-    });
-
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
     auto ws_transport = websocket_transport::create([&](){ return client; }, logger(writer, trace_level));
@@ -478,10 +388,25 @@ void receive_loop_logs_exception_runner(const T& e, const std::string& expected_
     });
     mre.get();
 
-    receive_event.wait();
+    ASSERT_FALSE(client->receive_loop_started.wait(5000));
 
-    // this is race'y but there is nothing we can block on
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    auto close_mre = manual_reset_event<void>();
+    ws_transport->on_close([&close_mre](std::exception_ptr exception)
+        {
+            close_mre.set(exception);
+        });
+
+    client->receive_message(std::make_exception_ptr(e));
+
+    try
+    {
+        close_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception & ex)
+    {
+        ASSERT_STREQ(e.what(), ex.what());
+    }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
 
@@ -493,10 +418,6 @@ void receive_loop_logs_exception_runner(const T& e, const std::string& expected_
 TEST(websocket_transport_receive_loop, process_response_callback_called_when_message_received)
 {
     auto client = std::make_shared<test_websocket_client>();
-    client->set_receive_function([](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        callback("msg", nullptr);
-    });
 
     auto process_response_event = std::make_shared<cancellation_token>();
     auto msg = std::make_shared<std::string>();
@@ -518,6 +439,8 @@ TEST(websocket_transport_receive_loop, process_response_callback_called_when_mes
     });
     mre.get();
 
+    client->receive_message("msg");
+
     process_response_event->wait(1000);
 
     ASSERT_EQ(std::string("msg"), *msg);
@@ -526,10 +449,6 @@ TEST(websocket_transport_receive_loop, process_response_callback_called_when_mes
 TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thrown)
 {
     auto client = std::make_shared<test_websocket_client>();
-    client->set_receive_function([](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        callback("", std::make_exception_ptr(std::runtime_error("error")));
-    });
 
     auto close_invoked = std::make_shared<bool>(false);
     client->set_close_function([close_invoked](std::function<void(std::exception_ptr)> callback)
@@ -563,6 +482,8 @@ TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thro
         mre.set(exception);
     });
     mre.get();
+
+    client->receive_message(std::make_exception_ptr(std::runtime_error("error")));
 
     error_event->wait(1000);
 
