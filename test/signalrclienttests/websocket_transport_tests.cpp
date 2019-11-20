@@ -362,41 +362,6 @@ TEST(websocket_transport_disconnect, disconnect_is_no_op_if_transport_not_starte
     ASSERT_FALSE(close_called);
 }
 
-// This is an odd test
-TEST(websocket_transport_disconnect, DISABLED_exceptions_from_outstanding_receive_task_observed_after_websocket_transport_disconnected)
-{
-    auto client = std::make_shared<test_websocket_client>();
-
-    auto receive_event = std::make_shared<cancellation_token>();
-    /*client->set_receive_function([receive_event](std::function<void(std::string, std::exception_ptr)> callback)
-    {
-        pplx::create_task([receive_event, callback]()
-        {
-            receive_event->wait();
-            callback("", std::make_exception_ptr(std::runtime_error("exception from receive")));
-        });
-    });*/
-
-    auto ws_transport = websocket_transport::create([&](){ return client; }, logger(std::make_shared<trace_log_writer>(), trace_level::none));
-
-    auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
-    {
-        mre.set(exception);
-    });
-    mre.get();
-
-    ws_transport->stop([&mre](std::exception_ptr exception)
-    {
-        mre.set(exception);
-    });
-    mre.get();
-
-    // at this point the cancellation token that closes the receive loop is set to cancelled so
-    // we can unblock the the receive task which throws an exception that should be observed otwherwise the test will crash
-    receive_event->cancel();
-}
-
 template<typename T>
 void receive_loop_logs_exception_runner(const T& e, const std::string& expected_message, trace_level trace_level);
 
@@ -425,10 +390,23 @@ void receive_loop_logs_exception_runner(const T& e, const std::string& expected_
 
     ASSERT_FALSE(client->receive_loop_started.wait(5000));
 
+    auto close_mre = manual_reset_event<void>();
+    ws_transport->on_close([&close_mre](std::exception_ptr exception)
+        {
+            close_mre.set(exception);
+        });
+
     client->receive_message(std::make_exception_ptr(e));
 
-    // this is race'y but there is nothing we can block on
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    try
+    {
+        close_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception & ex)
+    {
+        ASSERT_STREQ(e.what(), ex.what());
+    }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
 

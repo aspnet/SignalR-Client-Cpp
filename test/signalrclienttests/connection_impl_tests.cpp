@@ -845,7 +845,6 @@ TEST(connection_impl_start, negotiate_with_negotiateVersion_uses_connectionToken
     std::string query_string;
 
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
         /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
         /* connect function */[&query_string](const std::string& url, std::function<void(std::exception_ptr)> callback)
         {
@@ -892,7 +891,6 @@ TEST(connection_impl_start, correct_connection_id_returned_with_negotiateVersion
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
     auto websocket_client = create_test_websocket_client(
-        /* receive function */ [](std::function<void(std::string, std::exception_ptr)> callback) { callback("", std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
         /* send function */ [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
         /* connect function */[](const std::string& url, std::function<void(std::exception_ptr)> callback)
         {
