@@ -61,7 +61,11 @@ namespace signalr
             auto connection = weak_hub_connection.lock();
             if (connection)
             {
+                // start may be waiting on the handshake response so we complete it here, this no-ops if already set
                 connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
+
+                connection->m_callback_manager.clear(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection was stopped before invocation result was received") } }));
+
                 connection->m_disconnected();
             }
         });
@@ -125,7 +129,6 @@ namespace signalr
                                 callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
                                 return;
                             }
-                            //connection->m_handshakeTask->get();
                         }
                         catch (...) {}
 
@@ -171,7 +174,7 @@ namespace signalr
 
     void hub_connection_impl::stop(std::function<void(std::exception_ptr)> callback) noexcept
     {
-        m_callback_manager.clear(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection was stopped before invocation result was received") } }));
+        // TODO: state checks?
         m_connection->stop(callback);
     }
 

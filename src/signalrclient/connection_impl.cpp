@@ -543,56 +543,7 @@ namespace signalr
     {
         m_logger.log(trace_level::info, "stopping connection");
 
-        auto connection = shared_from_this();
-        shutdown([connection, callback](std::exception_ptr exception)
-            {
-                callback(exception);
-                //std::thread([connection, callback, exception]()
-                //    {
-                //        if (exception != nullptr)
-                //        {
-                //            callback(exception);
-                //            return;
-                //        }
-
-                //        if (connection->m_transport)
-                //        {
-                //            connection->stop_connection(exception);
-                //        }
-
-                //        {
-                //            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
-                //            // on a different thread at the same time. In this case we must not null out the transport if we are
-                //            // not in the `disconnecting` state to not affect the 'start' invocation.
-                //            std::lock_guard<std::mutex> lock(connection->m_stop_lock);
-                //            if (connection->change_state(connection_state::disconnecting, connection_state::disconnected))
-                //            {
-                //                // we do let the exception through (especially the task_canceled exception)
-                //                connection->m_transport = nullptr;
-                //            }
-                //        }
-
-                //        try
-                //        {
-                //            connection->m_disconnected();
-                //        }
-                //        catch (const std::exception& e)
-                //        {
-                //            connection->m_logger.log(
-                //                trace_level::errors,
-                //                std::string("disconnected callback threw an exception: ")
-                //                .append(e.what()));
-                //        }
-                //        catch (...)
-                //        {
-                //            connection->m_logger.log(
-                //                trace_level::errors,
-                //                std::string("disconnected callback threw an unknown exception"));
-                //        }
-
-                //        callback(nullptr);
-                //    }).detach();
-            });
+        shutdown(callback);
     }
 
     // This function is called from the dtor so you must not use `shared_from_this` here (it will throw).

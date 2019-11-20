@@ -1622,8 +1622,7 @@ TEST(connection_impl_stop, exception_for_disconnected_callback_caught_and_logged
     auto websocket_client = create_test_websocket_client();
     auto connection = create_connection(websocket_client, writer, trace_level::errors);
 
-    connection->set_disconnected([]()
-        { throw 42; });
+    connection->set_disconnected([]() { throw 42; });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
@@ -1647,18 +1646,7 @@ TEST(connection_impl_stop, exception_for_disconnected_callback_caught_and_logged
 
 TEST(connection_impl_stop, transport_error_invokes_disconnected_callback)
 {
-    int number = 0;
-    auto websocket_client = create_test_websocket_client(
-        /* receive function */ [number](std::function<void(std::string, std::exception_ptr)> callback)
-        mutable {
-            if (number == 1)
-            {
-                callback("", std::make_exception_ptr(std::runtime_error("error")));
-                return;
-            }
-            callback("{ }\x1e", nullptr);
-            ++number;
-        });
+    auto websocket_client = create_test_websocket_client();
     auto connection = create_connection(websocket_client);
 
     auto disconnect_mre = manual_reset_event<void>();
@@ -1671,6 +1659,9 @@ TEST(connection_impl_stop, transport_error_invokes_disconnected_callback)
         });
 
     mre.get();
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(1000));
+    websocket_client->receive_message(std::make_exception_ptr(std::runtime_error("error")));
 
     disconnect_mre.get();
 

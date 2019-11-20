@@ -13,7 +13,7 @@ class logger : public signalr::log_writer
     // Inherited via log_writer
     virtual void __cdecl write(const std::string & entry) override
     {
-        std::cout << entry << std::endl;
+        std::cout << entry;
     }
 };
 
@@ -77,12 +77,12 @@ void chat()
         }
 
         std::cout << "Enter your message:";
-        for (;;)
+        for (; connection.get_connection_state() == signalr::connection_state::connected;)
         {
             std::string message;
             std::getline(std::cin, message);
 
-            if (message == ":q")
+            if (message == ":q" || connection.get_connection_state() != signalr::connection_state::connected)
             {
                 break;
             }
