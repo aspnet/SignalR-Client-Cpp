@@ -554,10 +554,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_is_invalid)
         mre.get();
         ASSERT_TRUE(false); // exception not thrown
     }
-    catch (const std::exception & e)
-    {
-        ASSERT_STREQ("* Line 1, Column 28\n  Syntax error: value, object or array expected.\n", e.what());
-    }
+    catch (const std::runtime_error&) { }
 }
 
 TEST(connection_impl_start, negotiate_follows_redirect)
