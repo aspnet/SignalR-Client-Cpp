@@ -4,13 +4,13 @@
 #pragma once
 
 #include "signalrclient/signalr_value.h"
-#include <cpprest/json.h>
+#include <json/json.h>
 
 namespace signalr
 {
     static constexpr char record_separator = '\x1e';
 
-    signalr::value createValue(const web::json::value& v);
+    signalr::value createValue(const Json::Value& v);
 
-    web::json::value createJson(const signalr::value& v);
+    Json::Value createJson(const signalr::value& v);
 }

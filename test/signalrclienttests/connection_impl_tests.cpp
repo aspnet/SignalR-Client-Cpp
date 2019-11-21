@@ -556,7 +556,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_is_invalid)
     }
     catch (const std::exception & e)
     {
-        ASSERT_STREQ("* Line 1, Column 28 Syntax error: Malformed token", e.what());
+        ASSERT_STREQ("* Line 1, Column 28\n  Syntax error: value, object or array expected.\n", e.what());
     }
 }
 

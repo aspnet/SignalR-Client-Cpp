@@ -6,12 +6,15 @@
 #include "message_type.h"
 #include "json_helpers.h"
 #include "signalrclient/signalr_exception.h"
+#include "json/json.h"
 
 namespace signalr
 {
     std::string signalr::json_hub_protocol::write_message(const signalr::value& hub_message) const
     {
-        return utility::conversions::to_utf8string(createJson(hub_message).serialize()) + record_separator;
+        auto writer = Json::FastWriter();
+        writer.omitEndingLineFeed();
+        return writer.write(createJson(hub_message)) + record_separator;
     }
 
     std::vector<signalr::value> json_hub_protocol::parse_messages(const std::string& message) const
@@ -34,8 +37,14 @@ namespace signalr
 
     signalr::value json_hub_protocol::parse_message(const std::string& message) const
     {
-        auto result = web::json::value::parse(utility::conversions::to_string_t(message));
-        auto value = createValue(result);
+        Json::Value root;
+        auto reader = Json::Reader(Json::Features::Features::strictMode());
+        if (!reader.parse(message, root))
+        {
+            throw signalr_exception(reader.getFormattedErrorMessages());
+        }
+
+        auto value = createValue(root);
 
         if (!value.is_map())
         {
