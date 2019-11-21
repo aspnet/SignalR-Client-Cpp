@@ -176,6 +176,34 @@ TEST(start, start_fails_for_incomplete_handshake_response)
     ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
+TEST(start, start_fails_for_invalid_json_handshake_response)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{\"name\"}\x1e");
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception & ex)
+    {
+        ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
+    }
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+}
+
 TEST(start, start_fails_if_stop_called_before_handshake_response)
 {
     auto websocket_client = create_test_websocket_client();
@@ -932,6 +960,38 @@ TEST(receive, logs_if_callback_for_given_id_not_found)
 
     auto entry = remove_date_from_log_entry(log_entries[2]);
     ASSERT_EQ("[info        ] no callback found for id: 0\n", entry) << dump_vector(log_entries);
+}
+
+TEST(receive, closes_if_error_from_parsing)
+{
+    auto websocket_client = create_test_websocket_client();
+
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::info);
+
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection->set_disconnected([&disconnect_mre]()
+        {
+            disconnect_mre.set();
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    websocket_client->receive_message("{ \"type\": 3, \"invocationId\": \"0\": \"bad\" }\x1e");
+
+    disconnect_mre.get();
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(invoke_void, invoke_creates_runtime_error)
