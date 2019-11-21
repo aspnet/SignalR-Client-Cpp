@@ -5,7 +5,7 @@
 #include "negotiate.h"
 #include "url_builder.h"
 #include "signalrclient/signalr_exception.h"
-#include "json/json.h"
+#include "json_helpers.h"
 
 namespace signalr
 {
@@ -56,10 +56,12 @@ namespace signalr
                 try
                 {
                     Json::Value negotiation_response_json;
-                    auto reader = Json::Reader(Json::Features::Features::strictMode());
-                    if (!reader.parse(http_response.content, negotiation_response_json))
+                    auto reader = getJsonReader();
+                    std::string errors;
+
+                    if (!reader->parse(http_response.content.c_str(), http_response.content.c_str() + http_response.content.size(), &negotiation_response_json, &errors))
                     {
-                        throw signalr_exception(reader.getFormattedErrorMessages());
+                        throw signalr_exception(errors);
                     }
 
                     negotiation_response response;

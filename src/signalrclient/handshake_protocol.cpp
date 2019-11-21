@@ -29,11 +29,14 @@ namespace signalr
                 throw signalr_exception("incomplete message received");
             }
             auto message = response.substr(0, pos);
+
             Json::Value root;
-            auto reader = Json::Reader(Json::Features::Features::strictMode());
-            if (!reader.parse(message, root))
+            auto reader = getJsonReader();
+            std::string errors;
+
+            if (!reader->parse(message.c_str(), message.c_str() + message.size(), &root, &errors))
             {
-                throw signalr_exception(reader.getFormattedErrorMessages());
+                throw signalr_exception(errors);
             }
             auto remaining_data = response.substr(pos + 1);
             return std::forward_as_tuple(remaining_data, createValue(root));

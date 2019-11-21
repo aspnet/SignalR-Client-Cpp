@@ -36,10 +36,12 @@ namespace signalr
     signalr::value json_hub_protocol::parse_message(const std::string& message) const
     {
         Json::Value root;
-        auto reader = Json::Reader(Json::Features::Features::strictMode());
-        if (!reader.parse(message, root))
+        auto reader = getJsonReader();
+        std::string errors;
+
+        if (!reader->parse(message.c_str(), message.c_str() + message.size(), &root, &errors))
         {
-            throw signalr_exception(reader.getFormattedErrorMessages());
+            throw signalr_exception(errors);
         }
 
         auto value = createValue(root);

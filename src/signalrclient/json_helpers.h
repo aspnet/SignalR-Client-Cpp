@@ -15,4 +15,5 @@ namespace signalr
     Json::Value createJson(const signalr::value& v);
 
     Json::StreamWriterBuilder getJsonWriter();
+    std::unique_ptr<Json::CharReader> getJsonReader();
 }

@@ -95,4 +95,12 @@ namespace signalr
         writer["indentation"] = "";
         return writer;
     }
+
+    std::unique_ptr<Json::CharReader> getJsonReader()
+    {
+        auto builder = Json::CharReaderBuilder();
+        Json::CharReaderBuilder::strictMode(&builder.settings_);
+        std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+        return reader;
+    }
 }
