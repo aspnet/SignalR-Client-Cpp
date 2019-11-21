@@ -5,6 +5,7 @@
 
 #include "signalrclient/signalr_value.h"
 #include <json/json.h>
+#include <memory>
 
 namespace signalr
 {
