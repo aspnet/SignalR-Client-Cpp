@@ -335,6 +335,23 @@ TEST(stop, stop_stops_connection)
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
+TEST(stop, does_nothing_on_disconnected_connection)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+
+    hub_connection->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+}
+
 TEST(stop, disconnected_callback_called_when_hub_connection_stops)
 {
     auto websocket_client = create_test_websocket_client();

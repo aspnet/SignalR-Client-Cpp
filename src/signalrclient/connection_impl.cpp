@@ -604,6 +604,7 @@ namespace signalr
         }
     }
 
+    // do not use `shared_from_this` as it can be called via the destructor
     void connection_impl::stop_connection(std::exception_ptr error)
     {
         {
@@ -614,19 +615,15 @@ namespace signalr
 
             if (m_connection_state == connection_state::connecting)
             {
-                // TODO
+                // should never happen
+                m_logger.log(trace_level::errors, "Stopping was ignored because the connection is still in the connecting state.");
                 return;
             }
 
             if (m_connection_state == connection_state::disconnected)
             {
-                // TODO: log
+                m_logger.log(trace_level::info, "Stopping was ignored because the connection is already in the disconnected state.");
                 return;
-            }
-
-            if (m_connection_state == connection_state::disconnecting)
-            {
-                // TODO
             }
 
             change_state(connection_state::disconnected);

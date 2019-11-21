@@ -174,7 +174,18 @@ namespace signalr
 
     void hub_connection_impl::stop(std::function<void(std::exception_ptr)> callback) noexcept
     {
-        // TODO: state checks?
+        if (get_connection_state() == connection_state::disconnected)
+        {
+            m_logger.log(trace_level::info, "Stop ignored because the connection is already disconnected.");
+            callback(nullptr);
+            return;
+        }
+        else if (get_connection_state() == connection_state::disconnecting)
+        {
+            // TODO: Wait for in progress stop
+            m_logger.log(trace_level::info, "Stop ignored because the connection is in the disconnecting state.");
+        }
+
         m_connection->stop(callback);
     }
 
