@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "json_helpers.h"
+#include <cmath>
 
 namespace signalr
 {
@@ -85,5 +86,13 @@ namespace signalr
         default:
             return Json::Value(Json::ValueType::nullValue);
         }
+    }
+
+    Json::StreamWriterBuilder getJsonWriter()
+    {
+        auto writer = Json::StreamWriterBuilder();
+        writer["commentStyle"] = "None";
+        writer["indentation"] = "";
+        return writer;
     }
 }

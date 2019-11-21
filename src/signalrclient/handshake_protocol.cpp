@@ -17,9 +17,8 @@ namespace signalr
                 { "protocol", signalr::value(protocol->name()) },
                 { "version", signalr::value((double)protocol->version()) }
             };
-            auto writer = Json::FastWriter();
-            writer.omitEndingLineFeed();
-            return writer.write(createJson(signalr::value(std::move(map)))) + record_separator;
+
+            return Json::writeString(getJsonWriter(), createJson(signalr::value(std::move(map)))) + record_separator;
         }
 
         std::tuple<std::string, signalr::value> parse_handshake(const std::string& response)

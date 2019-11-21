@@ -13,4 +13,6 @@ namespace signalr
     signalr::value createValue(const Json::Value& v);
 
     Json::Value createJson(const signalr::value& v);
+
+    Json::StreamWriterBuilder getJsonWriter();
 }

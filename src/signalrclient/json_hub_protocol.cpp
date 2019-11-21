@@ -12,9 +12,7 @@ namespace signalr
 {
     std::string signalr::json_hub_protocol::write_message(const signalr::value& hub_message) const
     {
-        auto writer = Json::FastWriter();
-        writer.omitEndingLineFeed();
-        return writer.write(createJson(hub_message)) + record_separator;
+        return Json::writeString(getJsonWriter(), createJson(hub_message)) + record_separator;
     }
 
     std::vector<signalr::value> json_hub_protocol::parse_messages(const std::string& message) const
