@@ -53,7 +53,8 @@ namespace signalr
         {
             auto value = v.as_double();
             double intPart;
-            // REVIEW: workaround for 1.0 being output as 1.0 instead of 1
+            // Workaround for 1.0 being output as 1.0 instead of 1
+            // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
             if (std::modf(value, &intPart) == 0)
             {
                 return Json::Value((int)intPart);
