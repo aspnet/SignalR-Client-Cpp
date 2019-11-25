@@ -7,7 +7,17 @@ jobs:
     agentOs: Windows
     cMakeRunArgs: '-A x64'
     beforeBuild:
-    - powershell: "& vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
+    - powershell: |
+        if((Get-Command vcpkg.exe -ErrorAction SilentlyContinue) -eq $null) {
+          ./submodules/vcpkg/bootstrap-vcpkg.bat
+        }
+      displayName: Bootstap vcpkg
+    - powershell: |
+        if(Get-Command vcpkg.exe -ErrorAction SilentlyContinue) -eq $null) {
+          vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg
+        } else {
+          ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg
+        }
       condition: ne(variables.CACHE_RESTORED, 'true')
       displayName: vcpkg install dependencies
 
