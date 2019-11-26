@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <sstream>
-//#include "hub_connection.h"
 #include "hub_connection_builder.h"
 #include "log_writer.h"
 #include <future>

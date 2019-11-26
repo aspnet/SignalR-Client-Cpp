@@ -7,7 +7,6 @@
 #include "connection_impl.h"
 #include "signalrclient/trace_level.h"
 #include "memory_log_writer.h"
-#include "cpprest/ws_client.h"
 #include "signalrclient/signalr_exception.h"
 #include "signalrclient/web_exception.h"
 #include "test_http_client.h"
