@@ -10,6 +10,7 @@
 #include "json_hub_protocol.h"
 #include "message_type.h"
 #include "handshake_protocol.h"
+#include "signalrclient/websocket_client.h"
 
 namespace signalr
 {
@@ -22,18 +23,10 @@ namespace signalr
     }
 
     std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer)
+        const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+        std::function<std::shared_ptr<websocket_client>()> websocket_factory)
     {
-        return hub_connection_impl::create(url, trace_level, log_writer,
-            nullptr, std::make_unique<transport_factory>());
-    }
-
-    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::unique_ptr<http_client> http_client,
-        std::unique_ptr<transport_factory> transport_factory)
-    {
-        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, trace_level,
-            log_writer ? log_writer : std::make_shared<trace_log_writer>(), std::move(http_client), std::move(transport_factory)));
+        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, trace_level, log_writer, http_client, websocket_factory));
 
         connection->initialize();
 
@@ -41,13 +34,13 @@ namespace signalr
     }
 
     hub_connection_impl::hub_connection_impl(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::unique_ptr<http_client> http_client,
-        std::unique_ptr<transport_factory> transport_factory)
+        const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+        std::function<std::shared_ptr<websocket_client>()> websocket_factory)
         : m_connection(connection_impl::create(url, trace_level, log_writer,
-        std::move(http_client), std::move(transport_factory))), m_logger(log_writer, trace_level),
+            http_client, websocket_factory)), m_logger(log_writer, trace_level),
         m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),
         m_disconnected([]() noexcept {}), m_handshakeReceived(false), m_protocol(std::make_shared<json_hub_protocol>())
-    { }
+    {}
 
     void hub_connection_impl::initialize()
     {

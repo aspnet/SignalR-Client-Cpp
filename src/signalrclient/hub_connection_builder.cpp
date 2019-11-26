@@ -61,9 +61,9 @@ namespace signalr
         return *this;
     }
 
-    hub_connection_builder& hub_connection_builder::with_http_client(std::function<std::shared_ptr<http_client>()> factory)
+    hub_connection_builder& hub_connection_builder::with_http_client(std::shared_ptr<http_client> http_client)
     {
-        m_http_factory = factory;
+        m_http_client = http_client;
 
         return *this;
     }
@@ -71,9 +71,9 @@ namespace signalr
     hub_connection hub_connection_builder::build()
     {
 #ifndef USE_CPPRESTSDK
-        if (m_http_factory == nullptr)
+        if (m_http_client == nullptr)
         {
-            throw std::runtime_error("An http client factory must be provided using 'with_http_client' on the builder.");
+            throw std::runtime_error("An http client must be provided using 'with_http_client' on the builder.");
         }
 
         if (m_websocket_factory == nullptr)
@@ -82,6 +82,6 @@ namespace signalr
         }
 #endif
 
-        return hub_connection(m_url, m_log_level, m_logger);
+        return hub_connection(m_url, m_log_level, m_logger, m_http_client, m_websocket_factory);
     }
 }
