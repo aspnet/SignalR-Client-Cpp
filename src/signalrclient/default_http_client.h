@@ -10,6 +10,6 @@ namespace signalr
     class default_http_client : public http_client
     {
     public:
-        void send(std::string url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback) override;
+        void send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback) override;
     };
 }

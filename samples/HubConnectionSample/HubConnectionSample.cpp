@@ -3,7 +3,8 @@
 
 #include <iostream>
 #include <sstream>
-#include "hub_connection.h"
+//#include "hub_connection.h"
+#include "hub_connection_builder.h"
 #include "log_writer.h"
 #include <future>
 #include "signalr_value.h"
@@ -50,7 +51,10 @@ void send_message(signalr::hub_connection& connection, const std::string& messag
 
 void chat()
 {
-    signalr::hub_connection connection("http://localhost:5000/default", signalr::trace_level::all, std::make_shared<logger>());
+    signalr::hub_connection connection = signalr::hub_connection_builder::create("http://localhost:5000/default")
+        .with_logging(std::make_shared <logger>(), signalr::trace_level::all)
+        .build();
+
     connection.on("Send", [](const signalr::value & m)
     {
         std::cout << std::endl << m.as_array()[0].as_string() << std::endl << "Enter your message: ";

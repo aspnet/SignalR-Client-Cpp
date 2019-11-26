@@ -6,6 +6,7 @@ set (SOURCES
   default_websocket_client.cpp
   handshake_protocol.cpp
   hub_connection.cpp
+  hub_connection_builder.cpp
   hub_connection_impl.cpp
   json_helpers.cpp
   json_hub_protocol.cpp

@@ -51,7 +51,7 @@ namespace signalr
     class http_client
     {
     public:
-        virtual void send(std::string url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback) = 0;
+        virtual void send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback) = 0;
 
         virtual ~http_client() {}
     };

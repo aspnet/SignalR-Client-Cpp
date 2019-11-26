@@ -15,20 +15,22 @@
 namespace signalr
 {
     class hub_connection_impl;
+    class hub_connection_builder;
 
     class hub_connection
     {
     public:
         typedef std::function<void __cdecl (const signalr::value&)> method_invoked_handler;
 
-        SIGNALRCLIENT_API explicit hub_connection(const std::string& url, trace_level trace_level = trace_level::all,
-            std::shared_ptr<log_writer> log_writer = nullptr);
-
         SIGNALRCLIENT_API ~hub_connection();
 
         hub_connection(const hub_connection&) = delete;
 
         hub_connection& operator=(const hub_connection&) = delete;
+
+        SIGNALRCLIENT_API hub_connection(hub_connection&&) noexcept;
+
+        SIGNALRCLIENT_API hub_connection& operator=(hub_connection&&) noexcept;
 
         SIGNALRCLIENT_API void __cdecl start(std::function<void(std::exception_ptr)> callback) noexcept;
         SIGNALRCLIENT_API void __cdecl stop(std::function<void(std::exception_ptr)> callback) noexcept;
@@ -46,6 +48,11 @@ namespace signalr
 
         SIGNALRCLIENT_API void send(const std::string& method_name, const signalr::value& arguments = signalr::value(), std::function<void(std::exception_ptr)> callback = [](std::exception_ptr) {}) noexcept;
 
+    protected:
+        friend class hub_connection_builder;
+
+        explicit hub_connection(const std::string& url, trace_level trace_level = trace_level::all,
+            std::shared_ptr<log_writer> log_writer = nullptr);
     private:
         std::shared_ptr<hub_connection_impl> m_pImpl;
     };
