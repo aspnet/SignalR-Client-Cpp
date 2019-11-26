@@ -15,6 +15,8 @@
 #include "make_unique.h"
 #include "completion_event.h"
 #include <assert.h>
+#include "signalrclient/websocket_client.h"
+#include "default_websocket_client.h"
 
 namespace signalr
 {
@@ -27,14 +29,14 @@ namespace signalr
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
     {
-        return connection_impl::create(url, trace_level, log_writer, nullptr, std::make_unique<transport_factory>());
+        return connection_impl::create(url, trace_level, log_writer, nullptr, nullptr);
     }
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory)
+        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>()> websocket_factory)
     {
         return std::shared_ptr<connection_impl>(new connection_impl(url, trace_level,
-            log_writer ? log_writer : std::make_shared<trace_log_writer>(), std::move(http_client), std::move(transport_factory)));
+            log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client, websocket_factory));
     }
 
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
@@ -50,6 +52,36 @@ namespace signalr
         {
             m_http_client = std::unique_ptr<class http_client>(new default_http_client());
         }
+    }
+
+    connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
+        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr),
+        m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
+    {
+        if (http_client != nullptr)
+        {
+            m_http_client = std::move(http_client);
+        }
+        else
+        {
+#ifdef USE_CPPRESTSDK
+            m_http_client = std::unique_ptr<class http_client>(new default_http_client());
+#else
+            throw std::runtime_error("An http client must be provided.");
+#endif
+        }
+
+        if (websocket_factory == nullptr)
+        {
+#ifdef USE_CPPRESTSDK
+            websocket_factory = []() { return std::make_shared<default_websocket_client>(); };
+#else
+            throw std::runtime_error("A websocket factory must be provided.");
+#endif
+        }
+
+        m_transport_factory = std::unique_ptr<transport_factory>(new transport_factory(m_http_client, websocket_factory));
     }
 
     connection_impl::~connection_impl()

@@ -13,6 +13,8 @@
 
 namespace signalr
 {
+    class websocket_client;
+
     // Note:
     // Factory methods and private constructors prevent from using this class incorrectly. Because this class
     // derives from `std::enable_shared_from_this` the instance has to be owned by a `std::shared_ptr` whenever
@@ -22,11 +24,8 @@ namespace signalr
     {
     public:
         static std::shared_ptr<hub_connection_impl> create(const std::string& url, trace_level trace_level,
-            const std::shared_ptr<log_writer>& log_writer);
-
-        static std::shared_ptr<hub_connection_impl> create(const std::string& url, trace_level trace_level,
-            const std::shared_ptr<log_writer>& log_writer, std::unique_ptr<http_client> http_client,
-            std::unique_ptr<transport_factory> transport_factory);
+            const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+            std::function<std::shared_ptr<websocket_client>()> websocket_factory);
 
         hub_connection_impl(const hub_connection_impl&) = delete;
         hub_connection_impl& operator=(const hub_connection_impl&) = delete;
@@ -46,8 +45,9 @@ namespace signalr
         void set_disconnected(const std::function<void()>& disconnected);
 
     private:
-        hub_connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-            std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory);
+        hub_connection_impl(const std::string& url, trace_level trace_level,
+            const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+            std::function<std::shared_ptr<websocket_client>()> websocket_factory);
 
         std::shared_ptr<connection_impl> m_connection;
         logger m_logger;

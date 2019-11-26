@@ -5,12 +5,15 @@
 #include "signalrclient/hub_connection.h"
 #include "hub_connection_impl.h"
 #include "signalrclient/signalr_exception.h"
+#include "signalrclient/http_client.h"
+#include "signalrclient/websocket_client.h"
 
 namespace signalr
 {
     hub_connection::hub_connection(const std::string& url,
-        trace_level trace_level, std::shared_ptr<log_writer> log_writer)
-        : m_pImpl(hub_connection_impl::create(url, trace_level, log_writer))
+        trace_level trace_level, std::shared_ptr<log_writer> log_writer, std::shared_ptr<http_client> http_client,
+        std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        : m_pImpl(hub_connection_impl::create(url, trace_level, log_writer, http_client, websocket_factory))
     {}
 
     hub_connection::hub_connection(hub_connection&& rhs) noexcept

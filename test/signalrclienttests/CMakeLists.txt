@@ -13,7 +13,6 @@ set (SOURCES
   signalrclienttests.cpp
   stdafx.cpp
   test_http_client.cpp
-  test_transport_factory.cpp
   test_utils.cpp
   test_websocket_client.cpp
   url_builder_tests.cpp
