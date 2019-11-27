@@ -17,7 +17,8 @@ namespace signalr
                 { "protocol", signalr::value(protocol->name()) },
                 { "version", signalr::value((double)protocol->version()) }
             };
-            return utility::conversions::to_utf8string(createJson(signalr::value(std::move(map))).serialize()) + record_separator;
+
+            return Json::writeString(getJsonWriter(), createJson(signalr::value(std::move(map)))) + record_separator;
         }
 
         std::tuple<std::string, signalr::value> parse_handshake(const std::string& response)
@@ -28,9 +29,17 @@ namespace signalr
                 throw signalr_exception("incomplete message received");
             }
             auto message = response.substr(0, pos);
-            auto result = web::json::value::parse(utility::conversions::to_string_t(message));
+
+            Json::Value root;
+            auto reader = getJsonReader();
+            std::string errors;
+
+            if (!reader->parse(message.c_str(), message.c_str() + message.size(), &root, &errors))
+            {
+                throw signalr_exception(errors);
+            }
             auto remaining_data = response.substr(pos + 1);
-            return std::forward_as_tuple(remaining_data, createValue(result));
+            return std::forward_as_tuple(remaining_data, createValue(root));
         }
     }
 }

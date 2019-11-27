@@ -21,10 +21,12 @@ set (SOURCES
   websocket_transport.cpp
   ../../third_party_code/cpprestsdk/uri.cpp
   ../../third_party_code/cpprestsdk/uri_builder.cpp
+  ../../third_party_code/jsoncpp/jsoncpp.cpp
 )
 
 include_directories(
-    ../../third_party_code/cpprestsdk)
+    ../../third_party_code/cpprestsdk
+    ../../third_party_code/jsoncpp)
 
 add_library (signalrclient SHARED ${SOURCES})
 
