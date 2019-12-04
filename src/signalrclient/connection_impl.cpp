@@ -358,14 +358,12 @@ namespace signalr
             }
 
             // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
-            // which case we should not throw due to timeout. Instead we need to set the tce prevent the task that is
-            // using this tce from hanging indifinitely. (This will eventually result in throwing the pplx::task_canceled
-            // exception to the user since this is what we do in the start() function if disconnect_cts is tripped).
+            // which case we should not throw due to timeout.
             if (disconnect_cts->is_canceled())
             {
                 if (run_callback)
                 {
-                    // The callback checks the token and will handle it appropriately
+                    // The callback checks the disconnect_cts token and will handle it appropriately
                     callback({}, nullptr);
                 }
             }
