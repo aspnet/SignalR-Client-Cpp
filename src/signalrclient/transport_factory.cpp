@@ -16,10 +16,10 @@ namespace signalr
     std::shared_ptr<transport> transport_factory::create_transport(transport_type transport_type, const logger& logger,
         const signalr_client_config& signalr_client_config)
     {
+        // TODO: Handle config with transport(s)
         if (transport_type == signalr::transport_type::websockets)
         {
             return websocket_transport::create(m_websocket_factory,
-                //[signalr_client_config](){ return std::make_shared<default_websocket_client>(signalr_client_config); },
                 logger);
         }
 

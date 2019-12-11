@@ -67,8 +67,6 @@ namespace signalr
         {
 #ifdef USE_CPPRESTSDK
             m_http_client = std::unique_ptr<class http_client>(new default_http_client());
-#else
-            throw std::runtime_error("An http client must be provided.");
 #endif
         }
 
@@ -76,8 +74,6 @@ namespace signalr
         {
 #ifdef USE_CPPRESTSDK
             websocket_factory = []() { return std::make_shared<default_websocket_client>(); };
-#else
-            throw std::runtime_error("A websocket factory must be provided.");
 #endif
         }
 
