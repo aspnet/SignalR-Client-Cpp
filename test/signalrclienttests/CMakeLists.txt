@@ -5,7 +5,7 @@ set (SOURCES
   case_insensitive_comparison_utils_tests.cpp
   connection_impl_tests.cpp
   handshake_tests.cpp
-  hub_connection_impl_tests.cpp
+  hub_connection_tests.cpp
   hub_exception_tests.cpp
   logger_tests.cpp
   memory_log_writer.cpp
@@ -13,7 +13,6 @@ set (SOURCES
   signalrclienttests.cpp
   stdafx.cpp
   test_http_client.cpp
-  test_transport_factory.cpp
   test_utils.cpp
   test_websocket_client.cpp
   url_builder_tests.cpp

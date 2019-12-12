@@ -10,7 +10,7 @@
 
 namespace signalr
 {
-    void default_http_client::send(std::string url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback)
+    void default_http_client::send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback)
     {
         web::http::method method;
         if (request.method == http_method::GET)
