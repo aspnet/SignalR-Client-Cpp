@@ -60,34 +60,28 @@ namespace signalr
             {
 				if (value < 0)
 				{
-					if (value > (double)INT32_MIN)
+					if (value > (double)INT64_MIN)
 					{
-						// Fits within int32_t
-						return Json::Value((int32_t)intPart);
+						// Fits within int64_t
+						return Json::Value((int64_t)intPart);
 					}
 					else
 					{
-						// Needs int64_t
-						return Json::Value((int64_t)intPart);
+						// Remain as double
+						return Json::Value(value);
 					}
 				}
 				else
 				{
-					if (value < INT32_MAX)
+					if (value < UINT64_MAX)
 					{
-						return Json::Value((int32_t)intPart);
-					}
-					else if (value < UINT32_MAX)
-					{
-						return Json::Value((uint32_t)intPart);
-					}
-					else if (value < INT64_MAX)
-					{
-						return Json::Value((int64_t)intPart);
+						// Fits within uint64_t
+						return Json::Value((uint64_t)intPart);
 					}
 					else
 					{
-						return Json::Value((uint64_t)intPart);
+						// Remain as double
+						return Json::Value(value);
 					}
 				}
             }
