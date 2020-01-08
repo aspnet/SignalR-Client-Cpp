@@ -58,32 +58,32 @@ namespace signalr
             // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
             if (std::modf(value, &intPart) == 0)
             {
-				if (value < 0)
-				{
-					if (value > (double)INT64_MIN)
-					{
-						// Fits within int64_t
-						return Json::Value((int64_t)intPart);
-					}
-					else
-					{
-						// Remain as double
-						return Json::Value(value);
-					}
-				}
-				else
-				{
-					if (value < UINT64_MAX)
-					{
-						// Fits within uint64_t
-						return Json::Value((uint64_t)intPart);
-					}
-					else
-					{
-						// Remain as double
-						return Json::Value(value);
-					}
-				}
+                if (value < 0)
+                {
+                    if (value > (double)INT64_MIN)
+                    {
+                        // Fits within int64_t
+                        return Json::Value((int64_t)intPart);
+                    }
+                    else
+                    {
+                        // Remain as double
+                        return Json::Value(value);
+                    }
+                }
+                else
+                {
+                    if (value < UINT64_MAX)
+                    {
+                        // Fits within uint64_t
+                        return Json::Value((uint64_t)intPart);
+                    }
+                    else
+                    {
+                        // Remain as double
+                        return Json::Value(value);
+                    }
+                }
             }
             return Json::Value(v.as_double());
         }
