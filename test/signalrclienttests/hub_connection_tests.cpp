@@ -432,6 +432,36 @@ TEST(stop, disconnected_callback_called_when_hub_connection_stops)
     ASSERT_TRUE(disconnected_invoked);
 }
 
+TEST(stop, disconnected_callback_called_when_transport_error_occurs)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto disconnected_invoked = manual_reset_event<void>();
+    hub_connection->set_disconnected([&disconnected_invoked]() { disconnected_invoked.set(); });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+
+    /*hub_connection->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });*/
+
+    websocket_client->receive_message(std::make_exception_ptr(std::runtime_error("transport error")));
+
+    disconnected_invoked.get();
+}
+
 TEST(stop, connection_stopped_when_going_out_of_scope)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());

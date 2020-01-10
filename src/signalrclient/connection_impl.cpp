@@ -145,10 +145,7 @@ namespace signalr
             m_connection_id = "";
         }
 
-        start_negotiate(m_base_url, 0, [callback](std::exception_ptr exception)
-        {
-            callback(exception);
-        });
+        start_negotiate(m_base_url, 0, callback);
     }
 
     void connection_impl::start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
@@ -593,10 +590,7 @@ namespace signalr
 
         if (m_transport)
         {
-            m_transport->stop([callback](std::exception_ptr exception)
-                {
-                    callback(exception);
-                });
+            m_transport->stop(callback);
         }
         else
         {
