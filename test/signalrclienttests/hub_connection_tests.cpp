@@ -352,6 +352,56 @@ TEST(stop, does_nothing_on_disconnected_connection)
     ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
+TEST(stop, second_stop_noops_during_first_stop)
+{
+    auto transport_stop_mre = manual_reset_event<void>();
+    auto websocket_client = create_test_websocket_client();
+    websocket_client->set_close_function([&transport_stop_mre](std::function<void (std::exception_ptr)> callback)
+        {
+            transport_stop_mre.get();
+            callback(nullptr);
+        });
+    auto hub_connection = create_hub_connection(websocket_client);
+    bool connection_closed = false;
+    hub_connection->set_disconnected([&connection_closed]()
+        {
+            connection_closed = true;
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+
+    hub_connection->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    bool second_stop_called = false;
+    hub_connection->stop([&second_stop_called](std::exception_ptr exception)
+        {
+            second_stop_called = true;
+        });
+
+    ASSERT_TRUE(second_stop_called);
+    ASSERT_FALSE(connection_closed);
+
+    transport_stop_mre.set();
+    mre.get();
+
+    ASSERT_TRUE(connection_closed);
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+}
+
 TEST(stop, disconnected_callback_called_when_hub_connection_stops)
 {
     auto websocket_client = create_test_websocket_client();

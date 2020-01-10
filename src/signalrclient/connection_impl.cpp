@@ -627,7 +627,6 @@ namespace signalr
             }
 
             change_state(connection_state::disconnected);
-            // we do let the exception through (especially the task_canceled exception)
             m_transport = nullptr;
         }
 
@@ -641,6 +640,10 @@ namespace signalr
             {
                 m_logger.log(trace_level::errors, std::string("Connection closed with error: ").append(ex.what()));
             }
+        }
+        else
+        {
+            m_logger.log(trace_level::info, "Connection closed.");
         }
 
         try

@@ -182,11 +182,13 @@ namespace signalr
         }
         else if (get_connection_state() == connection_state::disconnecting)
         {
-            // TODO: Wait for in progress stop
             m_logger.log(trace_level::info, "Stop ignored because the connection is in the disconnecting state.");
+            callback(nullptr);
         }
-
-        m_connection->stop(callback);
+        else
+        {
+            m_connection->stop(callback);
+        }
     }
 
     void hub_connection_impl::process_message(std::string&& response)
