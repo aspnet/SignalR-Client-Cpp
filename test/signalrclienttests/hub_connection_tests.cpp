@@ -342,6 +342,8 @@ TEST(stop, does_nothing_on_disconnected_connection)
 
     auto mre = manual_reset_event<void>();
 
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+
     hub_connection.stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
@@ -430,6 +432,7 @@ TEST(stop, disconnected_callback_called_when_hub_connection_stops)
     mre.get();
 
     ASSERT_TRUE(disconnected_invoked);
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
 TEST(stop, disconnected_callback_called_when_transport_error_occurs)
@@ -452,14 +455,10 @@ TEST(stop, disconnected_callback_called_when_transport_error_occurs)
 
     mre.get();
 
-    /*hub_connection->stop([&mre](std::exception_ptr exception)
-        {
-            mre.set(exception);
-        });*/
-
     websocket_client->receive_message(std::make_exception_ptr(std::runtime_error("transport error")));
 
     disconnected_invoked.get();
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
 TEST(stop, connection_stopped_when_going_out_of_scope)
