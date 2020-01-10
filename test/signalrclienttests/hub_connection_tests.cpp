@@ -342,14 +342,14 @@ TEST(stop, does_nothing_on_disconnected_connection)
 
     auto mre = manual_reset_event<void>();
 
-    hub_connection->stop([&mre](std::exception_ptr exception)
+    hub_connection.stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
 
     mre.get();
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
 TEST(stop, second_stop_noops_during_first_stop)
@@ -363,13 +363,13 @@ TEST(stop, second_stop_noops_during_first_stop)
         });
     auto hub_connection = create_hub_connection(websocket_client);
     bool connection_closed = false;
-    hub_connection->set_disconnected([&connection_closed]()
+    hub_connection.set_disconnected([&connection_closed]()
         {
             connection_closed = true;
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection->start([&mre](std::exception_ptr exception)
+    hub_connection.start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -380,13 +380,13 @@ TEST(stop, second_stop_noops_during_first_stop)
 
     mre.get();
 
-    hub_connection->stop([&mre](std::exception_ptr exception)
+    hub_connection.stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
 
     bool second_stop_called = false;
-    hub_connection->stop([&second_stop_called](std::exception_ptr exception)
+    hub_connection.stop([&second_stop_called](std::exception_ptr exception)
         {
             second_stop_called = true;
         });
@@ -399,7 +399,7 @@ TEST(stop, second_stop_noops_during_first_stop)
 
     ASSERT_TRUE(connection_closed);
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
 TEST(stop, disconnected_callback_called_when_hub_connection_stops)
@@ -438,10 +438,10 @@ TEST(stop, disconnected_callback_called_when_transport_error_occurs)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto disconnected_invoked = manual_reset_event<void>();
-    hub_connection->set_disconnected([&disconnected_invoked]() { disconnected_invoked.set(); });
+    hub_connection.set_disconnected([&disconnected_invoked]() { disconnected_invoked.set(); });
 
     auto mre = manual_reset_event<void>();
-    hub_connection->start([&mre](std::exception_ptr exception)
+    hub_connection.start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
