@@ -1168,3 +1168,83 @@ TEST(invoke, send_throws_when_the_underlying_connection_is_not_valid)
         ASSERT_STREQ("cannot send data when the connection is not in the connected state. current connection state: disconnected", e.what());
     }
 }
+
+TEST(invoke, invoke_handles_UINT32_MAX_value_as_unsigned_int)
+{
+    unsigned int original_value = 0xFFFFFFFF;
+
+    auto capture_message = false;
+    auto server_mre = manual_reset_event<std::string>();
+
+    std::ostringstream websocket_stream;
+    websocket_stream << "{ \"type\": 3, \"invocationId\": \"0\", \"result\": [" << original_value << "] }\x1e";
+    std::string websocket_message = websocket_stream.str();
+
+    std::ostringstream expected_stream;
+    expected_stream << "{\"arguments\":[" << original_value << "],\"invocationId\":\"0\",\"target\":\"method\",\"type\":1}\x1e";
+    std::string expected_message = expected_stream.str();
+
+    auto websocket_client = create_test_websocket_client(
+        /* send function */[&capture_message,&server_mre](const std::string& msg, std::function<void(std::exception_ptr)> callback)
+        {
+            if (capture_message)
+            {
+                server_mre.set(msg);
+            }
+
+            callback(nullptr);
+        });
+
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto connect_mre = manual_reset_event<void>();
+
+    hub_connection->start([&connect_mre](std::exception_ptr exception)
+    {
+        connect_mre.set(exception);
+    });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+
+    websocket_client->receive_message("{ }\x1e");
+
+    connect_mre.get();
+
+    capture_message = true;
+
+    auto client_mre = manual_reset_event<signalr::value>();
+
+    std::vector<signalr::value> arr{ signalr::value((double)original_value) };
+    signalr::value args(arr);
+
+    hub_connection->invoke("method", signalr::value(arr), [&client_mre](const signalr::value& message, std::exception_ptr exception)
+    {
+        if (exception)
+        {
+            client_mre.set(exception);
+        }
+        else
+        {
+            client_mre.set(message);
+        }
+    });
+
+    websocket_client->receive_message(websocket_message);
+
+    auto result = client_mre.get();
+
+    ASSERT_TRUE(result.is_array());
+    
+    auto array = result.as_array();
+
+    ASSERT_EQ(1, array.size());
+
+    auto value = (unsigned int)array[0].as_double();
+
+    ASSERT_EQ(value, original_value);
+
+    auto message = server_mre.get();
+
+    ASSERT_EQ(message, expected_message);
+}
