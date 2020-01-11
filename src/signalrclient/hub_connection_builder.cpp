@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "signalrclient/hub_connection_builder.h"
+#include <stdexcept>
 
 namespace signalr
 {

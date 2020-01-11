@@ -50,7 +50,7 @@ TEST(websocket_transport_connect, connect_propagates_exceptions)
     auto client = std::make_shared<test_websocket_client>();
     client->set_connect_function([](const std::string&, std::function<void(std::exception_ptr)> callback)
     {
-        callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connecting failed"))));
+        callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
     });
 
     auto ws_transport = websocket_transport::create([&](){ return client; }, logger(std::make_shared<trace_log_writer>(), trace_level::none));
@@ -67,7 +67,7 @@ TEST(websocket_transport_connect, connect_propagates_exceptions)
     }
     catch (const std::exception &e)
     {
-        ASSERT_EQ(_XPLATSTR("connecting failed"), utility::conversions::to_string_t(e.what()));
+        ASSERT_EQ("connecting failed", e.what());
     }
 }
 

@@ -848,8 +848,6 @@ TEST(send, creates_correct_payload)
 
 TEST(send, does_not_wait_for_server_response)
 {
-    pplx::task_completion_event<void> waitForSend;
-
     auto websocket_client = create_test_websocket_client();
 
     auto hub_connection = create_hub_connection(websocket_client);
@@ -872,7 +870,6 @@ TEST(send, does_not_wait_for_server_response)
         mre.set(exception);
     });
     mre.get();
-    waitForSend.set();
 }
 
 TEST(send, passing_non_array_arguments_fails)
