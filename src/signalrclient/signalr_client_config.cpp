@@ -42,15 +42,20 @@ namespace signalr
     {
         m_websocket_client_config = websocket_client_config;
     }
+#endif
 
-    web::http::http_headers signalr_client_config::get_http_headers() const noexcept
+    const std::map<std::string, std::string>& signalr_client_config::get_http_headers() const noexcept
     {
         return m_http_headers;
     }
 
-    void signalr_client_config::set_http_headers(const web::http::http_headers& http_headers)
+    std::map<std::string, std::string>& signalr_client_config::get_http_headers() noexcept
+    {
+        return m_http_headers;
+    }
+
+    void signalr_client_config::set_http_headers(const std::map<std::string, std::string>& http_headers)
     {
         m_http_headers = http_headers;
     }
-#endif
 }

@@ -3,10 +3,10 @@
 
 #include "stdafx.h"
 #include "test_utils.h"
-#include "cpprest/asyncrt_utils.h"
 #include "trace_log_writer.h"
 #include "logger.h"
 #include "memory_log_writer.h"
+#include <regex>
 
 using namespace signalr;
 TEST(logger_write, entry_added_if_trace_level_set)
@@ -61,9 +61,11 @@ TEST(logger_write, entries_formatted_correctly)
 
     auto entry = log_entries[0];
 
-    auto date_str = entry.substr(0, entry.find_first_of("Z") + 1);
-    auto date = utility::datetime::from_string(utility::conversions::to_string_t(date_str), utility::datetime::ISO_8601);
-    ASSERT_EQ(date_str, utility::conversions::to_utf8string(date.to_string(utility::datetime::ISO_8601)));
+    //0000-0-00T00:00:00Z [message     ] message\n
+    std::regex r{ "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \\[.{12}\\] \\w{1,}\\n" };
+    ASSERT_TRUE(std::regex_match(entry, r));
 
-    ASSERT_EQ("[message     ] message\n", remove_date_from_log_entry(entry));
+    auto expected_message = std::string("[message     ] message\n");
+    auto pos = entry.find(expected_message);
+    ASSERT_EQ(expected_message.size(), entry.size() - pos);
 }

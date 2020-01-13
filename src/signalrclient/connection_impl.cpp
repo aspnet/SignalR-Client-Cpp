@@ -50,7 +50,9 @@ namespace signalr
         }
         else
         {
+#ifdef USE_CPPRESTSDK
             m_http_client = std::unique_ptr<class http_client>(new default_http_client());
+#endif
         }
     }
 
@@ -198,9 +200,8 @@ namespace signalr
                 {
                     if (!response.accessToken.empty())
                     {
-                        auto headers = connection->m_signalr_client_config.get_http_headers();
-                        headers[_XPLATSTR("Authorization")] = utility::conversions::to_string_t("Bearer " + response.accessToken);
-                        connection->m_signalr_client_config.set_http_headers(headers);
+                        auto& headers = connection->m_signalr_client_config.get_http_headers();
+                        headers["Authorization"] = "Bearer " + response.accessToken;
                     }
                     connection->start_negotiate(response.url, redirect_count + 1, callback);
                     return;

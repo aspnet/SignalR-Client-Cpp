@@ -412,16 +412,12 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_has_error)
             return http_response{ 200, response_body };
         });
 
-    pplx::task_completion_event<void> tce;
+    auto connect_mre = manual_reset_event<void>();
     auto websocket_client = std::make_shared<test_websocket_client>();
-    websocket_client->set_connect_function([tce](const std::string&, std::function<void(std::exception_ptr)> callback)
+    websocket_client->set_connect_function([&connect_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
         {
-            pplx::task<void>(tce)
-                .then([callback](pplx::task<void> prev_task)
-                    {
-                        prev_task.get();
-                        callback(nullptr);
-                    });
+            connect_mre.get();
+            callback(nullptr);
         });
 
     auto connection =
@@ -444,7 +440,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_has_error)
         ASSERT_STREQ("bad negotiate", e.what());
     }
 
-    tce.set();
+    connect_mre.set();
 }
 
 TEST(connection_impl_start, start_fails_if_negotiate_response_does_not_have_websockets)
@@ -924,16 +920,12 @@ TEST(connection_impl_start, start_fails_if_connect_request_times_out)
 
     auto http_client = create_test_http_client();
 
-    pplx::task_completion_event<void> tce;
+    auto connect_mre = manual_reset_event<void>();
     auto websocket_client = std::make_shared<test_websocket_client>();
-    websocket_client->set_connect_function([tce](const std::string&, std::function<void(std::exception_ptr)> callback)
+    websocket_client->set_connect_function([&connect_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
         {
-            pplx::task<void>(tce)
-                .then([callback](pplx::task<void> prev_task)
-                    {
-                        prev_task.get();
-                        callback(nullptr);
-                    });
+            connect_mre.get();
+            callback(nullptr);
         });
 
     auto connection =
@@ -956,7 +948,7 @@ TEST(connection_impl_start, start_fails_if_connect_request_times_out)
         ASSERT_STREQ("transport timed out when trying to connect", e.what());
     }
 
-    tce.set();
+    connect_mre.set();
 }
 
 TEST(connection_impl_process_response, process_response_logs_messages)
@@ -1277,11 +1269,8 @@ TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_ta
         /* connect function */ [&close_event](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
         /* close function */ [&close_event](std::function<void(std::exception_ptr)> callback)
         {
-            pplx::create_task([&close_event, callback]()
-                {
-                    close_event.wait();
-                    callback(nullptr);
-                });
+            close_event.wait();
+            callback(nullptr);
         });
 
     auto connection = create_connection(websocket_client, writer, trace_level::state_changes);
@@ -1699,7 +1688,7 @@ TEST(connection_impl_config, custom_headers_set_in_requests)
 
     signalr::signalr_client_config signalr_client_config{};
     auto http_headers = signalr_client_config.get_http_headers();
-    http_headers[_XPLATSTR("Answer")] = _XPLATSTR("42");
+    http_headers["Answer"] = "42";
     signalr_client_config.set_http_headers(http_headers);
     connection->set_client_config(signalr_client_config);
 

@@ -67,7 +67,7 @@ TEST(websocket_transport_connect, connect_propagates_exceptions)
     }
     catch (const std::exception &e)
     {
-        ASSERT_EQ("connecting failed", e.what());
+        ASSERT_STREQ("connecting failed", e.what());
     }
 }
 
@@ -127,7 +127,7 @@ TEST(websocket_transport_connect, cannot_call_connect_on_already_connected_trans
     }
     catch (const std::exception &e)
     {
-        ASSERT_EQ(_XPLATSTR("transport already connected"), utility::conversions::to_string_t(e.what()));
+        ASSERT_STREQ("transport already connected", e.what());
     }
 }
 
@@ -255,7 +255,7 @@ TEST(websocket_transport_disconnect, disconnect_logs_exceptions)
     auto client = std::make_shared<test_websocket_client>();
     client->set_close_function([](std::function<void(std::exception_ptr)> callback)
     {
-        callback(std::make_exception_ptr(web::websockets::client::websocket_exception(_XPLATSTR("connection closing failed"))));
+        callback(std::make_exception_ptr(std::runtime_error("connection closing failed")));
     });
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
@@ -494,7 +494,7 @@ TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thro
 TEST(websocket_transport_get_transport_type, get_transport_type_returns_websockets)
 {
     auto ws_transport = websocket_transport::create(
-        [](){ return std::make_shared<default_websocket_client>(); },
+        [](){ return std::make_shared<test_websocket_client>(); },
         logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     ASSERT_EQ(transport_type::websockets, ws_transport->get_transport_type());
