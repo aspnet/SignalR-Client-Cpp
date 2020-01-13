@@ -10,17 +10,18 @@
 
 namespace signalr
 {
-    std::shared_ptr<transport> websocket_transport::create(const std::function<std::shared_ptr<websocket_client>()>& websocket_client_factory,
-        const logger& logger)
+    std::shared_ptr<transport> websocket_transport::create(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+        const signalr_client_config& signalr_client_config, const logger& logger)
     {
         return std::shared_ptr<transport>(
-            new websocket_transport(websocket_client_factory, logger));
+            new websocket_transport(websocket_client_factory, signalr_client_config, logger));
     }
 
-    websocket_transport::websocket_transport(const std::function<std::shared_ptr<websocket_client>()>& websocket_client_factory,
-        const logger& logger)
+    websocket_transport::websocket_transport(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+        const signalr_client_config& signalr_client_config, const logger& logger)
         : transport(logger), m_websocket_client_factory(websocket_client_factory), m_close_callback([](std::exception_ptr) {}),
-        m_process_response_callback([](std::string, std::exception_ptr) {}), m_receive_loop_cts(std::make_shared<cancellation_token>())
+        m_process_response_callback([](std::string, std::exception_ptr) {}), m_receive_loop_cts(std::make_shared<cancellation_token>()),
+        m_signalr_client_config(signalr_client_config)
     {
         // we use this cts to check if the receive loop is running so it should be
         // initially canceled to indicate that the receive loop is not running
@@ -161,7 +162,7 @@ namespace signalr
                 std::string("[websocket transport] connecting to: ")
                 .append(url));
 
-            auto websocket_client = m_websocket_client_factory();
+            auto websocket_client = m_websocket_client_factory(m_signalr_client_config);
 
             {
                 std::lock_guard<std::mutex> client_lock(m_websocket_client_lock);

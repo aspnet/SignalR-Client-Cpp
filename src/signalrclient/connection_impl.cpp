@@ -33,7 +33,7 @@ namespace signalr
     }
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
     {
         return std::shared_ptr<connection_impl>(new connection_impl(url, trace_level,
             log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client, websocket_factory));
@@ -57,7 +57,7 @@ namespace signalr
     }
 
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr),
         m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
     {
@@ -75,7 +75,7 @@ namespace signalr
         if (websocket_factory == nullptr)
         {
 #ifdef USE_CPPRESTSDK
-            websocket_factory = []() { return std::make_shared<default_websocket_client>(); };
+            websocket_factory = [](const signalr_client_config& signalr_client_config) { return std::make_shared<default_websocket_client>(signalr_client_config); };
 #endif
         }
 

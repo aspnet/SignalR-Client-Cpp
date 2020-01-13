@@ -24,7 +24,7 @@ namespace signalr
 
     std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, trace_level trace_level,
         const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
-        std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
     {
         auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, trace_level, log_writer, http_client, websocket_factory));
 
@@ -35,7 +35,7 @@ namespace signalr
 
     hub_connection_impl::hub_connection_impl(const std::string& url, trace_level trace_level,
         const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
-        std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
         : m_connection(connection_impl::create(url, trace_level, log_writer,
             http_client, websocket_factory)), m_logger(log_writer, trace_level),
         m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),

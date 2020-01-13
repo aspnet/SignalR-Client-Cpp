@@ -16,7 +16,7 @@ namespace signalr
     class transport_factory
     {
     public:
-        transport_factory(std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>()> websocket_factory);
+        transport_factory(std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory);
 
         virtual std::shared_ptr<transport> create_transport(transport_type transport_type, const logger& logger,
             const signalr_client_config& signalr_client_config);
@@ -24,6 +24,6 @@ namespace signalr
         virtual ~transport_factory();
     private:
         std::shared_ptr<http_client> m_http_client;
-        std::function<std::shared_ptr<websocket_client>()> m_websocket_factory;
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> m_websocket_factory;
     };
 }

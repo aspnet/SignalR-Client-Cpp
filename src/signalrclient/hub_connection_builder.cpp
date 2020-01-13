@@ -56,7 +56,7 @@ namespace signalr
         return *this;
     }
 
-    hub_connection_builder& hub_connection_builder::with_websocket_factory(std::function<std::shared_ptr<websocket_client>()> factory)
+    hub_connection_builder& hub_connection_builder::with_websocket_factory(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> factory)
     {
         m_websocket_factory = factory;
 

@@ -13,7 +13,11 @@ namespace signalr
         static web::websockets::client::websocket_client_config create_client_config(const signalr_client_config& signalr_client_config) noexcept
         {
             auto websocket_client_config = signalr_client_config.get_websocket_client_config();
-            websocket_client_config.headers() = signalr_client_config.get_http_headers();
+            auto websocket_headers = websocket_client_config.headers();
+            for (auto& header : signalr_client_config.get_http_headers())
+            {
+                websocket_headers.add(utility::conversions::to_string_t(header.first), utility::conversions::to_string_t(header.second));
+            }
 
             return websocket_client_config;
         }
