@@ -77,7 +77,7 @@ void chat()
         }
 
         std::cout << "Enter your message:";
-        for (; connection.get_connection_state() == signalr::connection_state::connected;)
+        while (connection.get_connection_state() == signalr::connection_state::connected)
         {
             std::string message;
             std::getline(std::cin, message);

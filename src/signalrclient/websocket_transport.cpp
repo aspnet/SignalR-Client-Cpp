@@ -224,9 +224,9 @@ namespace signalr
 
         websocket_client->stop([logger, callback, close_callback](std::exception_ptr exception)
             {
-                close_callback(exception);
                 try
                 {
+                    close_callback(exception);
                     if (exception != nullptr)
                     {
                         std::rethrow_exception(exception);

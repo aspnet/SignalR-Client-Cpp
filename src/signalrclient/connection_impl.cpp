@@ -316,6 +316,10 @@ namespace signalr
                     return;
                 }
 
+                // close callback will only be called if start on the transport has already returned
+                // wait for the event in order to avoid a race where the state hasn't changed from connecting
+                // yet and the transport errors out
+                connection->m_start_completed_event.wait();
                 connection->stop_connection(exception);
             });
 
@@ -588,14 +592,7 @@ namespace signalr
             change_state(connection_state::disconnecting);
         }
 
-        if (m_transport)
-        {
-            m_transport->stop(callback);
-        }
-        else
-        {
-            stop_connection(nullptr);
-        }
+        m_transport->stop(callback);
     }
 
     // do not use `shared_from_this` as it can be called via the destructor
@@ -606,13 +603,6 @@ namespace signalr
             // on a different thread at the same time. In this case we must not null out the transport if we are
             // not in the `disconnecting` state to not affect the 'start' invocation.
             std::lock_guard<std::mutex> lock(m_stop_lock);
-
-            if (m_connection_state == connection_state::connecting)
-            {
-                // should never happen
-                m_logger.log(trace_level::errors, "Stopping was ignored because the connection is still in the connecting state.");
-                return;
-            }
 
             if (m_connection_state == connection_state::disconnected)
             {
