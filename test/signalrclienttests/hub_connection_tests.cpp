@@ -1199,7 +1199,7 @@ TEST(invoke, invoke_handles_UINT32_MAX_value_as_unsigned_int)
 
     auto connect_mre = manual_reset_event<void>();
 
-    hub_connection->start([&connect_mre](std::exception_ptr exception)
+    hub_connection.start([&connect_mre](std::exception_ptr exception)
     {
         connect_mre.set(exception);
     });
@@ -1218,7 +1218,7 @@ TEST(invoke, invoke_handles_UINT32_MAX_value_as_unsigned_int)
     std::vector<signalr::value> arr{ signalr::value((double)original_value) };
     signalr::value args(arr);
 
-    hub_connection->invoke("method", signalr::value(arr), [&client_mre](const signalr::value& message, std::exception_ptr exception)
+    hub_connection.invoke("method", signalr::value(arr), [&client_mre](const signalr::value& message, std::exception_ptr exception)
     {
         if (exception)
         {
@@ -1235,7 +1235,7 @@ TEST(invoke, invoke_handles_UINT32_MAX_value_as_unsigned_int)
     auto result = client_mre.get();
 
     ASSERT_TRUE(result.is_array());
-    
+
     auto array = result.as_array();
 
     ASSERT_EQ(1, array.size());
