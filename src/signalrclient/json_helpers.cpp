@@ -60,10 +60,10 @@ namespace signalr
             {
                 if (value < 0)
                 {
-                    if (value > (double)INT64_MIN)
+                    if (value >= (double)INT64_MIN)
                     {
                         // Fits within int64_t
-                        return Json::Value((int64_t)intPart);
+                        return Json::Value(static_cast<int64_t>(intPart));
                     }
                     else
                     {
@@ -73,10 +73,10 @@ namespace signalr
                 }
                 else
                 {
-                    if (value < UINT64_MAX)
+                    if (value <= (double)UINT64_MAX)
                     {
                         // Fits within uint64_t
-                        return Json::Value((uint64_t)intPart);
+                        return Json::Value(static_cast<uint64_t>(intPart));
                     }
                     else
                     {
