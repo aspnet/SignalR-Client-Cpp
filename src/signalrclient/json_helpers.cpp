@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "json_helpers.h"
 #include <cmath>
+#include <stdint.h>
 
 namespace signalr
 {
@@ -57,7 +58,32 @@ namespace signalr
             // because the server expects certain values to be 1 instead of 1.0 (like protocol version)
             if (std::modf(value, &intPart) == 0)
             {
-                return Json::Value((int)intPart);
+                if (value < 0)
+                {
+                    if (value >= (double)INT64_MIN)
+                    {
+                        // Fits within int64_t
+                        return Json::Value(static_cast<int64_t>(intPart));
+                    }
+                    else
+                    {
+                        // Remain as double
+                        return Json::Value(value);
+                    }
+                }
+                else
+                {
+                    if (value <= (double)UINT64_MAX)
+                    {
+                        // Fits within uint64_t
+                        return Json::Value(static_cast<uint64_t>(intPart));
+                    }
+                    else
+                    {
+                        // Remain as double
+                        return Json::Value(value);
+                    }
+                }
             }
             return Json::Value(v.as_double());
         }

@@ -22,6 +22,77 @@ hub_connection create_hub_connection(std::shared_ptr<websocket_client> websocket
         .build();
 }
 
+template<typename TValue>
+std::string build_websocket_message_string(TValue value)
+{
+    std::ostringstream stream;
+    stream << "{ \"type\": 3, \"invocationId\": \"0\", \"result\": [" << value << "] }\x1e";
+
+    return stream.str();
+}
+
+template<int32_t precision>
+std::string format_double_as_string(double value)
+{
+    std::ostringstream stream;
+    stream << std::setprecision(precision) << value;
+
+    return stream.str();
+}
+
+template<typename TValue>
+void invoke_common_numeric_handling_logic(TValue original_value, std::function<void(TValue, TValue)> assertion_callback)
+{
+    std::string websocket_message = build_websocket_message_string(original_value);
+
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto connect_mre = manual_reset_event<void>();
+
+    hub_connection.start([&connect_mre](std::exception_ptr exception)
+        {
+            connect_mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+
+    websocket_client->receive_message("{ }\x1e");
+
+    connect_mre.get();
+
+    auto callback_mre = manual_reset_event<signalr::value>();
+
+    std::vector<signalr::value> arr{ signalr::value((double)original_value) };
+
+    hub_connection.invoke("method", signalr::value(arr), [&callback_mre](const signalr::value& message, std::exception_ptr exception)
+        {
+            if (exception)
+            {
+                callback_mre.set(exception);
+            }
+            else
+            {
+                callback_mre.set(message);
+            }
+        });
+
+    websocket_client->receive_message(websocket_message);
+
+    auto result = callback_mre.get();
+
+    ASSERT_TRUE(result.is_array());
+
+    auto array = result.as_array();
+
+    ASSERT_EQ(1, array.size());
+
+    auto value = static_cast<TValue>(array[0].as_double());
+
+    assertion_callback(value, original_value);
+}
+
 TEST(url, negotiate_appended_to_url)
 {
     std::string base_urls[] = { "http://fakeuri", "http://fakeuri/" };
@@ -1167,4 +1238,69 @@ TEST(invoke, send_throws_when_the_underlying_connection_is_not_valid)
     {
         ASSERT_STREQ("cannot send data when the connection is not in the connected state. current connection state: disconnected", e.what());
     }
+}
+
+TEST(invoke, invoke_handles_UINT32_MAX_value_as_unsigned_int)
+{
+    invoke_common_numeric_handling_logic<unsigned int>(UINT32_MAX, [](unsigned int result, unsigned int expected) 
+        { 
+            ASSERT_EQ(result, expected); 
+        });
+}
+
+TEST(invoke, invoke_handles_INT64_MIN_value_as_int64_t)
+{
+    invoke_common_numeric_handling_logic<long long>(INT64_MIN, [](long long result, long long expected) 
+        { 
+            ASSERT_EQ(result, expected); 
+        });
+}
+
+TEST(invoke, invoke_handles_INT64_MIN_minus_1_value_as_double)
+{
+    invoke_common_numeric_handling_logic<double>((INT64_MIN - 1.0), [](double result, double expected) 
+        { 
+            std::string result_string = format_double_as_string<6>(result);
+            std::string expected_string = format_double_as_string<6>(expected);
+
+            ASSERT_EQ(result_string, expected_string);
+        });
+}
+
+TEST(invoke, invoke_handles_UINT64_MAX_value_as_uint64_t)
+{
+    invoke_common_numeric_handling_logic<long long>(UINT64_MAX, [](long long result, long long expected) 
+        { 
+            ASSERT_EQ(result, expected); 
+        });
+}
+
+TEST(invoke, invoke_handles_UINT64_MAX_plus_1_value_as_double)
+{
+    invoke_common_numeric_handling_logic<double>((UINT64_MAX + 1.0), [](double result, double expected) 
+        {
+            std::string result_string = format_double_as_string<6>(result);
+            std::string expected_string = format_double_as_string<6>(expected);
+
+            ASSERT_EQ(result_string, expected_string);
+        });
+}
+
+TEST(invoke, invoke_handles_non_integer_value_as_double)
+{
+    invoke_common_numeric_handling_logic<double>(3.1415926, [](double result, double expected) 
+        { 
+            std::string result_string = format_double_as_string<6>(result);
+            std::string expected_string = format_double_as_string<6>(expected);
+
+            ASSERT_EQ(result_string, expected_string);
+        });
+}
+
+TEST(invoke, invoke_handles_zero_value_as_int)
+{
+    invoke_common_numeric_handling_logic<int>(0, [](int result, int expected)
+        {
+            ASSERT_EQ(result, expected);
+        });
 }
