@@ -65,7 +65,6 @@ void invoke_common_numeric_handling_logic(TValue original_value, std::function<v
     auto callback_mre = manual_reset_event<signalr::value>();
 
     std::vector<signalr::value> arr{ signalr::value((double)original_value) };
-    signalr::value args(arr);
 
     hub_connection.invoke("method", signalr::value(arr), [&callback_mre](const signalr::value& message, std::exception_ptr exception)
         {
