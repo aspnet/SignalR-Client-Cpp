@@ -194,7 +194,7 @@ namespace signalr
                     return;
                 }
             }
-            auto weak_connection = weak_from_this();
+            std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
             m_connection->stop([weak_connection](std::exception_ptr exception)
                 {
                     auto connection = weak_connection.lock();
