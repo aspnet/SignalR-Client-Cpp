@@ -354,7 +354,7 @@ TEST(stop, does_nothing_on_disconnected_connection)
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
-TEST(stop, second_stop_noops_during_first_stop)
+TEST(stop, second_stop_waits_for_first_stop)
 {
     auto transport_stop_mre = manual_reset_event<void>();
     auto websocket_client = create_test_websocket_client();
@@ -388,20 +388,69 @@ TEST(stop, second_stop_noops_during_first_stop)
         });
 
     bool second_stop_called = false;
-    hub_connection.stop([&second_stop_called](std::exception_ptr exception)
+    auto second_mre = manual_reset_event<void>();
+    hub_connection.stop([&second_stop_called, &second_mre](std::exception_ptr exception)
         {
             second_stop_called = true;
+            second_mre.set(exception);
         });
 
-    ASSERT_TRUE(second_stop_called);
+    ASSERT_FALSE(second_stop_called);
     ASSERT_FALSE(connection_closed);
 
     transport_stop_mre.set();
     mre.get();
 
     ASSERT_TRUE(connection_closed);
+    second_mre.get();
+    ASSERT_TRUE(second_stop_called);
 
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+}
+
+TEST(stop, blocking_stop_callback_does_not_prevent_start)
+{
+    auto transport_stop_mre = manual_reset_event<void>();
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+
+    auto blocking_mre = manual_reset_event<void>();
+    hub_connection.stop([&mre, &blocking_mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+            blocking_mre.get();
+            mre.set();
+        });
+
+    mre.get();
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+
+    blocking_mre.set();
+    mre.get();
 }
 
 TEST(stop, disconnected_callback_called_when_hub_connection_stops)
@@ -1338,24 +1387,24 @@ TEST(invoke, send_throws_when_the_underlying_connection_is_not_valid)
 
 TEST(invoke, invoke_handles_UINT32_MAX_value_as_unsigned_int)
 {
-    invoke_common_numeric_handling_logic<unsigned int>(UINT32_MAX, [](unsigned int result, unsigned int expected) 
-        { 
-            ASSERT_EQ(result, expected); 
+    invoke_common_numeric_handling_logic<unsigned int>(UINT32_MAX, [](unsigned int result, unsigned int expected)
+        {
+            ASSERT_EQ(result, expected);
         });
 }
 
 TEST(invoke, invoke_handles_INT64_MIN_value_as_int64_t)
 {
-    invoke_common_numeric_handling_logic<long long>(INT64_MIN, [](long long result, long long expected) 
-        { 
-            ASSERT_EQ(result, expected); 
+    invoke_common_numeric_handling_logic<long long>(INT64_MIN, [](long long result, long long expected)
+        {
+            ASSERT_EQ(result, expected);
         });
 }
 
 TEST(invoke, invoke_handles_INT64_MIN_minus_1_value_as_double)
 {
-    invoke_common_numeric_handling_logic<double>((INT64_MIN - 1.0), [](double result, double expected) 
-        { 
+    invoke_common_numeric_handling_logic<double>((INT64_MIN - 1.0), [](double result, double expected)
+        {
             std::string result_string = format_double_as_string<6>(result);
             std::string expected_string = format_double_as_string<6>(expected);
 
@@ -1365,15 +1414,15 @@ TEST(invoke, invoke_handles_INT64_MIN_minus_1_value_as_double)
 
 TEST(invoke, invoke_handles_UINT64_MAX_value_as_uint64_t)
 {
-    invoke_common_numeric_handling_logic<long long>(UINT64_MAX, [](long long result, long long expected) 
-        { 
-            ASSERT_EQ(result, expected); 
+    invoke_common_numeric_handling_logic<long long>(UINT64_MAX, [](long long result, long long expected)
+        {
+            ASSERT_EQ(result, expected);
         });
 }
 
 TEST(invoke, invoke_handles_UINT64_MAX_plus_1_value_as_double)
 {
-    invoke_common_numeric_handling_logic<double>((UINT64_MAX + 1.0), [](double result, double expected) 
+    invoke_common_numeric_handling_logic<double>((UINT64_MAX + 1.0), [](double result, double expected)
         {
             std::string result_string = format_double_as_string<6>(result);
             std::string expected_string = format_double_as_string<6>(expected);
@@ -1384,8 +1433,8 @@ TEST(invoke, invoke_handles_UINT64_MAX_plus_1_value_as_double)
 
 TEST(invoke, invoke_handles_non_integer_value_as_double)
 {
-    invoke_common_numeric_handling_logic<double>(3.1415926, [](double result, double expected) 
-        { 
+    invoke_common_numeric_handling_logic<double>(3.1415926, [](double result, double expected)
+        {
             std::string result_string = format_double_as_string<6>(result);
             std::string expected_string = format_double_as_string<6>(expected);
 

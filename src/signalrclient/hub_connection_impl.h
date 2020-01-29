@@ -59,6 +59,9 @@ namespace signalr
         signalr_client_config m_signalr_client_config;
         std::shared_ptr<hub_protocol> m_protocol;
 
+        std::mutex m_stop_callback_lock;
+        std::vector<std::function<void(std::exception_ptr)>> m_stop_callbacks;
+
         void initialize();
 
         void process_message(std::string&& message);

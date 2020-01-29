@@ -180,14 +180,44 @@ namespace signalr
             callback(nullptr);
             return;
         }
-        else if (get_connection_state() == connection_state::disconnecting)
-        {
-            m_logger.log(trace_level::info, "Stop ignored because the connection is in the disconnecting state.");
-            callback(nullptr);
-        }
         else
         {
-            m_connection->stop(callback);
+            {
+                std::lock_guard<std::mutex> lock(m_stop_callback_lock);
+                m_stop_callbacks.push_back(callback);
+
+                if (m_stop_callbacks.size() > 1)
+                {
+                    m_logger.log(trace_level::info, "Stop is already in progress, waiting for it to finish.");
+                    // we already registered the callback
+                    // so we can just return now as the in-progress stop will trigger the callback when it completes
+                    return;
+                }
+            }
+            auto weak_connection = weak_from_this();
+            m_connection->stop([weak_connection](std::exception_ptr exception)
+                {
+                    auto connection = weak_connection.lock();
+                    if (!connection)
+                    {
+                        return;
+                    }
+
+                    std::vector<std::function<void(std::exception_ptr)>> callbacks;
+
+                    {
+                        std::lock_guard<std::mutex> lock(connection->m_stop_callback_lock);
+                        // copy the callbacks out and clear the list inside the lock
+                        // then run the callbacks outside of the lock
+                        callbacks = connection->m_stop_callbacks;
+                        connection->m_stop_callbacks.clear();
+                    }
+
+                    for (auto& callback : callbacks)
+                    {
+                        callback(exception);
+                    }
+                });
         }
     }
 
@@ -200,11 +230,11 @@ namespace signalr
                 signalr::value handshake;
                 std::tie(response, handshake) = handshake::parse_handshake(response);
 
-                auto obj = handshake.as_map();
+                auto& obj = handshake.as_map();
                 auto found = obj.find("error");
                 if (found != obj.end())
                 {
-                    auto error = found->second.as_string();
+                    auto& error = found->second.as_string();
                     m_logger.log(trace_level::errors, std::string("handshake error: ")
                         .append(error));
                     m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
@@ -307,13 +337,13 @@ namespace signalr
             throw signalr_exception("expected object");
         }
 
-        auto invocationId = message.as_map().at("invocationId");
+        auto& invocationId = message.as_map().at("invocationId");
         if (!invocationId.is_string())
         {
             throw signalr_exception("invocationId is not a string");
         }
 
-        auto id = invocationId.as_string();
+        auto& id = invocationId.as_string();
         if (!m_callback_manager.invoke_callback(id, message, true))
         {
             m_logger.log(trace_level::info, std::string("no callback found for id: ").append(id));
