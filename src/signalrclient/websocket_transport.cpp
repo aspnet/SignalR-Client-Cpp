@@ -226,6 +226,7 @@ namespace signalr
             {
                 try
                 {
+                    close_callback(exception);
                     if (exception != nullptr)
                     {
                         std::rethrow_exception(exception);
@@ -241,8 +242,6 @@ namespace signalr
 
                     callback(exception);
                 }
-
-                close_callback(exception);
             });
     }
 

@@ -21,6 +21,8 @@ namespace signalr
         {
             return 1;
         }
+
+        ~json_hub_protocol() {}
     private:
         signalr::value parse_message(const std::string&) const;
 

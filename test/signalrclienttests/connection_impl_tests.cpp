@@ -1640,8 +1640,32 @@ TEST(connection_impl_stop, exception_for_disconnected_callback_caught_and_logged
     mre.get();
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(1U, log_entries.size());
+    ASSERT_EQ(1U, log_entries.size()) << dump_vector(log_entries);
     ASSERT_EQ("[error       ] disconnected callback threw an unknown exception\n", remove_date_from_log_entry(log_entries[0]));
+}
+
+TEST(connection_impl_stop, transport_error_invokes_disconnected_callback)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto connection = create_connection(websocket_client);
+
+    auto disconnect_mre = manual_reset_event<void>();
+    connection->set_disconnected([&disconnect_mre]() { disconnect_mre.set(); });
+
+    auto mre = manual_reset_event<void>();
+    connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(1000));
+    websocket_client->receive_message(std::make_exception_ptr(std::runtime_error("error")));
+
+    disconnect_mre.get();
+
+    ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 }
 
 TEST(connection_impl_config, custom_headers_set_in_requests)

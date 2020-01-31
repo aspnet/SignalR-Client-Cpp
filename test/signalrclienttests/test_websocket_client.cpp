@@ -88,6 +88,9 @@ void test_websocket_client::stop(std::function<void(std::exception_ptr)> callbac
         m_receive_loop_not_running.wait(1000);
     }
 
+    handshake_sent.reset();
+    receive_loop_started.reset();
+
     auto local_copy = m_close_function;
     std::thread([callback, local_copy]()
         {

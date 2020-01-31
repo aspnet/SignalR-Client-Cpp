@@ -145,10 +145,7 @@ namespace signalr
             m_connection_id = "";
         }
 
-        start_negotiate(m_base_url, 0, [callback](std::exception_ptr exception)
-        {
-            callback(exception);
-        });
+        start_negotiate(m_base_url, 0, callback);
     }
 
     void connection_impl::start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
@@ -310,6 +307,21 @@ namespace signalr
 
         auto transport = connection->m_transport_factory->create_transport(
             transport_type::websockets, connection->m_logger, connection->m_signalr_client_config);
+
+        transport->on_close([weak_connection](std::exception_ptr exception)
+            {
+                auto connection = weak_connection.lock();
+                if (!connection)
+                {
+                    return;
+                }
+
+                // close callback will only be called if start on the transport has already returned
+                // wait for the event in order to avoid a race where the state hasn't changed from connecting
+                // yet and the transport errors out
+                connection->m_start_completed_event.wait();
+                connection->stop_connection(exception);
+            });
 
         transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
             {
@@ -532,50 +544,7 @@ namespace signalr
     {
         m_logger.log(trace_level::info, "stopping connection");
 
-        auto connection = shared_from_this();
-        shutdown([connection, callback](std::exception_ptr exception)
-            {
-                std::thread([connection, callback, exception]()
-                    {
-                        if (exception != nullptr)
-                        {
-                            callback(exception);
-                            return;
-                        }
-
-                        {
-                            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
-                            // on a different thread at the same time. In this case we must not null out the transport if we are
-                            // not in the `disconnecting` state to not affect the 'start' invocation.
-                            std::lock_guard<std::mutex> lock(connection->m_stop_lock);
-                            if (connection->change_state(connection_state::disconnecting, connection_state::disconnected))
-                            {
-                                // we do let the exception through (especially the task_canceled exception)
-                                connection->m_transport = nullptr;
-                            }
-                        }
-
-                        try
-                        {
-                            connection->m_disconnected();
-                        }
-                        catch (const std::exception& e)
-                        {
-                            connection->m_logger.log(
-                                trace_level::errors,
-                                std::string("disconnected callback threw an exception: ")
-                                .append(e.what()));
-                        }
-                        catch (...)
-                        {
-                            connection->m_logger.log(
-                                trace_level::errors,
-                                std::string("disconnected callback threw an unknown exception"));
-                        }
-
-                        callback(nullptr);
-                    }).detach();
-            });
+        shutdown(callback);
     }
 
     // This function is called from the dtor so you must not use `shared_from_this` here (it will throw).
@@ -623,10 +592,61 @@ namespace signalr
             change_state(connection_state::disconnecting);
         }
 
-        m_transport->stop([callback](std::exception_ptr exception)
+        m_transport->stop(callback);
+    }
+
+    // do not use `shared_from_this` as it can be called via the destructor
+    void connection_impl::stop_connection(std::exception_ptr error)
+    {
+        {
+            // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
+            // on a different thread at the same time. In this case we must not null out the transport if we are
+            // not in the `disconnecting` state to not affect the 'start' invocation.
+            std::lock_guard<std::mutex> lock(m_stop_lock);
+
+            if (m_connection_state == connection_state::disconnected)
             {
-                callback(exception);
-            });
+                m_logger.log(trace_level::info, "Stopping was ignored because the connection is already in the disconnected state.");
+                return;
+            }
+
+            change_state(connection_state::disconnected);
+            m_transport = nullptr;
+        }
+
+        if (error)
+        {
+            try
+            {
+                std::rethrow_exception(error);
+            }
+            catch (const std::exception & ex)
+            {
+                m_logger.log(trace_level::errors, std::string("Connection closed with error: ").append(ex.what()));
+            }
+        }
+        else
+        {
+            m_logger.log(trace_level::info, "Connection closed.");
+        }
+
+        try
+        {
+            m_disconnected();
+        }
+        catch (const std::exception & e)
+        {
+            m_logger.log(
+                trace_level::errors,
+                std::string("disconnected callback threw an exception: ")
+                .append(e.what()));
+        }
+        catch (...)
+        {
+            m_logger.log(
+                trace_level::errors,
+                std::string("disconnected callback threw an unknown exception"));
+        }
     }
 
     connection_state connection_impl::get_connection_state() const noexcept
