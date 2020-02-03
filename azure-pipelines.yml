@@ -93,12 +93,18 @@ stages:
       agentOs: Windows
       jobName: Windows_Build_Test
       useCppRestSDK: false
+      cMakeRunArgs: '-A x64'
 
   - template: .azure/default-build.yml
     parameters:
       agentOs: macOs
       jobName: Mac_Build_Test
       useCppRestSDK: false
+      beforeBuild:
+      # XCode 11 doesn't play nicely with gcc, workaround by using XCode 10. We can try updating to a newer XCode in the future
+      # Once the problem has been resolved
+      - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
+      - script: brew install gcc
 
   # Publish to the BAR
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
