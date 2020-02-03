@@ -106,13 +106,18 @@ stages:
       # XCode 11 doesn't play nicely with gcc, workaround by using XCode 10. We can try updating to a newer XCode in the future
       # Once the problem has been resolved
       - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
+        displayName: xcode-select
       - script: brew install gcc
+        displayName: Install gcc
 
   # Publish to the BAR
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - template: /eng/common/templates/job/publish-build-assets.yml
       parameters:
         dependsOn:
+          - Windows_Build_Test_With_CppRestSDK
+          - Mac_Build_Test_With_CppRestSDK
+          - Linux_Build_Test_With_CppRestSDK
           - Windows_Build_Test
           - Mac_Build_Test
           - Linux_Build_Test
