@@ -10,6 +10,7 @@
 
 #include "_exports.h"
 #include <map>
+#include <string>
 
 namespace signalr
 {
