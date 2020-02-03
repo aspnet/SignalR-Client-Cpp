@@ -15,7 +15,7 @@
 
 #ifndef _WIN32
 #ifndef __cdecl
-#ifdef (cdecl)
+#ifdef cdecl
 #define __cdecl __attribute__((cdecl))
 #else
 #define __cdecl
