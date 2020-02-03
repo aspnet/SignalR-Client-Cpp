@@ -927,11 +927,13 @@ TEST(connection_impl_start, start_fails_if_connect_request_times_out)
     auto http_client = create_test_http_client();
 
     auto connect_mre = manual_reset_event<void>();
+    auto wait_connect_mre = manual_reset_event<void>();
     auto websocket_client = std::make_shared<test_websocket_client>();
-    websocket_client->set_connect_function([&connect_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
+    websocket_client->set_connect_function([&connect_mre, &wait_connect_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
         {
             connect_mre.get();
             callback(nullptr);
+            wait_connect_mre.set();
         });
 
     auto connection =
@@ -955,6 +957,7 @@ TEST(connection_impl_start, start_fails_if_connect_request_times_out)
     }
 
     connect_mre.set();
+    wait_connect_mre.get();
 }
 
 TEST(connection_impl_process_response, process_response_logs_messages)
