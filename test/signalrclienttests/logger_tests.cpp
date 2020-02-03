@@ -62,7 +62,7 @@ TEST(logger_write, entries_formatted_correctly)
     auto entry = log_entries[0];
 
     //0000-0-00T00:00:00Z [message     ] message\n
-    std::regex r{ "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z \\[.{12}\\] \\w{1,}\\n" };
+    std::regex r{ "[\\d]{4}-[\\d]{2}-[\\d]{2}T[\\d]{2}:[\\d]{2}:[\\d]{2}Z \\[.{12}\\] \\w{1,}\\n" };
     ASSERT_TRUE(std::regex_match(entry, r));
 
     auto expected_message = std::string("[message     ] message\n");
