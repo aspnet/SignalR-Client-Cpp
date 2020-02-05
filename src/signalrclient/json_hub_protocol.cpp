@@ -22,7 +22,7 @@ namespace signalr
         auto pos = message.find(record_separator, offset);
         while (pos != std::string::npos)
         {
-            auto hub_message = parse_message(message.substr(offset, pos - offset));
+            auto hub_message = parse_message(message.c_str() + offset, pos - offset);
             vec.push_back(std::move(hub_message));
 
             offset = pos + 1;
@@ -33,13 +33,13 @@ namespace signalr
         return vec;
     }
 
-    signalr::value json_hub_protocol::parse_message(const std::string& message) const
+    signalr::value json_hub_protocol::parse_message(const char* begin, size_t length) const
     {
         Json::Value root;
         auto reader = getJsonReader();
         std::string errors;
 
-        if (!reader->parse(message.c_str(), message.c_str() + message.size(), &root, &errors))
+        if (!reader->parse(begin, begin + length, &root, &errors))
         {
             throw signalr_exception(errors);
         }
