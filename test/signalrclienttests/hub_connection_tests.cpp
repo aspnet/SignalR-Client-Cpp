@@ -18,7 +18,7 @@ hub_connection create_hub_connection(std::shared_ptr<websocket_client> websocket
     return hub_connection_builder::create(create_uri())
         .with_logging(log_writer, trace_level)
         .with_http_client(create_test_http_client())
-        .with_websocket_factory([websocket_client]() { return websocket_client; })
+        .with_websocket_factory([websocket_client](const signalr_client_config&) { return websocket_client; })
         .build();
 }
 
@@ -109,7 +109,7 @@ TEST(url, negotiate_appended_to_url)
         auto hub_connection = hub_connection_builder::create(base_url)
             .with_logging(std::make_shared<memory_log_writer>(), trace_level::none)
             .with_http_client(http_client)
-            .with_websocket_factory([]() { return create_test_websocket_client(); })
+            .with_websocket_factory([](const signalr_client_config&) { return create_test_websocket_client(); })
             .build();
 
         auto mre = manual_reset_event<void>();
@@ -848,8 +848,6 @@ TEST(send, creates_correct_payload)
 
 TEST(send, does_not_wait_for_server_response)
 {
-    pplx::task_completion_event<void> waitForSend;
-
     auto websocket_client = create_test_websocket_client();
 
     auto hub_connection = create_hub_connection(websocket_client);
@@ -872,7 +870,6 @@ TEST(send, does_not_wait_for_server_response)
         mre.set(exception);
     });
     mre.get();
-    waitForSend.set();
 }
 
 TEST(send, passing_non_array_arguments_fails)

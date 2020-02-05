@@ -28,7 +28,7 @@ namespace signalr
 
         SIGNALRCLIENT_API hub_connection_builder& with_logging(std::shared_ptr<log_writer> logger, trace_level logLevel);
 
-        SIGNALRCLIENT_API hub_connection_builder& with_websocket_factory(std::function<std::shared_ptr<websocket_client>()> factory);
+        SIGNALRCLIENT_API hub_connection_builder& with_websocket_factory(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> factory);
 
         SIGNALRCLIENT_API hub_connection_builder& with_http_client(std::shared_ptr<http_client> http_client);
 
@@ -39,7 +39,7 @@ namespace signalr
         std::string m_url;
         std::shared_ptr<log_writer> m_logger;
         trace_level m_log_level;
-        std::function<std::shared_ptr<websocket_client>()> m_websocket_factory;
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> m_websocket_factory;
         std::shared_ptr<http_client> m_http_client;
     };
 }

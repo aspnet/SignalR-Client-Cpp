@@ -12,7 +12,7 @@ namespace signalr
 {
     hub_connection::hub_connection(const std::string& url,
         trace_level trace_level, std::shared_ptr<log_writer> log_writer, std::shared_ptr<http_client> http_client,
-        std::function<std::shared_ptr<websocket_client>()> websocket_factory)
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
         : m_pImpl(hub_connection_impl::create(url, trace_level, log_writer, http_client, websocket_factory))
     {}
 

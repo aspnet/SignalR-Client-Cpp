@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <vector>
+#include <string>
+
 namespace signalr
 {
     struct available_transport

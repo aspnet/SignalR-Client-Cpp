@@ -32,11 +32,7 @@ namespace signalr
             // TODO: signalr_client_config
             http_request request;
             request.method = http_method::POST;
-
-            for (auto& header : config.get_http_headers())
-            {
-                request.headers.insert(std::make_pair(utility::conversions::to_utf8string(header.first), utility::conversions::to_utf8string(header.second)));
-            }
+            request.headers = config.get_http_headers();
 
             client.send(negotiate_url, request, [callback](const http_response& http_response, std::exception_ptr exception)
             {
