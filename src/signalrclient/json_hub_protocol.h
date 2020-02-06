@@ -24,7 +24,7 @@ namespace signalr
 
         ~json_hub_protocol() {}
     private:
-        signalr::value parse_message(const std::string&) const;
+        signalr::value parse_message(const char* begin, size_t length) const;
 
         std::string m_protocol_name = "json";
     };

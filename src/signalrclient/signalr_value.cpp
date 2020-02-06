@@ -152,6 +152,11 @@ namespace signalr
 
     value::~value()
     {
+        destruct_internals();
+    }
+
+    void value::destruct_internals()
+    {
         switch (mType)
         {
         case value_type::array:
@@ -170,6 +175,8 @@ namespace signalr
 
     value& value::operator=(const value& rhs)
     {
+        destruct_internals();
+
         mType = rhs.mType;
         switch (mType)
         {
@@ -197,6 +204,8 @@ namespace signalr
 
     value& value::operator=(value&& rhs) noexcept
     {
+        destruct_internals();
+
         mType = std::move(rhs.mType);
         switch (mType)
         {

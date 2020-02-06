@@ -184,5 +184,7 @@ namespace signalr
         };
 
         storage mStorage;
+
+        void destruct_internals();
     };
 }
