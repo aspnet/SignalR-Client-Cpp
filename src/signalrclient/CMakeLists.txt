@@ -32,7 +32,7 @@ include_directories(
 add_library (signalrclient SHARED ${SOURCES})
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(signalrclient PRIVATE /Wall /WX /GR- /guard:cf)
+    target_compile_options(signalrclient PRIVATE /W4 /WX /GR- /guard:cf)
 else()
     target_compile_options(signalrclient PRIVATE -fno-rtti -Wall -Wextra -Wpedantic)
 endif()
