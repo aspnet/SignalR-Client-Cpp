@@ -13,5 +13,7 @@ namespace signalr
     public:
         // NOTE: the caller does not enforce thread safety of this call
         SIGNALRCLIENT_API virtual void write(const std::string &entry) = 0;
+
+        virtual ~log_writer() {}
     };
 }

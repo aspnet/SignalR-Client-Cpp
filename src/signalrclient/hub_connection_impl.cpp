@@ -7,7 +7,6 @@
 #include "signalrclient/hub_exception.h"
 #include "trace_log_writer.h"
 #include "signalrclient/signalr_exception.h"
-#include "make_unique.h"
 #include "json_hub_protocol.h"
 #include "message_type.h"
 #include "handshake_protocol.h"
@@ -40,7 +39,7 @@ namespace signalr
         : m_connection(connection_impl::create(url, trace_level, log_writer,
             http_client, websocket_factory)), m_logger(log_writer, trace_level),
         m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),
-        m_disconnected([]() noexcept {}), m_handshakeReceived(false), m_protocol(std::make_shared<json_hub_protocol>())
+        m_handshakeReceived(false), m_disconnected([]() noexcept {}), m_protocol(std::make_shared<json_hub_protocol>())
     {}
 
     void hub_connection_impl::initialize()

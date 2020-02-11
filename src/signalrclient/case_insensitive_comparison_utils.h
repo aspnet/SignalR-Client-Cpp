@@ -21,7 +21,7 @@ namespace signalr
                 return false;
             }
 
-            for (int i = 0; i < s1.size(); ++i)
+            for (unsigned i = 0; i < s1.size(); ++i)
             {
                 if (std::toupper(s1[i]) != std::toupper(s2[i]))
                 {

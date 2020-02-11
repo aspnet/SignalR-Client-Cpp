@@ -20,9 +20,9 @@ namespace signalr
 
     websocket_transport::websocket_transport(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
         const signalr_client_config& signalr_client_config, const logger& logger)
-        : transport(logger), m_websocket_client_factory(websocket_client_factory), m_close_callback([](std::exception_ptr) {}),
-        m_process_response_callback([](std::string, std::exception_ptr) {}), m_receive_loop_cts(std::make_shared<cancellation_token>()),
-        m_signalr_client_config(signalr_client_config)
+        : transport(logger), m_websocket_client_factory(websocket_client_factory), m_process_response_callback([](std::string, std::exception_ptr) {}),
+        m_close_callback([](std::exception_ptr) {}), m_signalr_client_config(signalr_client_config),
+        m_receive_loop_cts(std::make_shared<cancellation_token>())
     {
         // we use this cts to check if the receive loop is running so it should be
         // initially canceled to indicate that the receive loop is not running

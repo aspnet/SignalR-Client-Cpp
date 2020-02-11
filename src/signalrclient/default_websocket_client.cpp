@@ -52,6 +52,7 @@ namespace signalr
             {
                 try
                 {
+                    task.get();
                     callback(nullptr);
                 }
                 catch (...)
