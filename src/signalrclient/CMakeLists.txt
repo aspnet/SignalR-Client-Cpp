@@ -41,7 +41,7 @@ else()
     )
   elseif(NOT WIN32)
     target_link_libraries(signalrclient
-      PUBLIC ${CPPREST_LIB}
+      PUBLIC ${CPPREST_LIB} Boost::system
       PRIVATE OpenSSL::SSL
     )
   else()
