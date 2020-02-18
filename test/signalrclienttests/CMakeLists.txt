@@ -24,5 +24,6 @@ include_directories(
 
 add_executable (signalrclienttests ${SOURCES})
 
-target_link_libraries(signalrclienttests gtest signalrclient ${CPPREST_LIB})
+find_package(Boost REQUIRED COMPONENTS system)
+target_link_libraries(signalrclienttests gtest signalrclient ${CPPREST_LIB} Boost::system)
 add_test(NAME signalrclienttests COMMAND signalrclienttests)
