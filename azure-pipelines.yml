@@ -34,19 +34,10 @@ stages:
       useCppRestSDK: true
       cMakeRunArgs: '-A x64'
       beforeBuild:
-      # check if vcpkg exists on the machine before trying to build it
-      - powershell: |
-          if ((Get-Command vcpkg.exe -ErrorAction SilentlyContinue) -eq $null) {
-            & ./submodules/vcpkg/bootstrap-vcpkg.bat
-          }
+      - powershell: & ./submodules/vcpkg/bootstrap-vcpkg.bat
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - powershell: |
-          if (Get-Command vcpkg.exe -ErrorAction SilentlyContinue) {
-            & vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg
-          } else {
-            & ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg
-          }
+      - powershell: & ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
       afterBuild:
@@ -80,7 +71,10 @@ stages:
       jobName: Linux_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
-      - script: sudo vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
