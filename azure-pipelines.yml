@@ -34,10 +34,10 @@ stages:
       useCppRestSDK: true
       cMakeRunArgs: '-A x64'
       beforeBuild:
-      - powershell: & ./submodules/vcpkg/bootstrap-vcpkg.bat
+      - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - powershell: & ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
       afterBuild:
