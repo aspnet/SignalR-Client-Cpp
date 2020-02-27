@@ -24,5 +24,5 @@ include_directories(
 
 add_executable (signalrclienttests ${SOURCES})
 
-target_link_libraries(signalrclienttests gtest signalrclient ${CPPREST_LIB})
+target_link_libraries(signalrclienttests gtest signalrclient)
 add_test(NAME signalrclienttests COMMAND signalrclienttests)
