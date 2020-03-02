@@ -40,7 +40,7 @@ else()
     if(WERROR)
         target_compile_options(signalrclient PRIVATE -Werror)
     endif()
-    target_compile_options(signalrclient PRIVATE -fno-rtti -Wall -Wextra -Wpedantic)
+    target_compile_options(signalrclient PRIVATE -fno-rtti -Wall -Wextra -Wpedantic -Wno-unknown-pragmas)
 endif()
 
 if(NOT USE_CPPRESTSDK)
