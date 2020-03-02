@@ -8,6 +8,8 @@ project (signalrclient)
 
 include(CTest)
 
+set(WERROR ON CACHE BOOL "Enable warnings as errors.")
+
 if(NOT WIN32)
   set(EXTRA_FLAGS "-std=c++11 -fPIC -DNO_SIGNALRCLIENT_EXPORTS")
 else()
