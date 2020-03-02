@@ -40,7 +40,12 @@ else()
     if(WERROR)
         target_compile_options(signalrclient PRIVATE -Werror)
     endif()
-    target_compile_options(signalrclient PRIVATE -fno-rtti -Wall -Wextra -Wpedantic -Wno-unknown-pragmas)
+
+    # GCC on OSX has a bug with exceptions and no-rtti that can cause crashes
+    if(NOT APPLE)
+        target_compile_options(signalrclient PRIVATE -fno-rtti)
+    endif()
+    target_compile_options(signalrclient PRIVATE -Wall -Wextra -Wpedantic -Wno-unknown-pragmas)
 endif()
 
 if(NOT USE_CPPRESTSDK)
