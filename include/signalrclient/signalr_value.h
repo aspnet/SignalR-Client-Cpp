@@ -180,7 +180,11 @@ namespace signalr
             double number;
             std::map<std::string, value> map;
 
+            // constructor and destructor is not implicitly called
+#pragma warning (push)
+#pragma warning (disable: 26495 4582 4583)
             storage() {}
+#pragma warning (pop)
             ~storage() {}
         };
 

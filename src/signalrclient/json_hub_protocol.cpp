@@ -7,7 +7,6 @@
 #include "message_type.h"
 #include "json_helpers.h"
 #include "signalrclient/signalr_exception.h"
-#include "json/json.h"
 
 namespace signalr
 {
