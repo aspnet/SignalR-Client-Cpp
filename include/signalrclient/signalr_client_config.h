@@ -5,8 +5,11 @@
 #pragma once
 
 #ifdef USE_CPPRESTSDK
-#include "cpprest/http_client.h"
-#include "cpprest/ws_client.h"
+#pragma warning (push)
+#pragma warning (disable : 5204 4355 4625 4626 4868)
+#include <cpprest/http_client.h>
+#include <cpprest/ws_client.h>
+#pragma warning (pop)
 #endif
 
 #include "_exports.h"

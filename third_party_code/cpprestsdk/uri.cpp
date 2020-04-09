@@ -38,7 +38,7 @@ namespace signalr
             /// </summary>
             inline bool is_unreserved(int c)
             {
-                return utility::is_alnum((char)c) || c == '-' || c == '.' || c == '_' || c == '~';
+                return utility::is_alnum((unsigned char)c) || c == '-' || c == '.' || c == '_' || c == '~';
             }
 
             /// <summary>
@@ -93,7 +93,7 @@ namespace signalr
             /// </summary>
             inline bool is_scheme_character(int c)
             {
-                return utility::is_alnum((char)c) || c == '+' || c == '-' || c == '.';
+                return utility::is_alnum((unsigned char)c) || c == '+' || c == '-' || c == '.';
             }
 
             /// <summary>
@@ -732,13 +732,13 @@ namespace signalr
             }
             else if (equals_index == 0)
             {
-                std::string value(key_value_pair.begin() + equals_index + 1, key_value_pair.end());
+                std::string value(key_value_pair.begin() + (int64_t)equals_index + 1, key_value_pair.end());
                 results[std::string{}] = value;
             }
             else
             {
-                std::string key(key_value_pair.begin(), key_value_pair.begin() + equals_index);
-                std::string value(key_value_pair.begin() + equals_index + 1, key_value_pair.end());
+                std::string key(key_value_pair.begin(), key_value_pair.begin() + (int64_t)equals_index);
+                std::string value(key_value_pair.begin() + (int64_t)equals_index + 1, key_value_pair.end());
                 results[key] = value;
             }
         }

@@ -41,7 +41,7 @@ namespace signalr
             std::hash<size_t> hasher;
             for (const auto& c : s)
             {
-                hash ^= hasher(std::toupper(c)) + (hash << 5) + (hash >> 2);
+                hash ^= hasher(static_cast<size_t>(std::toupper(c))) + (hash << 5) + (hash >> 2);
             }
 
             return hash;

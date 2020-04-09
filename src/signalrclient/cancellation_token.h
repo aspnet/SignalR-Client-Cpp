@@ -24,6 +24,9 @@ namespace signalr
         {
         }
 
+        cancellation_token(const cancellation_token&) = delete;
+        cancellation_token& operator=(const cancellation_token&) = delete;
+
         void cancel()
         {
             std::lock_guard<std::mutex> lock(m_lock);

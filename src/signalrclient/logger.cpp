@@ -71,6 +71,10 @@ namespace signalr
             return "error";
         case signalr::trace_level::info:
             return "info";
+        case signalr::trace_level::none:
+            return "none";
+        case signalr::trace_level::all:
+            return "all";
         default:
             assert(false);
             return "(unknown)";

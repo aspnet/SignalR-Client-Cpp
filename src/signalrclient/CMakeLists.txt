@@ -35,7 +35,17 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     if(WERROR)
         target_compile_options(signalrclient PRIVATE /WX)
     endif()
-    target_compile_options(signalrclient PRIVATE /W4 /GR- /guard:cf)
+    target_compile_options(signalrclient PRIVATE
+        /Wall
+        /wd4820 # padding added after data member
+        /wd4514 # unreferenced inline function removed
+        /wd5045 # compiler will insert Spectre mitigation if /Qspectre switch is added
+        /wd4464 # relative include paths
+        /experimental:external /external:anglebrackets /external:templates- /external:W0
+        /GR- # disable run-time type information
+        /guard:cf # enable control-flow guard
+        /EHa # enable C++ EH (w/ SEH exceptions)
+    )
 else()
     if(WERROR)
         target_compile_options(signalrclient PRIVATE -Werror)

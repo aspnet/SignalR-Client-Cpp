@@ -4,10 +4,6 @@
 
 #include "stdafx.h"
 #include "signalrclient/signalr_client_config.h"
-#ifdef USE_CPPRESTSDK
-#include "cpprest/http_client.h"
-#include "cpprest/ws_client.h"
-#endif
 
 namespace signalr
 {

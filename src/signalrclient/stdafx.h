@@ -9,9 +9,7 @@
 // prevents from defining min/max macros that conflict with std::min()/std::max() functions
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
-#pragma warning( push, 0 )
 #include <windows.h>
-#pragma warning ( pop )
 
 #endif
 

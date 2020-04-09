@@ -7,7 +7,11 @@
 #include "logger.h"
 #include "signalrclient/signalr_exception.h"
 #include "base_uri.h"
+
+#pragma warning (push)
+#pragma warning (disable : 5204 4355)
 #include <future>
+#pragma warning (pop)
 
 namespace signalr
 {
