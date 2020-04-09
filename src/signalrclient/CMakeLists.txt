@@ -35,8 +35,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     if(WERROR)
         target_compile_options(signalrclient PRIVATE /WX)
     endif()
+    if(WALL)
+        target_compile_options(signalrclient PRIVATE /Wall)
+    endif()
     target_compile_options(signalrclient PRIVATE
-        /Wall
         /wd4820 # padding added after data member
         /wd4514 # unreferenced inline function removed
         /wd5045 # compiler will insert Spectre mitigation if /Qspectre switch is added
@@ -52,12 +54,15 @@ else()
     if(WERROR)
         target_compile_options(signalrclient PRIVATE -Werror)
     endif()
+    if(WALL)
+        target_compile_options(signalrclient PRIVATE -Wall)
+    endif()
 
     # GCC on OSX has a bug with exceptions and no-rtti that can cause crashes
     if(NOT APPLE)
         target_compile_options(signalrclient PRIVATE -fno-rtti)
     endif()
-    target_compile_options(signalrclient PRIVATE -Wall -Wextra -Wpedantic -Wno-unknown-pragmas)
+    target_compile_options(signalrclient PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
 endif()
 
 if(NOT USE_CPPRESTSDK)
