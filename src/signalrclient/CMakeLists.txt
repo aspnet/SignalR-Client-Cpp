@@ -41,6 +41,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         /wd4514 # unreferenced inline function removed
         /wd5045 # compiler will insert Spectre mitigation if /Qspectre switch is added
         /wd4464 # relative include paths
+        /wd4711 # function 'x' selected for automatic inline expansion
+        /wd4710 # function not inlined
         /experimental:external /external:anglebrackets /external:templates- /external:W0
         /GR- # disable run-time type information
         /guard:cf # enable control-flow guard
