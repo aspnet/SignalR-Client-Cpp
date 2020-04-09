@@ -1460,6 +1460,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
         }));
 
     auto wait_for_start_mre = manual_reset_event<void>();
+    auto close_complete = manual_reset_event<void>();
 
     auto websocket_client = create_test_websocket_client(
         [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::exception())); },
@@ -1467,6 +1468,9 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
             wait_for_start_mre.set();
             disconnect_completed_event->wait();
             callback(nullptr);
+        }, [&close_complete](std::function<void(std::exception_ptr)> callback) {
+            callback(nullptr);
+            close_complete.set();
         });
 
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
@@ -1496,15 +1500,17 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     }
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
+    close_complete.get();
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(6U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(7U, log_entries.size()) << dump_vector(log_entries);
     ASSERT_EQ("[state change] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
     ASSERT_EQ("[info        ] [websocket transport] connecting to: ws://stop_cancels_ongoing_start_request/?id=f7707523-307d-4cba-9abf-3eef701241e8\n", remove_date_from_log_entry(log_entries[1]));
     ASSERT_EQ("[info        ] stopping connection\n", remove_date_from_log_entry(log_entries[2]));
     ASSERT_EQ("[info        ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[3]));
     ASSERT_EQ("[info        ] starting the connection has been canceled.\n", remove_date_from_log_entry(log_entries[4]));
     ASSERT_EQ("[state change] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[5]));
+    ASSERT_EQ("[info        ] Stopping was ignored because the connection is already in the disconnected state.\n", remove_date_from_log_entry(log_entries[6]));
 }
 
 // Test races with start and stop
