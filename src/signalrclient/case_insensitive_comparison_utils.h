@@ -21,7 +21,7 @@ namespace signalr
                 return false;
             }
 
-            for (int i = 0; i < s1.size(); ++i)
+            for (unsigned i = 0; i < s1.size(); ++i)
             {
                 if (std::toupper(s1[i]) != std::toupper(s2[i]))
                 {
@@ -41,7 +41,7 @@ namespace signalr
             std::hash<size_t> hasher;
             for (const auto& c : s)
             {
-                hash ^= hasher(std::toupper(c)) + (hash << 5) + (hash >> 2);
+                hash ^= hasher(static_cast<size_t>(std::toupper(c))) + (hash << 5) + (hash >> 2);
             }
 
             return hash;

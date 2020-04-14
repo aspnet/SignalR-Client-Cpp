@@ -36,6 +36,15 @@ namespace signalr
         http_response() {}
         http_response(http_response&& rhs) noexcept : status_code(rhs.status_code), content(std::move(rhs.content)) {}
         http_response(int code, const std::string& content) : status_code(code), content(content) {}
+        http_response(const http_response& rhs) : status_code(rhs.status_code), content(rhs.content) {}
+
+        http_response& operator=(const http_response& rhs)
+        {
+            status_code = rhs.status_code;
+            content = rhs.content;
+
+            return *this;
+        }
 
         http_response& operator=(http_response&& rhs) noexcept
         {

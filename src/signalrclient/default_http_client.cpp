@@ -7,7 +7,10 @@
 #ifdef USE_CPPRESTSDK
 #include "default_http_client.h"
 #include <thread>
-#include "cpprest/http_client.h"
+#pragma warning (push)
+#pragma warning (disable : 5204 4355 4625 4626 4868)
+#include <cpprest/http_client.h>
+#pragma warning (pop)
 
 namespace signalr
 {

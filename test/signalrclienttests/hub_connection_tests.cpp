@@ -1315,7 +1315,6 @@ TEST(on, cannot_register_handler_if_connection_not_in_disconnected_state)
 {
     try
     {
-        int number = 0;
         auto websocket_client = create_test_websocket_client();
         auto hub_connection = create_hub_connection(websocket_client);
 

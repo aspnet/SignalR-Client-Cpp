@@ -24,7 +24,7 @@ TEST(negotiate, request_created_with_correct_url)
 
     auto mre = manual_reset_event<void>();
     negotiate::negotiate(http_client, "http://fake/signalr", signalr_client_config(),
-        [&mre](signalr::negotiation_response&& response, std::exception_ptr exception)
+        [&mre](signalr::negotiation_response&&, std::exception_ptr exception)
         {
             mre.set();
         });

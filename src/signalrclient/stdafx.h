@@ -8,11 +8,7 @@
 
 // prevents from defining min/max macros that conflict with std::min()/std::max() functions
 #define NOMINMAX
-
-#include <SDKDDKVer.h>
-
 #define WIN32_LEAN_AND_MEAN
-
 #include <windows.h>
 
 #endif

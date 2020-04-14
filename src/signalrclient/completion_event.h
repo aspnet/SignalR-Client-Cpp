@@ -4,13 +4,19 @@
 
 #pragma once
 
+#pragma warning (push)
+#pragma warning (disable : 5204 4355)
 #include <future>
+#pragma warning (pop)
 
 namespace signalr
 {
     class completion_event_impl : public std::enable_shared_from_this<completion_event_impl>
     {
     public:
+        completion_event_impl(const completion_event_impl&) = delete;
+        completion_event_impl& operator=(const completion_event_impl&) = delete;
+
         static std::shared_ptr<completion_event_impl> create()
         {
             return std::shared_ptr<completion_event_impl>(new completion_event_impl());

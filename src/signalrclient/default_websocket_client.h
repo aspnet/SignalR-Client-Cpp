@@ -6,7 +6,10 @@
 
 #ifdef USE_CPPRESTSDK
 
-#include "cpprest/ws_client.h"
+#pragma warning (push)
+#pragma warning (disable : 5204 4355 4625 4626 4868)
+#include <cpprest/ws_client.h>
+#pragma warning (pop)
 #include "signalrclient/signalr_client_config.h"
 #include "signalrclient/websocket_client.h"
 

@@ -4,7 +4,6 @@
 
 #include "stdafx.h"
 #include "transport_factory.h"
-#include "default_websocket_client.h"
 #include "websocket_transport.h"
 #include "signalrclient/websocket_client.h"
 

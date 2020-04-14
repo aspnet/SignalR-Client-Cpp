@@ -31,6 +31,40 @@ include_directories(
 
 add_library (signalrclient SHARED ${SOURCES})
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    if(WERROR)
+        target_compile_options(signalrclient PRIVATE /WX)
+    endif()
+    if(WALL)
+        target_compile_options(signalrclient PRIVATE /Wall)
+    endif()
+    target_compile_options(signalrclient PRIVATE
+        /wd4820 # padding added after data member
+        /wd4514 # unreferenced inline function removed
+        /wd5045 # compiler will insert Spectre mitigation if /Qspectre switch is added
+        /wd4464 # relative include paths
+        /wd4711 # function 'x' selected for automatic inline expansion
+        /wd4710 # function not inlined
+        /experimental:external /external:anglebrackets /external:templates- /external:W0
+        /GR- # disable run-time type information
+        /guard:cf # enable control-flow guard
+        /EHa # enable C++ EH (w/ SEH exceptions)
+    )
+else()
+    if(WERROR)
+        target_compile_options(signalrclient PRIVATE -Werror)
+    endif()
+    if(WALL)
+        target_compile_options(signalrclient PRIVATE -Wall)
+    endif()
+
+    # GCC on OSX has a bug with exceptions and no-rtti that can cause crashes
+    if(NOT APPLE)
+        target_compile_options(signalrclient PRIVATE -fno-rtti)
+    endif()
+    target_compile_options(signalrclient PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
+endif()
+
 if(NOT USE_CPPRESTSDK)
   target_link_libraries(signalrclient)
 else()

@@ -13,7 +13,6 @@
 #include "signalrclient/signalr_exception.h"
 #include "default_http_client.h"
 #include "case_insensitive_comparison_utils.h"
-#include "make_unique.h"
 #include "completion_event.h"
 #include <assert.h>
 #include "signalrclient/websocket_client.h"
@@ -21,13 +20,6 @@
 
 namespace signalr
 {
-    // unnamed namespace makes it invisble outside this translation unit
-    namespace
-    {
-        // this is a workaround for a compiler bug where mutable lambdas won't sometimes compile
-        static void log(const logger& logger, trace_level level, const std::string& entry);
-    }
-
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
     {
         return connection_impl::create(url, trace_level, log_writer, nullptr, nullptr);
@@ -259,8 +251,7 @@ namespace signalr
                         }
                         catch (const std::exception& e)
                         {
-                            auto canceled = dynamic_cast<const canceled_exception*>(&e);
-                            if (canceled)
+                            if (token->is_canceled())
                             {
                                 connection->m_logger.log(trace_level::info,
                                     "starting the connection has been canceled.");

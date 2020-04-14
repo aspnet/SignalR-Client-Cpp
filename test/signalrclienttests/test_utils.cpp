@@ -19,7 +19,7 @@ std::string remove_date_from_log_entry(const std::string &log_entry)
 
 std::unique_ptr<http_client> create_test_http_client()
 {
-    return std::make_unique<test_http_client>([](const std::string & url, http_request request)
+    return std::unique_ptr<test_http_client>(new test_http_client([](const std::string & url, http_request request)
     {
         auto response_body =
             url.find_first_of("/negotiate") != 0
@@ -28,7 +28,7 @@ std::unique_ptr<http_client> create_test_http_client()
             : "";
 
         return http_response{ 200, response_body };
-    });
+    }));
 }
 
 std::string create_uri()
