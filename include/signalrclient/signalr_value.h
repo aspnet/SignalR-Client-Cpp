@@ -180,7 +180,9 @@ namespace signalr
             double number;
             std::map<std::string, value> map;
 
-            // constructor is not implicitly called
+            // constructor of types in union are not implicitly called
+            // this is expected as we only construct a single type in the union once we know
+            // what that type is when constructing the signalr_value type.
 #pragma warning (push)
 #pragma warning (disable: 4582)
             storage() {}
