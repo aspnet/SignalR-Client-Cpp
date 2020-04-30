@@ -29,7 +29,7 @@ include_directories(
     ../../third_party_code/cpprestsdk
     ../../third_party_code/jsoncpp)
 
-add_library (signalrclient SHARED ${SOURCES})
+add_library (signalrclient ${SOURCES})
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     if(WERROR)
