@@ -66,14 +66,18 @@ namespace signalr
 
                     for (auto& cb : tmp)
                     {
-                        try
-                        {
-                            cb.first();
-                        }
-                        catch (...)
-                        {
-                            // ignore exceptions?
-                        }
+                        // todo: dispatch to threadpool
+                        std::thread([cb]()
+                            {
+                                try
+                                {
+                                    cb.first();
+                                }
+                                catch (...)
+                                {
+                                    // ignore exceptions?
+                                }
+                            }).detach();
                     }
 
                     tmp.clear();

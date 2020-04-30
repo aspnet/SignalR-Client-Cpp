@@ -18,11 +18,11 @@ namespace signalr
 
     struct scheduler
     {
-        virtual void schedule(const signalr_cb& cb, std::chrono::milliseconds delay) = 0;
-        virtual void schedule(const signalr_cb& cb, std::exception_ptr, std::chrono::milliseconds delay) = 0;
-        virtual void schedule(const signalr_message_cb& cb, std::string, std::chrono::milliseconds delay) = 0;
-        virtual void schedule(const signalr_message_cb& cb, std::exception_ptr, std::chrono::milliseconds delay) = 0;
-        virtual void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay) = 0;
+        virtual void schedule(const signalr_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
+        virtual void schedule(const signalr_cb& cb, std::exception_ptr, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
+        virtual void schedule(const signalr_message_cb& cb, std::string, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
+        virtual void schedule(const signalr_message_cb& cb, std::exception_ptr, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
+        virtual void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
 
         virtual ~scheduler() {}
     };

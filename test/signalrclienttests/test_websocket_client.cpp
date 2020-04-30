@@ -4,7 +4,6 @@
 
 #include "stdafx.h"
 #include "test_websocket_client.h"
-#include <thread>
 #include "test_utils.h"
 #include "signalrclient/signalr_exception.h"
 
@@ -51,7 +50,12 @@ test_websocket_client::~test_websocket_client()
     }
 }
 
-void test_websocket_client::start(const std::string& url, std::function<void(std::exception_ptr)> callback)
+void test_websocket_client::set_config(const signalr_client_config& config)
+{
+    m_scheduler = config.get_scheduler();
+}
+
+void test_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
 {
     std::lock_guard<std::mutex> lock(m_receive_lock);
     m_stopped = false;
@@ -63,10 +67,10 @@ void test_websocket_client::start(const std::string& url, std::function<void(std
     receive_loop_started.reset();
 
     auto local_copy = m_connect_function;
-    std::thread([url, callback, local_copy]()
+    m_scheduler->schedule([url, callback, local_copy]()
         {
             (*local_copy)(url, callback);
-        }).detach();
+        });
 }
 
 void test_websocket_client::stop(std::function<void(std::exception_ptr)> callback)
@@ -93,20 +97,20 @@ void test_websocket_client::stop(std::function<void(std::exception_ptr)> callbac
     receive_loop_started.reset();
 
     auto local_copy = m_close_function;
-    std::thread([callback, local_copy]()
+    m_scheduler->schedule([callback, local_copy]()
         {
             (*local_copy)(callback);
-        }).detach();
+        });
 }
 
 void test_websocket_client::send(const std::string& payload, signalr::transfer_format, std::function<void(std::exception_ptr)> callback)
 {
     handshake_sent.cancel();
     auto local_copy = m_send_function;
-    std::thread([payload, callback, local_copy]()
+    m_scheduler->schedule([payload, callback, local_copy]()
         {
             (*local_copy)(payload, callback);
-        }).detach();
+        });
 }
 
 void test_websocket_client::receive(std::function<void(const std::string&, std::exception_ptr)> callback)

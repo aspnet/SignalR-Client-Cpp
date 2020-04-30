@@ -13,13 +13,17 @@
 
 using namespace signalr;
 
-hub_connection create_hub_connection(std::shared_ptr<websocket_client> websocket_client = create_test_websocket_client(),
+hub_connection create_hub_connection(std::shared_ptr<test_websocket_client> websocket_client = create_test_websocket_client(),
     std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::verbose)
 {
     return hub_connection_builder::create(create_uri())
         .with_logging(log_writer, trace_level)
         .with_http_client(create_test_http_client())
-        .with_websocket_factory([websocket_client](const signalr_client_config&) { return websocket_client; })
+        .with_websocket_factory([websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            })
         .build();
 }
 
@@ -130,7 +134,7 @@ TEST(url, negotiate_appended_to_url)
     }
 }
 
-TEST(start, start_starts_connection)
+TEST(start, starts_connection)
 {
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);

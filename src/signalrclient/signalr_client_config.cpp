@@ -55,4 +55,14 @@ namespace signalr
     {
         m_http_headers = http_headers;
     }
+
+    void signalr_client_config::set_scheduler(std::shared_ptr<scheduler> scheduler)
+    {
+        m_scheduler = scheduler;
+    }
+
+    std::shared_ptr<scheduler> signalr_client_config::get_scheduler() const noexcept
+    {
+        return m_scheduler;
+    }
 }
