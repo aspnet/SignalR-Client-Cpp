@@ -11,6 +11,7 @@
 #include "trace_level.h"
 #include "log_writer.h"
 #include "signalr_client_config.h"
+#include "scheduler.h"
 #include "transfer_format.h"
 
 namespace signalr
@@ -22,7 +23,7 @@ namespace signalr
     public:
         typedef std::function<void __cdecl(const std::string&)> message_received_handler;
 
-        SIGNALRCLIENT_API explicit connection(const std::string& url, trace_level trace_level = trace_level::info, std::shared_ptr<log_writer> log_writer = nullptr);
+        SIGNALRCLIENT_API explicit connection(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level = trace_level::info, std::shared_ptr<log_writer> log_writer = nullptr);
 
         SIGNALRCLIENT_API ~connection();
 

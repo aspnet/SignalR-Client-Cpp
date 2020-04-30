@@ -12,6 +12,7 @@
 #include "log_writer.h"
 #include "signalr_client_config.h"
 #include "signalr_value.h"
+#include "../include/signalrclient/scheduler.h"
 
 namespace signalr
 {
@@ -54,7 +55,7 @@ namespace signalr
     private:
         friend class hub_connection_builder;
 
-        explicit hub_connection(const std::string& url, trace_level trace_level = trace_level::info,
+        explicit hub_connection(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level = trace_level::info,
             std::shared_ptr<log_writer> log_writer = nullptr, std::shared_ptr<http_client> http_client = nullptr,
             std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory = nullptr, bool skip_negotiation = false);
 
