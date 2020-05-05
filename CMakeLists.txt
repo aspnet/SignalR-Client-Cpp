@@ -10,6 +10,7 @@ include(CTest)
 
 set(WERROR true CACHE BOOL "Enable warnings as errors.")
 set(WALL true CACHE BOOL "Enable all warnings.")
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries")
 
 if(NOT WIN32)
   set(EXTRA_FLAGS "-std=c++11 -fPIC -DNO_SIGNALRCLIENT_EXPORTS")
