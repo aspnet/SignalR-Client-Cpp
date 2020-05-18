@@ -70,7 +70,7 @@ license you like.
 
 
 #pragma warning( push, 0 )
-#pragma warning( disable: 4702 )
+#pragma warning( disable: 4702; disable: 4738 )
 
 
 
