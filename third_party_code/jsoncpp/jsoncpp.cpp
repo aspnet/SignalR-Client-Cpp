@@ -70,7 +70,7 @@ license you like.
 
 
 #pragma warning( push, 0 )
-#pragma warning( disable: 4702 )
+#pragma warning( disable: 4702; disable: 4738 )
 
 
 
@@ -3326,7 +3326,6 @@ double Value::asDouble() const {
   JSON_FAIL_MESSAGE("Value is not convertible to double.");
 }
 
-#pragma warning(disable:4738)
 float Value::asFloat() const {
   switch (type_) {
   case intValue:
@@ -3349,7 +3348,6 @@ float Value::asFloat() const {
   }
   JSON_FAIL_MESSAGE("Value is not convertible to float.");
 }
-#pragma warning(default:4738)
 
 bool Value::asBool() const {
   switch (type_) {
