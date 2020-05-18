@@ -71,6 +71,13 @@ namespace signalr
         return *this;
     }
 
+    hub_connection_builder& hub_connection_builder::skip_negotiation(const bool skip)
+    {
+        m_skip_negotiation = skip;
+
+        return *this;
+    }
+
     hub_connection hub_connection_builder::build()
     {
 #ifndef USE_CPPRESTSDK
@@ -85,6 +92,6 @@ namespace signalr
         }
 #endif
 
-        return hub_connection(m_url, m_log_level, m_logger, m_http_client, m_websocket_factory);
+        return hub_connection(m_url, m_log_level, m_logger, m_http_client, m_websocket_factory, m_skip_negotiation);
     }
 }

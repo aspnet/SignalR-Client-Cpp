@@ -22,20 +22,20 @@ namespace signalr
 {
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
     {
-        return connection_impl::create(url, trace_level, log_writer, nullptr, nullptr);
+        return connection_impl::create(url, trace_level, log_writer, nullptr, nullptr, false);
     }
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
+        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
         return std::shared_ptr<connection_impl>(new connection_impl(url, trace_level,
-            log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client, websocket_factory));
+            log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client, websocket_factory, skip_negotiation));
     }
 
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory)
+        std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr),
-        m_transport_factory(std::move(transport_factory)), m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
+        m_transport_factory(std::move(transport_factory)), m_skip_negotiation(skip_negotiation), m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
     {
         if (http_client != nullptr)
         {
@@ -50,8 +50,8 @@ namespace signalr
     }
 
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
-        : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr),
+        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr), m_skip_negotiation(skip_negotiation),
         m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
     {
         if (http_client != nullptr)
@@ -155,8 +155,64 @@ namespace signalr
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
         const auto& token = m_disconnect_cts;
 
+		const auto started = [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
+        {
+            auto connection = weak_connection.lock();
+            if (!connection)
+            {
+                callback(std::make_exception_ptr(signalr_exception("connection no longer exists")));
+                return;
+            }
+
+            try
+            {
+                if (exception != nullptr)
+                {
+                    std::rethrow_exception(exception);
+                }
+                token->throw_if_cancellation_requested();
+            }
+            catch (const std::exception& e)
+            {
+                if (token->is_canceled())
+                {
+                    connection->m_logger.log(trace_level::info,
+                        "starting the connection has been canceled.");
+                }
+                else
+                {
+                    connection->m_logger.log(trace_level::errors,
+                        std::string("connection could not be started due to: ")
+                        .append(e.what()));
+                }
+
+                connection->m_transport = nullptr;
+                connection->change_state(connection_state::disconnected);
+                connection->m_start_completed_event.cancel();
+                callback(std::current_exception());
+                return;
+            }
+
+            connection->m_transport = transport;
+
+            if (!connection->change_state(connection_state::connecting, connection_state::connected))
+            {
+                connection->m_logger.log(trace_level::errors,
+                    std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
+                    .append(translate_connection_state(connection->get_connection_state())));
+
+                assert(false);
+            }
+
+            connection->m_start_completed_event.cancel();
+            callback(nullptr);
+        };
+
+        if (m_skip_negotiation)
+            return start_transport(url, started);
+
         negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
-            [callback, weak_connection, redirect_count, token, url](negotiation_response&& response, std::exception_ptr exception)
+            [callback, weak_connection, redirect_count, token, url, started](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -232,58 +288,7 @@ namespace signalr
                     return;
                 }
 
-                connection->start_transport(url, [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
-                    {
-                        auto connection = weak_connection.lock();
-                        if (!connection)
-                        {
-                            callback(std::make_exception_ptr(signalr_exception("connection no longer exists")));
-                            return;
-                        }
-
-                        try
-                        {
-                            if (exception != nullptr)
-                            {
-                                std::rethrow_exception(exception);
-                            }
-                            token->throw_if_cancellation_requested();
-                        }
-                        catch (const std::exception& e)
-                        {
-                            if (token->is_canceled())
-                            {
-                                connection->m_logger.log(trace_level::info,
-                                    "starting the connection has been canceled.");
-                            }
-                            else
-                            {
-                                connection->m_logger.log(trace_level::errors,
-                                    std::string("connection could not be started due to: ")
-                                    .append(e.what()));
-                            }
-
-                            connection->m_transport = nullptr;
-                            connection->change_state(connection_state::disconnected);
-                            connection->m_start_completed_event.cancel();
-                            callback(std::current_exception());
-                            return;
-                        }
-
-                        connection->m_transport = transport;
-
-                        if (!connection->change_state(connection_state::connecting, connection_state::connected))
-                        {
-                            connection->m_logger.log(trace_level::errors,
-                                std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
-                                .append(translate_connection_state(connection->get_connection_state())));
-
-                            assert(false);
-                        }
-
-                        connection->m_start_completed_event.cancel();
-                        callback(nullptr);
-                    });
+                connection->start_transport(url, started);
             });
     }
 
