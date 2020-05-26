@@ -55,7 +55,7 @@ namespace signalr
         auto cv = m_callback_cv;
         std::thread([callbacks, callback_lock, cv, closed]()
             {
-                std::vector<std::pair<signalr_base_cb, std::chrono::milliseconds>> tmp;
+                std::vector<std::pair<signalr_base_cb, std::chrono::nanoseconds>> tmp;
                 while ((*closed) == false)
                 {
                     {
@@ -89,17 +89,22 @@ namespace signalr
             cv = m_timer_cv;
         std::thread([callbacks, callback_lock, cv, closed]()
             {
-                std::vector<std::pair<signalr_base_cb, std::chrono::milliseconds>> tmp;
+                std::chrono::steady_clock clock{};
+                std::vector<std::pair<signalr_base_cb, std::chrono::nanoseconds>> tmp;
+                auto prev_time = clock.now();
                 while ((*closed) == false)
                 {
                     {
                         std::unique_lock<std::mutex> lock((*callback_lock));
                         cv->wait_for(lock, std::chrono::milliseconds(15), [&closed] { return (*closed); });
                         auto it = callbacks->begin();
+
+                        auto curr_time = clock.now();
+                        auto diff = curr_time - prev_time;
+
                         while (it != callbacks->end())
                         {
-                            // todo: calculate delay
-                            (*it).second -= std::chrono::milliseconds(15);
+                            (*it).second -= diff;
                             if ((*it).second <= std::chrono::milliseconds::zero())
                             {
                                 tmp.push_back((*it));
@@ -110,6 +115,7 @@ namespace signalr
                                 ++it;
                             }
                         }
+                        prev_time = curr_time;
                     } // unlock
 
                     for (auto& cb : tmp)
