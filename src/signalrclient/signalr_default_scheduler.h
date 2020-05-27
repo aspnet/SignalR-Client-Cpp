@@ -8,12 +8,26 @@
 
 namespace signalr
 {
+    struct thread
+    {
+    public:
+        thread();
+        void add(std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>);
+        bool is_free() const;
+        void shutdown();
+        ~thread();
+    private:
+        std::shared_ptr<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>> m_callbacks;
+        std::shared_ptr<std::mutex> m_callback_lock;
+        std::shared_ptr<std::condition_variable> m_callback_cv;
+        std::shared_ptr<bool> m_closed;
+        std::shared_ptr<bool> m_busy;
+    };
+
     struct signalr_default_scheduler : scheduler
     {
-        signalr_default_scheduler() : m_callbacks(std::make_shared<std::vector<std::pair<signalr_base_cb, std::chrono::nanoseconds>>>()),
-            m_timer_callbacks(std::make_shared<std::vector<std::pair<signalr_base_cb, std::chrono::nanoseconds>>>()), m_callback_lock(std::make_shared<std::mutex>()),
-            m_timer_lock(std::make_shared<std::mutex>()), m_callback_cv(std::make_shared<std::condition_variable>()), m_timer_cv(std::make_shared<std::condition_variable>()),
-            m_closed(std::make_shared<bool>())
+        signalr_default_scheduler() : m_callbacks(std::make_shared<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>>()),
+            m_callback_lock(std::make_shared<std::mutex>()), m_callback_cv(std::make_shared<std::condition_variable>()), m_closed(std::make_shared<bool>())
         {
             run();
         }
@@ -29,12 +43,9 @@ namespace signalr
 
     private:
         void run();
-        std::shared_ptr<std::vector<std::pair<signalr_base_cb, std::chrono::nanoseconds>>> m_callbacks;
-        std::shared_ptr<std::vector<std::pair<signalr_base_cb, std::chrono::nanoseconds>>> m_timer_callbacks;
+        std::shared_ptr<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>> m_callbacks;
         std::shared_ptr<std::mutex> m_callback_lock;
-        std::shared_ptr<std::mutex> m_timer_lock;
         std::shared_ptr<std::condition_variable> m_callback_cv;
-        std::shared_ptr<std::condition_variable> m_timer_cv;
         std::shared_ptr<bool> m_closed;
 
         void close();

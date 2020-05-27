@@ -1528,7 +1528,6 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
         }));
 
     auto wait_for_start_mre = manual_reset_event<void>();
-    auto close_complete = manual_reset_event<void>();
 
     auto websocket_client = create_test_websocket_client(
         [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::exception())); },
@@ -1536,9 +1535,6 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
             wait_for_start_mre.set();
             disconnect_completed_event->wait();
             callback(nullptr);
-        }, [&close_complete](std::function<void(std::exception_ptr)> callback) {
-            callback(nullptr);
-            close_complete.set();
         });
 
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
@@ -1572,7 +1568,6 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     }
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
-    close_complete.get();
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
 

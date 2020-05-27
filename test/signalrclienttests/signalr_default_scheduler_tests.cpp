@@ -45,17 +45,52 @@ TEST(scheduler, callback_can_be_called_when_timer_callback_called_first)
     ASSERT_FALSE(first_callback);
 }
 
-//TEST(scheduler, scheduler_can_destruct_with_callbacks_registered)
-//{
-//    auto mre = manual_reset_event<void>();
-//    {
-//        signalr_default_scheduler scheduler;
-//
-//        scheduler.schedule([&mre]()
-//            {
-//                mre.set();
-//            }, std::chrono::milliseconds(100));
-//    }
-//
-//    mre.get();
-//}
+TEST(scheduler, callback_with_delay_is_delayed)
+{
+    signalr_default_scheduler scheduler;
+    auto delay = std::chrono::milliseconds(100);
+
+    auto mre = manual_reset_event<void>();
+    bool first_callback = false;
+    auto prev_now = std::chrono::steady_clock::now();
+    scheduler.schedule([&mre]()
+        {
+            mre.set();
+        }, delay);
+
+    mre.get();
+
+    auto now = std::chrono::steady_clock::now();
+    ASSERT_TRUE(now - prev_now >= delay);
+}
+
+// Makes sure state is thread safe and the scheduler doesn't seg fault when destructed
+TEST(scheduler, scheduler_can_destruct_with_callbacks_registered)
+{
+    {
+        signalr_default_scheduler scheduler;
+
+        scheduler.schedule([]()
+            {
+            }, std::chrono::seconds(100));
+    }
+
+    manual_reset_event<void> start_mre{};
+    manual_reset_event<void> continue_mre{};
+    {
+        signalr_default_scheduler scheduler;
+
+        scheduler.schedule([&start_mre, &continue_mre]()
+            {
+                start_mre.set();
+                continue_mre.get();
+
+                // avoids referencing these objects after they've been destructed
+                start_mre.set();
+            });
+
+        start_mre.get();
+    }
+    continue_mre.set();
+    start_mre.get();
+}
