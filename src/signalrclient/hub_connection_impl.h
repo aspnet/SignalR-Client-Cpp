@@ -46,7 +46,7 @@ namespace signalr
         void set_disconnected(const std::function<void()>& disconnected);
 
     private:
-        hub_connection_impl(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level,
+        hub_connection_impl(const std::string& url, trace_level trace_level,
             const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
             std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory,
             bool skip_negotiation);

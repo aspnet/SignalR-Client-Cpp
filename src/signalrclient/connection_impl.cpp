@@ -16,22 +16,23 @@
 #include <assert.h>
 #include "signalrclient/websocket_client.h"
 #include "default_websocket_client.h"
+#include "signalr_default_scheduler.h"
 
 namespace signalr
 {
-    std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
+    std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer)
     {
-        return connection_impl::create(url, scheduler, trace_level, log_writer, nullptr, nullptr, false);
+        return connection_impl::create(url, trace_level, log_writer, nullptr, nullptr, false);
     }
 
-    std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
+    std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
         std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
-        return std::shared_ptr<connection_impl>(new connection_impl(url, scheduler, trace_level,
+        return std::shared_ptr<connection_impl>(new connection_impl(url, trace_level,
             log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client, websocket_factory, skip_negotiation));
     }
 
-    connection_impl::connection_impl(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
+    connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
         std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr),
         m_transport_factory(std::move(transport_factory)), m_skip_negotiation(skip_negotiation), m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
@@ -48,7 +49,7 @@ namespace signalr
         }
     }
 
-    connection_impl::connection_impl(const std::string& url, std::shared_ptr<scheduler> scheduler, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
+    connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
         std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr), m_skip_negotiation(skip_negotiation),
         m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
@@ -72,7 +73,6 @@ namespace signalr
         }
 
         m_transport_factory = std::unique_ptr<transport_factory>(new transport_factory(m_http_client, websocket_factory));
-        m_event_loop = scheduler;
     }
 
     connection_impl::~connection_impl()
@@ -142,6 +142,14 @@ namespace signalr
             m_start_completed_event.reset();
             m_connection_id = "";
         }
+
+        auto scheduler = m_signalr_client_config.get_scheduler();
+        if (!scheduler)
+        {
+            scheduler = std::make_shared<signalr_default_scheduler>();
+            m_signalr_client_config.set_scheduler(scheduler);
+        }
+        m_event_loop = scheduler;
 
         start_negotiate(m_base_url, 0, callback);
     }
@@ -436,40 +444,6 @@ namespace signalr
                 }
             }
         }, std::chrono::seconds(5));
-
-        //std::thread([disconnect_cts, connect_request_done, connect_request_lock, callback, weak_connection]()
-        //{
-        //    disconnect_cts->wait(5000);
-
-        //    bool run_callback = false;
-        //    {
-        //        std::lock_guard<std::mutex> lock(*connect_request_lock);
-        //        // no op after connection started successfully
-        //        if (*connect_request_done == false)
-        //        {
-        //            *connect_request_done = true;
-        //            run_callback = true;
-        //        }
-        //    }
-
-        //    // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
-        //    // which case we should not throw due to timeout.
-        //    if (disconnect_cts->is_canceled())
-        //    {
-        //        if (run_callback)
-        //        {
-        //            // The callback checks the disconnect_cts token and will handle it appropriately
-        //            callback({}, nullptr);
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (run_callback)
-        //        {
-        //            callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
-        //        }
-        //    }
-        //}).detach();
 
         connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {

@@ -4,6 +4,7 @@
 
 #include "stdafx.h"
 #include "signalrclient/signalr_client_config.h"
+#include "signalr_default_scheduler.h"
 
 namespace signalr
 {
@@ -40,6 +41,11 @@ namespace signalr
         m_websocket_client_config = websocket_client_config;
     }
 #endif
+
+    signalr_client_config::signalr_client_config()
+    {
+        m_scheduler = std::make_shared<signalr_default_scheduler>();
+    }
 
     const std::map<std::string, std::string>& signalr_client_config::get_http_headers() const noexcept
     {

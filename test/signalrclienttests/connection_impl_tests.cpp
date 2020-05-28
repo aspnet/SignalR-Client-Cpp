@@ -18,7 +18,7 @@ using namespace signalr;
 static std::shared_ptr<connection_impl> create_connection(std::shared_ptr<test_websocket_client> websocket_client = create_test_websocket_client(),
     std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::verbose)
 {
-    return connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level, log_writer, create_test_http_client(),
+    return connection_impl::create(create_uri(), trace_level, log_writer, create_test_http_client(),
         [websocket_client](const signalr_client_config& config)
         {
             websocket_client->set_config(config);
@@ -115,7 +115,7 @@ TEST(connection_impl_start, connection_state_is_disconnected_when_connection_can
         }));
 
     auto connection =
-        connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level::none, std::make_shared<memory_log_writer>(),
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>(),
             std::move(http_client), nullptr);
 
     auto mre = manual_reset_event<void>();
@@ -214,7 +214,7 @@ TEST(connection_impl_start, start_appends_id_query_string)
             callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
         });
 
-    auto connection = connection_impl::create(create_uri("a=b&c=d"), std::make_shared<signalr_default_scheduler>(), trace_level::errors,
+    auto connection = connection_impl::create(create_uri("a=b&c=d"), trace_level::errors,
         writer, create_test_http_client(), [websocket_client](const signalr_client_config& config)
         {
             websocket_client->set_config(config);
@@ -280,7 +280,7 @@ TEST(connection_impl_start, start_propagates_exceptions_from_negotiate)
         }));
 
     auto connection =
-        connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level::none,
+        connection_impl::create(create_uri(), trace_level::none,
             std::make_shared<memory_log_writer>(), std::move(http_client), nullptr);
 
     auto mre = manual_reset_event<void>();
@@ -830,7 +830,7 @@ TEST(connection_impl_start, negotiate_redirect_uses_own_query_string)
             return http_response{ 200, response_body };
         }));
 
-    auto connection = connection_impl::create(create_uri("a=b&c=d"), std::make_shared<signalr_default_scheduler>(), trace_level::errors, writer,
+    auto connection = connection_impl::create(create_uri("a=b&c=d"), trace_level::errors, writer,
         std::move(http_client), [websocket_client](const signalr_client_config& config)
         {
             websocket_client->set_config(config);
@@ -882,7 +882,7 @@ TEST(connection_impl_start, negotiate_with_negotiateVersion_uses_connectionToken
             return http_response{ 200, response_body };
         }));
 
-    auto connection = connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level::errors, writer,
+    auto connection = connection_impl::create(create_uri(), trace_level::errors, writer,
         std::move(http_client), [websocket_client](const signalr_client_config& config)
         {
             websocket_client->set_config(config);
@@ -932,7 +932,7 @@ TEST(connection_impl_start, correct_connection_id_returned_with_negotiateVersion
             return http_response{ 200, response_body };
         }));
 
-    auto connection = connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level::errors, writer,
+    auto connection = connection_impl::create(create_uri(), trace_level::errors, writer,
         std::move(http_client), [websocket_client](const signalr_client_config& config)
         {
             websocket_client->set_config(config);
@@ -1100,7 +1100,7 @@ TEST(connection_impl_send, message_sent)
 TEST(connection_impl_send, send_throws_if_connection_not_connected)
 {
     auto connection =
-        connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level::none, std::make_shared<memory_log_writer>());
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>());
 
     auto mre = manual_reset_event<void>();
     connection->send("whatever", transfer_format::text, [&mre](std::exception_ptr exception)
@@ -1940,7 +1940,7 @@ TEST(connection_id, connection_id_reset_when_starting_connection)
         }));
 
     auto connection =
-        connection_impl::create(create_uri(), std::make_shared<signalr_default_scheduler>(), trace_level::none, std::make_shared<memory_log_writer>(),
+        connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>(),
             std::move(http_client), [websocket_client](const signalr_client_config& config)
             {
                 websocket_client->set_config(config);

@@ -16,7 +16,6 @@
 #include <map>
 #include <string>
 #include "scheduler.h"
-#include "../src/signalrclient/signalr_default_scheduler.h"
 
 namespace signalr
 {
@@ -38,6 +37,8 @@ namespace signalr
         SIGNALRCLIENT_API void __cdecl set_websocket_client_config(const web::websockets::client::websocket_client_config& websocket_client_config);
 #endif
 
+        SIGNALRCLIENT_API __cdecl signalr_client_config();
+
         SIGNALRCLIENT_API const std::map<std::string, std::string>& __cdecl get_http_headers() const noexcept;
         SIGNALRCLIENT_API std::map<std::string, std::string>& __cdecl get_http_headers() noexcept;
         SIGNALRCLIENT_API void __cdecl set_http_headers(const std::map<std::string, std::string>& http_headers);
@@ -50,6 +51,6 @@ namespace signalr
         web::websockets::client::websocket_client_config m_websocket_client_config;
 #endif
         std::map<std::string, std::string> m_http_headers;
-        std::shared_ptr<scheduler> m_scheduler = std::make_shared<signalr_default_scheduler>();
+        std::shared_ptr<scheduler> m_scheduler;
     };
 }

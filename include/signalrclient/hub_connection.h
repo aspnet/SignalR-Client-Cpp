@@ -12,7 +12,6 @@
 #include "log_writer.h"
 #include "signalr_client_config.h"
 #include "signalr_value.h"
-#include "../include/signalrclient/scheduler.h"
 
 namespace signalr
 {
