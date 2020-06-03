@@ -23,7 +23,7 @@ namespace signalr
 
     void logger::log(trace_level level, const std::string& entry) const
     {
-        if ((level & m_trace_level) != trace_level::none)
+        if ((level & m_trace_level) != trace_level::none && m_log_writer)
         {
             try
             {
