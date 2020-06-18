@@ -11,7 +11,6 @@
 #include "signalrclient/signalr_exception.h"
 #include "signalrclient/web_exception.h"
 #include "test_http_client.h"
-#include "../src/signalrclient/signalr_default_scheduler.h"
 
 using namespace signalr;
 
