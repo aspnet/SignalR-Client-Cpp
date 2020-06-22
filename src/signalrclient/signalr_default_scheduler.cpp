@@ -4,6 +4,7 @@
 
 #include "stdafx.h"
 #include "signalr_default_scheduler.h"
+#include <thread>
 
 namespace signalr
 {
