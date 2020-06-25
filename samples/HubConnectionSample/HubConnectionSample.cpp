@@ -18,12 +18,12 @@ class logger : public signalr::log_writer
     }
 };
 
-void send_message(signalr::hub_connection& connection, const std::string& message)
+void send_message(std::shared_ptr<signalr::hub_connection> connection, const std::string& message)
 {
     std::vector<signalr::value> args { std::string("c++"), message };
 
     // if you get an internal compiler error uncomment the lambda below or install VS Update 4
-    connection.invoke("Send", args, [](const signalr::value& value, std::exception_ptr exception)
+    connection->invoke("Send", args, [](const signalr::value& value, std::exception_ptr exception)
     {
         try
         {
@@ -87,7 +87,7 @@ void chat()
                 break;
             }
 
-            //send_message(connection, message);
+            send_message(connection, message);
         }
 
         connection->stop([&task](std::exception_ptr exception)
