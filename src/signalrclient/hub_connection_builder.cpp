@@ -88,7 +88,7 @@ namespace signalr
     }
 #endif
 
-    hub_connection hub_connection_builder::build()
+    std::shared_ptr<hub_connection> hub_connection_builder::build()
     {
 #ifndef USE_CPPRESTSDK
         if (m_http_client_factory == nullptr)
@@ -115,6 +115,6 @@ namespace signalr
             hub_protocol = std::unique_ptr<json_hub_protocol>(new json_hub_protocol());
         }
 
-        return hub_connection(m_url, std::move(hub_protocol), m_log_level, m_logger, m_http_client_factory, m_websocket_factory, m_skip_negotiation);
+        return std::shared_ptr<hub_connection>(new hub_connection(m_url, std::move(hub_protocol), m_log_level, m_logger, m_http_client_factory, m_websocket_factory, m_skip_negotiation));
     }
 }

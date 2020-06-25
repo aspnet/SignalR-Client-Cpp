@@ -39,7 +39,7 @@ namespace signalr
         SIGNALRCLIENT_API hub_connection_builder& with_messagepack_hub_protocol();
 #endif
 
-        SIGNALRCLIENT_API hub_connection build();
+        SIGNALRCLIENT_API std::shared_ptr<hub_connection> build();
     private:
         hub_connection_builder(const std::string& url);
 

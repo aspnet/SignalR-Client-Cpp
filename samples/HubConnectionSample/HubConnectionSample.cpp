@@ -50,17 +50,17 @@ void send_message(signalr::hub_connection& connection, const std::string& messag
 
 void chat()
 {
-    signalr::hub_connection connection = signalr::hub_connection_builder::create("http://localhost:5000/default")
-        .with_logging(std::make_shared <logger>(), signalr::trace_level::verbose)
+    std::shared_ptr<signalr::hub_connection> connection = signalr::hub_connection_builder::create("http://localhost:5000/default")
+        .with_logging(std::make_shared<logger>(), signalr::trace_level::verbose)
         .build();
 
-    connection.on("Send", [](const std::vector<signalr::value>& m)
+    connection->on("Send", [](const std::vector<signalr::value>& m)
     {
         std::cout << std::endl << m[0].as_string() << std::endl << "Enter your message: ";
     });
 
     std::promise<void> task;
-    connection.start([&connection, &task](std::exception_ptr exception)
+    connection->start([&connection, &task](std::exception_ptr exception)
     {
         if (exception)
         {
@@ -77,20 +77,20 @@ void chat()
         }
 
         std::cout << "Enter your message:";
-        while (connection.get_connection_state() == signalr::connection_state::connected)
+        while (connection->get_connection_state() == signalr::connection_state::connected)
         {
             std::string message;
             std::getline(std::cin, message);
 
-            if (message == ":q" || connection.get_connection_state() != signalr::connection_state::connected)
+            if (message == ":q" || connection->get_connection_state() != signalr::connection_state::connected)
             {
                 break;
             }
 
-            send_message(connection, message);
+            //send_message(connection, message);
         }
 
-        connection.stop([&task](std::exception_ptr exception)
+        connection->stop([&task](std::exception_ptr exception)
         {
             try
             {
