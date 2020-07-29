@@ -30,10 +30,10 @@ namespace signalr
                 return;
             }
 
-            // TODO: signalr_client_config
             http_request request;
             request.method = http_method::POST;
             request.headers = config.get_http_headers();
+            request.timeout = config.get_http_client_config().timeout();
 
             client.send(negotiate_url, request, [callback](const http_response& http_response, std::exception_ptr exception)
             {
