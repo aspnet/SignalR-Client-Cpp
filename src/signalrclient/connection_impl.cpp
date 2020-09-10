@@ -178,6 +178,7 @@ namespace signalr
                             .append(e.what()));
                     }
                     connection->change_state(connection_state::disconnected);
+                    connection->m_start_completed_event.cancel();
                     callback(exception);
                     return;
                 }
@@ -185,6 +186,7 @@ namespace signalr
                 if (!response.error.empty())
                 {
                     connection->change_state(connection_state::disconnected);
+                    connection->m_start_completed_event.cancel();
                     callback(std::make_exception_ptr(signalr_exception(response.error)));
                     return;
                 }
@@ -219,6 +221,7 @@ namespace signalr
                 if (!foundWebsockets)
                 {
                     connection->change_state(connection_state::disconnected);
+                    connection->m_start_completed_event.cancel();
                     callback(std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
                     return;
                 }
