@@ -56,8 +56,8 @@ stages:
       # Once the problem has been resolved
       - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
         displayName: xcode-select
-      - script: brew install gcc
-        displayName: Install gcc
+      - script: brew install gcc valgrind
+        displayName: Install gcc and valgrind
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
@@ -77,12 +77,17 @@ stages:
       - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
+      - bash: "sudo apt install valgrind"
+        displayName: install valgrind
 
   - template: .azure/default-build.yml
     parameters:
       agentOs: Linux
       jobName: Linux_Build_Test
       useCppRestSDK: false
+    beforeBuild:
+    - bash: "sudo apt install valgrind"
+        displayName: install valgrind
 
   - template: .azure/default-build.yml
     parameters:
@@ -101,8 +106,8 @@ stages:
       # Once the problem has been resolved
       - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
         displayName: xcode-select
-      - script: brew install gcc
-        displayName: Install gcc
+      - script: brew install gcc valgrind
+        displayName: Install gcc and valgrind
 
   # Publish to the BAR
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
