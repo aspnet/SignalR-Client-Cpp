@@ -87,7 +87,7 @@ stages:
       useCppRestSDK: false
     beforeBuild:
     - bash: "sudo apt install valgrind"
-        displayName: install valgrind
+      displayName: install valgrind
 
   - template: .azure/default-build.yml
     parameters:
