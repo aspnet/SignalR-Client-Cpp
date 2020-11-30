@@ -85,9 +85,9 @@ stages:
       agentOs: Linux
       jobName: Linux_Build_Test
       useCppRestSDK: false
-    beforeBuild:
-    - bash: "sudo apt install valgrind"
-      displayName: install valgrind
+      beforeBuild:
+      - bash: "sudo apt install valgrind"
+        displayName: install valgrind
 
   - template: .azure/default-build.yml
     parameters:
