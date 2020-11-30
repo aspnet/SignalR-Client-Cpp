@@ -56,8 +56,8 @@ stages:
       # Once the problem has been resolved
       - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
         displayName: xcode-select
-      - script: brew install gcc valgrind
-        displayName: Install gcc and valgrind
+      - script: brew install gcc
+        displayName: Install gcc
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
@@ -106,8 +106,8 @@ stages:
       # Once the problem has been resolved
       - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
         displayName: xcode-select
-      - script: brew install gcc valgrind
-        displayName: Install gcc and valgrind
+      - script: brew install gcc
+        displayName: Install gcc
 
   # Publish to the BAR
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:

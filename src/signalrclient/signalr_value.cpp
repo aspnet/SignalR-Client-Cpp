@@ -182,7 +182,7 @@ namespace signalr
 
     value& value::operator=(const value& rhs)
     {
-        destruct_internals();
+        //destruct_internals();
 
         mType = rhs.mType;
         switch (mType)
