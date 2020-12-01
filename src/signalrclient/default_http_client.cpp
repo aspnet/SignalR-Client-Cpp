@@ -44,20 +44,41 @@ namespace signalr
             http_request.headers() = headers;
         }
 
-        auto milliseconds = std::chrono::milliseconds(request.timeout);
+#pragma warning (push)
+#pragma warning (disable : 4625 4626 5026 5027)
+        struct cancel_wait_context
+        {
+            bool complete = false;
+            std::condition_variable cv;
+            std::mutex mtx;
+        };
+#pragma warning (pop)
+
+        std::shared_ptr<cancel_wait_context> context;
         pplx::cancellation_token_source cts;
+
+        auto milliseconds = std::chrono::milliseconds(request.timeout);
         if (milliseconds.count() != 0)
         {
-            pplx::create_task([milliseconds, cts]()
+            context = std::make_shared<cancel_wait_context>();
+            pplx::create_task([context, milliseconds, cts]()
             {
-                std::this_thread::sleep_for(milliseconds);
-                cts.cancel();
+                auto timeout_point = std::chrono::steady_clock::now() + milliseconds;
+                std::unique_lock<std::mutex> lck(context->mtx);
+                while (!context->complete)
+                {
+                    if (context->cv.wait_until(lck, timeout_point) == std::cv_status::timeout)
+                    {
+                        cts.cancel();
+                        break;
+                    }
+                }
             });
         }
 
         web::http::client::http_client client(utility::conversions::to_string_t(url));
         client.request(http_request, cts.get_token())
-            .then([callback](pplx::task<web::http::http_response> response_task)
+            .then([context, callback](pplx::task<web::http::http_response> response_task)
         {
             try
             {
@@ -75,6 +96,13 @@ namespace signalr
             catch (...)
             {
                 callback(http_response(), std::current_exception());
+            }
+
+            if (context != nullptr)
+            {
+                std::unique_lock<std::mutex> lck(context->mtx);
+                context->complete = true;
+                context->cv.notify_all();
             }
         });
     }

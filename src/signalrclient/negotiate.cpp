@@ -34,6 +34,9 @@ namespace signalr
             http_request request;
             request.method = http_method::POST;
             request.headers = config.get_http_headers();
+#ifdef USE_CPPRESTSDK
+            request.timeout = config.get_http_client_config().timeout();
+#endif
 
             client.send(negotiate_url, request, [callback](const http_response& http_response, std::exception_ptr exception)
             {
