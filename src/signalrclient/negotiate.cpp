@@ -30,6 +30,7 @@ namespace signalr
                 return;
             }
 
+            // TODO: signalr_client_config
             http_request request;
             request.method = http_method::POST;
             request.headers = config.get_http_headers();
