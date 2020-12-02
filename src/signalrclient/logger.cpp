@@ -28,7 +28,8 @@ namespace signalr
         {
             try
             {
-                std::chrono::milliseconds milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+                std::chrono::milliseconds milliseconds =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
                 std::chrono::seconds seconds = std::chrono::duration_cast<std::chrono::seconds>(milliseconds);
                 milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(milliseconds - seconds);
 
@@ -46,9 +47,12 @@ namespace signalr
                 // 5 = 3 digits of millisecond precision + 'Z' + null character ending
                 snprintf(timeString + sizeof(timeString) - 5, 5, "%03dZ", (int)milliseconds.count());
 
+                auto trace_level = translate_trace_level(level);
+                assert(trace_level.length() <= 12);
+
                 std::stringstream os;
                 os << timeString << " ["
-                    << std::left << std::setw(12) << translate_trace_level(level) << "] "<< entry << std::endl;
+                    << std::left << std::setw(12) << trace_level << "] "<< entry << std::endl;
                 m_log_writer->write(os.str());
             }
             catch (const std::exception &e)
