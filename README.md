@@ -4,6 +4,26 @@ This project is part of ASP.NET Core. You can find samples, documentation and ge
 
 Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
 
+## Build this library
+
+There are multiple ways to build this library
+
+* Use [vcpkg](https://github.com/microsoft/vcpkg) and install the library with `vcpkg install microsoft-signalr`
+* Build from [command line](#command-line-build)
+* Build in Visual Studio by selecting the "Open a local folder" option and selecting the repository root folder
+
+## Command line build
+
+Below are instructions to build on different OS's. You can also use the following options to customize the build:
+
+| Command line | Description | Default value |
+| --- | --- | --- |
+| -DBUILD_SAMPLES | Build the included sample project | false |
+| -DBUILD_TESTING | Builds the test project | true |
+| -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) | false |
+| -DWERROR | Enables warnings as errors | true |
+| -DWALL | Enables all warnings | true |
+
 ### Build on Windows ###
 ```powershell
 PS> git submodule update --init
@@ -41,3 +61,41 @@ $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg
 $ cmake --build . --config Release
 ```
 Output will be in `build.release/bin/`
+
+## Example usage
+
+```cpp
+#include "signalrclient/hub_connection.h"
+#include "signalrclient/hub_connection_builder.h"
+#include "signalrclient/signalr_value.h"
+
+std::promise<void> start_task;
+signalr::hub_connection connection = signalr::hub_connection_builder::create("http://localhost:5000/hub").build();
+
+connection.on("Echo", [](const signalr::value& m)
+{
+    std::cout << m.as_array()[0].as_string() << std::endl;
+});
+
+connection.start([&start_task](std::exception_ptr exception) {
+    start_task.set_value();
+});
+
+start_task.get_future().get();
+
+std::promise<void> send_task;
+std::vector<signalr::value> arr { "Hello world" };
+signalr::value arg(arr);
+connection.invoke("Echo", arg, [&send_task](const signalr::value& value, std::exception_ptr exception) {
+    send_task.set_value();
+});
+
+send_task.get_future().get();
+
+std::promise<void> stop_task;
+connection.stop([&stop_task](std::exception_ptr exception) {
+    stop_task.set_value();
+});
+
+stop_task.get_future().get();
+```
