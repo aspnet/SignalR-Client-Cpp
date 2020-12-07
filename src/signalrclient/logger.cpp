@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <assert.h>
+#include <chrono>
 
 namespace signalr
 {
@@ -27,22 +28,31 @@ namespace signalr
         {
             try
             {
-                time_t t;
+                std::chrono::milliseconds milliseconds =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+                std::chrono::seconds seconds = std::chrono::duration_cast<std::chrono::seconds>(milliseconds);
+                milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(milliseconds - seconds);
+
+                time_t t = seconds.count();
                 tm time;
-                // gets current calendar time
-                std::time(&t);
                 // convert time to utc
                 GMTIME(&time, &t);
 
-                // TODO: millisecond "precision"
-                char timeString[sizeof("2019-11-23T13:23:02Z")];
+                char timeString[sizeof("2019-11-23T13:23:02.000Z")];
 
-                // format string to ISO8601
-                std::strftime(timeString, sizeof(timeString), "%FT%TZ", &time);
+                // format string to ISO8601 with additional space for 3 digits of millisecond precision
+                std::strftime(timeString, sizeof(timeString), "%FT%T.000Z", &time);
+
+                // add millisecond part
+                // 5 = 3 digits of millisecond precision + 'Z' + null character ending
+                snprintf(timeString + sizeof(timeString) - 5, 5, "%03dZ", (int)milliseconds.count());
+
+                auto trace_level = translate_trace_level(level);
+                assert(trace_level.length() <= 12);
 
                 std::stringstream os;
                 os << timeString << " ["
-                    << std::left << std::setw(12) << translate_trace_level(level) << "] "<< entry << std::endl;
+                    << std::left << std::setw(12) << trace_level << "] "<< entry << std::endl;
                 m_log_writer->write(os.str());
             }
             catch (const std::exception &e)
