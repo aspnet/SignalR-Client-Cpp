@@ -10,7 +10,7 @@ There are multiple ways to build this library
 
 * Use [vcpkg](https://github.com/microsoft/vcpkg) and install the library with `vcpkg install microsoft-signalr`
 * Build from [command line](#command-line-build)
-* Build in Visual Studio by selecting the "Open a local folder" option and selecting the repository root folder
+* Build in Visual Studio (must have the "Desktop Development with C++" workload) by selecting the "Open a local folder" option and selecting the repository root folder
 
 ## Command line build
 
