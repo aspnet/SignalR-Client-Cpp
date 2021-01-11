@@ -97,8 +97,8 @@ stages:
       beforeBuild:
       - bash: "sudo apt install valgrind"
         displayName: install valgrind
-      - bash: "sudo apt install g++-10 && g++ --version"
-        displayName: install g++
+      variables:
+        CXX: g++-10
 
   - template: .azure/default-build.yml
     parameters:
