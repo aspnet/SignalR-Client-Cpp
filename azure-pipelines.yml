@@ -97,8 +97,8 @@ stages:
       beforeBuild:
       - bash: "sudo apt install valgrind"
         displayName: install valgrind
-      - bash: "sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt-get update && sudo apt install g++-10"
-        displayName: install g++-10
+      - bash: "sudo apt install g++ && g++ --version"
+        displayName: install g++
 
   - template: .azure/default-build.yml
     parameters:
