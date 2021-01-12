@@ -100,7 +100,7 @@ connection.stop([&stop_task](std::exception_ptr exception) {
 stop_task.get_future().get();
 ```
 
-### Minimal CMake file
+### Example CMake file
 
 ```
 cmake_minimum_required (VERSION 3.5)
