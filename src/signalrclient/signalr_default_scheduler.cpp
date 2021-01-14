@@ -9,29 +9,26 @@
 namespace signalr
 {
     thread::thread()
-        : m_callbacks(std::make_shared<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>>()),
-        m_callback_lock(std::make_shared<std::mutex>()), m_callback_cv(std::make_shared<std::condition_variable>()), m_closed(std::make_shared<bool>()), m_busy(std::make_shared<bool>())
+        : m_internals(std::make_shared<internals>())
     {
-        auto closed = m_closed;
-        auto callbacks = m_callbacks;
-        auto callback_lock = m_callback_lock;
-        auto cv = m_callback_cv;
-        auto busy = m_busy;
+        auto internals = m_internals;
 
         std::thread([=]()
             {
-                while ((*closed) == false)
+                while (internals->m_closed == false)
                 {
                     signalr_base_cb cb;
                     {
-                        std::unique_lock<std::mutex> lock((*callback_lock));
-                        cv->wait(lock, [&callbacks, &closed] { return *closed || !callbacks->empty(); });
-                        if ((*closed))
+                        std::unique_lock<std::mutex> lock(internals->m_callback_lock);
+                        auto& callbacks = internals->m_callbacks;
+                        auto& closed = internals->m_closed;
+                        internals->m_callback_cv.wait(lock, [&callbacks, &closed] { return closed || !callbacks.empty(); });
+                        if (internals->m_closed)
                         {
                             return;
                         }
-                        cb = callbacks->front().first;
-                        callbacks->erase(callbacks->begin());
+                        cb = internals->m_callbacks.front().first;
+                        internals->m_callbacks.erase(internals->m_callbacks.begin());
                     } // unlock
 
                     try
@@ -42,7 +39,7 @@ namespace signalr
                     {
                         // ignore exceptions?
                     }
-                    (*busy) = false;
+                    internals->m_busy = false;
                 }
             }).detach();
     }
@@ -50,22 +47,22 @@ namespace signalr
     void thread::add(std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>> cb)
     {
         {
-            std::lock_guard<std::mutex> lock((*m_callback_lock));
-            m_callbacks->push_back(cb);
-            (*m_busy) = true;
+            std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
+            m_internals->m_callbacks.push_back(cb);
+            m_internals->m_busy = true;
         } // unlock
-        m_callback_cv->notify_one();
+        m_internals->m_callback_cv.notify_one();
     }
 
     void thread::shutdown()
     {
-        (*m_closed) = true;
-        m_callback_cv->notify_one();
+        m_internals->m_closed = true;
+        m_internals->m_callback_cv.notify_one();
     }
 
     bool thread::is_free() const
     {
-        return !(*m_busy);
+        return !m_internals->m_busy;
     }
 
     thread::~thread()
@@ -96,30 +93,29 @@ namespace signalr
     void signalr_default_scheduler::schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay)
     {
         {
-            std::lock_guard<std::mutex> lock((*m_callback_lock));
-            m_callbacks->push_back(std::make_pair(cb, std::chrono::steady_clock::now() + delay));
+            std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
+            m_internals->m_callbacks.push_back(std::make_pair(cb, std::chrono::steady_clock::now() + delay));
         } // unlock
-        m_callback_cv->notify_one();
+        m_internals->m_callback_cv.notify_one();
     }
 
     void signalr_default_scheduler::run()
     {
-        auto closed = m_closed;
-        auto callbacks = m_callbacks;
-        auto callback_lock = m_callback_lock;
-        auto cv = m_callback_cv;
+        auto internals = m_internals;
 
-        std::thread([callbacks, callback_lock, cv, closed]()
+        std::thread([=]()
             {
                 std::vector<thread> threads{ 5 };
 
-                while ((*closed) == false)
+                while (internals->m_closed == false)
                 {
                     std::pair<signalr::signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>> cb;
                     {
-                        std::unique_lock<std::mutex> lock((*callback_lock));
-                        cv->wait_for(lock, std::chrono::milliseconds(15), [&callbacks, &closed] { return (*closed) || !callbacks->empty(); });
-                        if ((*closed))
+                        std::unique_lock<std::mutex> lock(internals->m_callback_lock);
+                        auto& callbacks = internals->m_callbacks;
+                        auto& closed = internals->m_closed;
+                        internals->m_callback_cv.wait_for(lock, std::chrono::milliseconds(15), [&callbacks, &closed] { return closed || !callbacks.empty(); });
+                        if (closed)
                         {
                             return;
                         }
@@ -127,9 +123,9 @@ namespace signalr
                         // find the first callback that is ready to run and remove it from the list
                         // then exit the lock so other threads can find a callback
                         auto curr_time = std::chrono::steady_clock::now();
-                        auto it = callbacks->begin();
+                        auto it = callbacks.begin();
                         auto found = false;
-                        while (it != callbacks->end())
+                        while (it != callbacks.end())
                         {
                             if (it->second <= curr_time)
                             {
@@ -150,7 +146,7 @@ namespace signalr
                             }
                             if (found)
                             {
-                                it = callbacks->erase(it);
+                                it = callbacks.erase(it);
                             }
                             else
                             {
@@ -164,8 +160,8 @@ namespace signalr
 
     void signalr_default_scheduler::close()
     {
-        (*m_closed) = true;
-        m_callback_cv->notify_one();
+        m_internals->m_closed = true;
+        m_internals->m_callback_cv.notify_one();
     }
 
     signalr_default_scheduler::~signalr_default_scheduler()

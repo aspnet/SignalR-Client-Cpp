@@ -17,17 +17,24 @@ namespace signalr
         void shutdown();
         ~thread();
     private:
-        std::shared_ptr<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>> m_callbacks;
-        std::shared_ptr<std::mutex> m_callback_lock;
-        std::shared_ptr<std::condition_variable> m_callback_cv;
-        std::shared_ptr<bool> m_closed;
-        std::shared_ptr<bool> m_busy;
+#pragma warning( push )
+#pragma warning( disable: 4625 5026 4626 5027 )
+        struct internals
+        {
+            std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>> m_callbacks;
+            std::mutex m_callback_lock;
+            std::condition_variable m_callback_cv;
+            bool m_closed;
+            bool m_busy;
+        };
+#pragma warning( pop )
+
+        std::shared_ptr<internals> m_internals;
     };
 
     struct signalr_default_scheduler : scheduler
     {
-        signalr_default_scheduler() : m_callbacks(std::make_shared<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>>()),
-            m_callback_lock(std::make_shared<std::mutex>()), m_callback_cv(std::make_shared<std::condition_variable>()), m_closed(std::make_shared<bool>())
+        signalr_default_scheduler() : m_internals(std::make_shared<internals>())
         {
             run();
         }
@@ -43,10 +50,19 @@ namespace signalr
 
     private:
         void run();
-        std::shared_ptr<std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>>> m_callbacks;
-        std::shared_ptr<std::mutex> m_callback_lock;
-        std::shared_ptr<std::condition_variable> m_callback_cv;
-        std::shared_ptr<bool> m_closed;
+
+#pragma warning( push )
+#pragma warning( disable: 4625 5026 4626 5027 )
+        struct internals
+        {
+            std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>> m_callbacks;
+            std::mutex m_callback_lock;
+            std::condition_variable m_callback_cv;
+            bool m_closed;
+        };
+#pragma warning( pop )
+
+        std::shared_ptr<internals> m_internals;
 
         void close();
     };
