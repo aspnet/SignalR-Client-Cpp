@@ -11,7 +11,7 @@ eval $* &
 PID=$!
 
 # Timeout duration
-TIME=120
+TIME=240
 
 while (($TIME > 0)); do
   # polling interval
@@ -34,4 +34,4 @@ done
 kill -9 $PID
 
 echo "Process took too long"
-exit $EXITCODE
+exit 1
