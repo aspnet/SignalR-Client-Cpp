@@ -12,7 +12,7 @@ namespace signalr
     {
     public:
         thread();
-        void add(std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>);
+        void add(signalr_base_cb);
         bool is_free() const;
         void shutdown();
         ~thread();
@@ -21,7 +21,7 @@ namespace signalr
 #pragma warning( disable: 4625 5026 4626 5027 )
         struct internals
         {
-            std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>> m_callbacks;
+            std::vector<signalr_base_cb> m_callbacks;
             std::mutex m_callback_lock;
             std::condition_variable m_callback_cv;
             bool m_closed;

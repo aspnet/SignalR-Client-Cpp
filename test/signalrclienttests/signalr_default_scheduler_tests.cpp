@@ -30,10 +30,12 @@ TEST(scheduler, callback_can_be_called_when_timer_callback_called_first)
     signalr_default_scheduler scheduler;
 
     auto mre = manual_reset_event<void>();
+    auto timer_mre = manual_reset_event<void>();
     bool first_callback = false;
-    scheduler.schedule([&first_callback]()
+    scheduler.schedule([&first_callback, &timer_mre]()
         {
             first_callback = true;
+            timer_mre.set();
         }, std::chrono::milliseconds(100));
 
     scheduler.schedule([&mre]()
@@ -43,6 +45,7 @@ TEST(scheduler, callback_can_be_called_when_timer_callback_called_first)
 
     mre.get();
     ASSERT_FALSE(first_callback);
+    timer_mre.get();
 }
 
 TEST(scheduler, callback_with_delay_is_delayed)
@@ -72,7 +75,7 @@ TEST(scheduler, scheduler_can_destruct_with_callbacks_registered)
 
         scheduler.schedule([]()
             {
-            }, std::chrono::seconds(100));
+            }, std::chrono::seconds(1));
     }
 
     manual_reset_event<void> start_mre{};

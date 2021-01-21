@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 #include "stdafx.h"
+#include <assert.h>
 #include "signalr_default_scheduler.h"
 #include <thread>
 
@@ -15,38 +16,47 @@ namespace signalr
 
         std::thread([=]()
             {
-                while (internals->m_closed == false)
+                while (true)
                 {
-                    signalr_base_cb cb;
                     {
-                        std::unique_lock<std::mutex> lock(internals->m_callback_lock);
-                        auto& callbacks = internals->m_callbacks;
-                        auto& closed = internals->m_closed;
-                        internals->m_callback_cv.wait(lock, [&callbacks, &closed] { return closed || !callbacks.empty(); });
-                        if (internals->m_closed)
+                        signalr_base_cb cb;
                         {
-                            return;
-                        }
-                        cb = internals->m_callbacks.front().first;
-                        internals->m_callbacks.erase(internals->m_callbacks.begin());
-                    } // unlock
+                            std::unique_lock<std::mutex> lock(internals->m_callback_lock);
+                            auto& callbacks = internals->m_callbacks;
+                            auto& closed = internals->m_closed;
+                            internals->m_callback_cv.wait(lock, [&callbacks, &closed] { return closed || !callbacks.empty(); });
+                            if (internals->m_closed && callbacks.empty())
+                            {
+                                assert(callbacks.empty());
+                                return;
+                            }
+                            cb = internals->m_callbacks.front();
+                            internals->m_callbacks.erase(internals->m_callbacks.begin());
+                        } // unlock
 
-                    try
-                    {
-                        cb();
-                    }
-                    catch (...)
-                    {
-                        // ignore exceptions?
-                    }
+                        try
+                        {
+                            cb();
+                        }
+                        catch (...)
+                        {
+                            // ignore exceptions?
+                        }
+                    } // destruct cb, otherwise it's possible a shared_ptr is being held by the lambda/function and on destruction it could schedule work which could be
+                    // added to this thread and if it then blocks waiting for completion it would deadlock. If we destruct before setting the m_busy flag,
+                    // another thread will run the work instead.
+
                     internals->m_busy = false;
                 }
+
+                assert(internals->m_callbacks.empty());
             }).detach();
     }
 
-    void thread::add(std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>> cb)
+    void thread::add(signalr_base_cb cb)
     {
         {
+            assert(m_internals->m_closed == false);
             std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
             m_internals->m_callbacks.push_back(cb);
             m_internals->m_busy = true;
@@ -93,6 +103,7 @@ namespace signalr
     void signalr_default_scheduler::schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay)
     {
         {
+            assert(m_internals->m_closed == false);
             std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
             m_internals->m_callbacks.push_back(std::make_pair(cb, std::chrono::steady_clock::now() + delay));
         } // unlock
@@ -107,16 +118,18 @@ namespace signalr
             {
                 std::vector<thread> threads{ 5 };
 
-                while (internals->m_closed == false)
+                while (true)
                 {
-                    std::pair<signalr::signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>> cb;
+                    signalr::signalr_base_cb cb;
                     {
                         std::unique_lock<std::mutex> lock(internals->m_callback_lock);
                         auto& callbacks = internals->m_callbacks;
                         auto& closed = internals->m_closed;
                         internals->m_callback_cv.wait_for(lock, std::chrono::milliseconds(15), [&callbacks, &closed] { return closed || !callbacks.empty(); });
-                        if (closed)
+
+                        if (closed && callbacks.empty())
                         {
+                            assert(callbacks.empty());
                             return;
                         }
 
@@ -129,7 +142,7 @@ namespace signalr
                         {
                             if (it->second <= curr_time)
                             {
-                                cb = (*it);
+                                cb = (*it).first;
                                 for (auto& thread : threads)
                                 {
                                     if (thread.is_free())
@@ -155,6 +168,8 @@ namespace signalr
                         }
                     } // unlock
                 }
+
+                assert(internals->m_callbacks.empty());
             }).detach();
     }
 
