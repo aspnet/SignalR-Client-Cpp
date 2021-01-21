@@ -11,7 +11,7 @@ eval $* &
 PID=$!
 
 # Timeout duration
-TIME=240
+TIME=800
 
 while (($TIME > 0)); do
   # polling interval
