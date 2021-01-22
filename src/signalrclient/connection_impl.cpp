@@ -148,6 +148,7 @@ namespace signalr
         if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
         {
             change_state(connection_state::disconnected);
+            m_start_completed_event.cancel();
             callback(std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
             return;
         }
