@@ -424,7 +424,7 @@ namespace signalr
                     *connect_request_done = true;
                     run_callback = true;
                 }
-            }
+            } // unlock
 
             // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
             // which case we should not throw due to timeout.

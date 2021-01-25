@@ -107,7 +107,12 @@ namespace signalr
             std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
             m_internals->m_callbacks.push_back(std::make_pair(cb, std::chrono::steady_clock::now() + delay));
         } // unlock
-        m_internals->m_callback_cv.notify_one();
+
+        // If callback has a delay, no point in running the logic to check if it should run early
+        if (delay == std::chrono::milliseconds::zero())
+        {
+            m_internals->m_callback_cv.notify_one();
+        }
     }
 
     void signalr_default_scheduler::run()
@@ -118,55 +123,56 @@ namespace signalr
             {
                 std::vector<thread> threads{ 5 };
 
+                std::unique_lock<std::mutex> lock(internals->m_callback_lock);
+
+                auto prev_callback_count = size_t{ 0 };
+
                 while (true)
                 {
-                    signalr::signalr_base_cb cb;
+                    auto& callbacks = internals->m_callbacks;
+                    auto& closed = internals->m_closed;
+                    internals->m_callback_cv.wait_for(lock, std::chrono::milliseconds(105), [&callbacks, &closed, &prev_callback_count] { return closed || prev_callback_count != callbacks.size(); });
+
+                    if (closed && callbacks.empty())
                     {
-                        std::unique_lock<std::mutex> lock(internals->m_callback_lock);
-                        auto& callbacks = internals->m_callbacks;
-                        auto& closed = internals->m_closed;
-                        internals->m_callback_cv.wait_for(lock, std::chrono::milliseconds(15), [&callbacks, &closed] { return closed || !callbacks.empty(); });
+                        assert(callbacks.empty());
+                        return;
+                    }
 
-                        if (closed && callbacks.empty())
+                    // find the first callback that is ready to run, find a thread to run it and remove it from the list
+                    auto curr_time = std::chrono::steady_clock::now();
+                    auto it = callbacks.begin();
+                    auto found = false;
+                    while (it != callbacks.end())
+                    {
+                        if (it->second <= curr_time)
                         {
-                            assert(callbacks.empty());
-                            return;
-                        }
-
-                        // find the first callback that is ready to run and remove it from the list
-                        // then exit the lock so other threads can find a callback
-                        auto curr_time = std::chrono::steady_clock::now();
-                        auto it = callbacks.begin();
-                        auto found = false;
-                        while (it != callbacks.end())
-                        {
-                            if (it->second <= curr_time)
+                            auto cb = (*it).first;
+                            for (auto& thread : threads)
                             {
-                                cb = (*it).first;
-                                for (auto& thread : threads)
+                                if (thread.is_free())
                                 {
-                                    if (thread.is_free())
-                                    {
-                                        thread.add(cb);
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                                if (!found)
-                                {
+                                    thread.add(cb);
+                                    found = true;
                                     break;
                                 }
                             }
-                            if (found)
+                            if (!found)
                             {
-                                it = callbacks.erase(it);
-                            }
-                            else
-                            {
-                                ++it;
+                                break;
                             }
                         }
-                    } // unlock
+                        if (found)
+                        {
+                            it = callbacks.erase(it);
+                        }
+                        else
+                        {
+                            ++it;
+                        }
+                    }
+
+                    prev_callback_count = callbacks.size();
                 }
 
                 assert(internals->m_callbacks.empty());
