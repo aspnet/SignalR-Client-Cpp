@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../include/signalrclient/scheduler.h"
+#include <thread>
 
 namespace signalr
 {
@@ -12,6 +13,9 @@ namespace signalr
     {
     public:
         thread();
+        thread(const thread&) = delete;
+        thread& operator=(const thread&) = delete;
+
         void add(signalr_base_cb);
         bool is_free() const;
         void shutdown();
@@ -30,6 +34,7 @@ namespace signalr
 #pragma warning( pop )
 
         std::shared_ptr<internals> m_internals;
+        std::thread m_thread;
     };
 
 #pragma warning( push )

@@ -14,7 +14,7 @@ namespace signalr
     {
         auto internals = m_internals;
 
-        std::thread([=]()
+        m_thread = std::thread([=]()
             {
                 while (true)
                 {
@@ -50,7 +50,7 @@ namespace signalr
                 }
 
                 assert(internals->m_callbacks.empty());
-            }).detach();
+            });
     }
 
     void thread::add(signalr_base_cb cb)
@@ -68,6 +68,7 @@ namespace signalr
     {
         m_internals->m_closed = true;
         m_internals->m_callback_cv.notify_one();
+        m_thread.join();
     }
 
     bool thread::is_free() const
