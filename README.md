@@ -65,6 +65,8 @@ Output will be in `build.release/bin/`
 ## Example usage
 
 ```cpp
+#include <iostream>
+#include <future>
 #include "signalrclient/hub_connection.h"
 #include "signalrclient/hub_connection_builder.h"
 #include "signalrclient/signalr_value.h"
