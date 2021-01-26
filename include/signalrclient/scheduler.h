@@ -23,9 +23,21 @@ namespace signalr
             schedule(cb, nullptr, delay);
         }
 
-        virtual void schedule(const signalr_cb& cb, std::exception_ptr, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
-        virtual void schedule(const signalr_message_cb& cb, std::string, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
-        virtual void schedule(const signalr_message_cb& cb, std::exception_ptr, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
+        virtual void schedule(const signalr_cb& cb, std::exception_ptr exception, std::chrono::milliseconds delay = std::chrono::milliseconds::zero())
+        {
+            schedule([cb, exception]() { cb(exception); }, delay);
+        }
+
+        virtual void schedule(const signalr_message_cb& cb, std::string message, std::chrono::milliseconds delay = std::chrono::milliseconds::zero())
+        {
+            schedule([cb, message]() { cb(message, nullptr); }, delay);
+        }
+
+        virtual void schedule(const signalr_message_cb& cb, std::exception_ptr exception, std::chrono::milliseconds delay = std::chrono::milliseconds::zero())
+        {
+            schedule([cb, exception]() { cb("", exception); }, delay);
+        }
+
         virtual void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
 
         virtual ~scheduler() {}

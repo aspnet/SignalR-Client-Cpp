@@ -32,6 +32,9 @@ namespace signalr
         std::shared_ptr<internals> m_internals;
     };
 
+#pragma warning( push )
+    // not all virtual functions of the base class are overridden
+#pragma warning( disable : 4266 )
     struct signalr_default_scheduler : scheduler
     {
         signalr_default_scheduler() : m_internals(std::make_shared<internals>())
@@ -41,10 +44,6 @@ namespace signalr
         signalr_default_scheduler(const signalr_default_scheduler&) = delete;
         signalr_default_scheduler& operator=(const signalr_default_scheduler&) = delete;
 
-        void schedule(const signalr_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
-        void schedule(const signalr_cb& cb, std::exception_ptr, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
-        void schedule(const signalr_message_cb& cb, std::string, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
-        void schedule(const signalr_message_cb& cb, std::exception_ptr, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
         void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
         ~signalr_default_scheduler();
 
@@ -66,4 +65,5 @@ namespace signalr
 
         void close();
     };
+#pragma warning( pop )
 }

@@ -80,26 +80,6 @@ namespace signalr
         shutdown();
     }
 
-    void signalr_default_scheduler::schedule(const signalr_cb& cb, std::chrono::milliseconds delay)
-    {
-        schedule([cb]() { cb(nullptr); }, delay);
-    }
-
-    void signalr_default_scheduler::schedule(const signalr_cb& cb, std::exception_ptr exception, std::chrono::milliseconds delay)
-    {
-        schedule([cb, exception]() { cb(exception); }, delay);
-    }
-
-    void signalr_default_scheduler::schedule(const signalr_message_cb& cb, std::string message, std::chrono::milliseconds delay)
-    {
-        schedule([cb, message]() { cb(message, nullptr); }, delay);
-    }
-
-    void signalr_default_scheduler::schedule(const signalr_message_cb& cb, std::exception_ptr exception, std::chrono::milliseconds delay)
-    {
-        schedule([cb, exception]() { cb("", exception); }, delay);
-    }
-
     void signalr_default_scheduler::schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay)
     {
         {
