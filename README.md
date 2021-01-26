@@ -23,7 +23,7 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) | false |
 | -DWERROR | Enables warnings as errors | true |
 | -DWALL | Enables all warnings | true |
-| -DOVERRIDE_NEW_DELETE_HEADER=<header path> | Adds the provided header to the library compilation, intended to allow "new" and "delete" to be replaced. | <none> |
+| -DOVERRIDE_NEW_DELETE_HEADER=`<header path>` | Adds the provided header to the library compilation, intended to allow "new" and "delete" to be replaced. | `<none>` |
 
 ### Build on Windows ###
 ```powershell
