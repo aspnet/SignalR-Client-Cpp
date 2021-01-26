@@ -72,6 +72,9 @@ license you like.
 #pragma warning( push, 0 )
 #pragma warning( disable: 4702; disable: 4738 )
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 
 
 #include "json/json.h"
@@ -5380,6 +5383,8 @@ JSONCPP_OSTREAM& operator<<(JSONCPP_OSTREAM& sout, Value const& root) {
 // //////////////////////////////////////////////////////////////////////
 // End of content of file: src/lib_json/json_writer.cpp
 // //////////////////////////////////////////////////////////////////////
+
+#pragma GCC diagnostic pop
 
 #pragma warning ( pop )
 
