@@ -46,7 +46,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         /wd4711 # function 'x' selected for automatic inline expansion
         /wd4710 # function not inlined
         /experimental:external /external:anglebrackets /external:templates- /external:W0
-        /GR- # disable run-time type information
+        # /GR- # do not disable run-time type information, it can be needed by libraries we depend on, like boost
         /guard:cf # enable control-flow guard
         /EHa # enable C++ EH (w/ SEH exceptions)
     )
@@ -58,10 +58,6 @@ else()
         target_compile_options(signalrclient PRIVATE -Wall)
     endif()
 
-    # GCC on OSX has a bug with exceptions and no-rtti that can cause crashes
-    if(NOT APPLE)
-        target_compile_options(signalrclient PRIVATE -fno-rtti)
-    endif()
     target_compile_options(signalrclient PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
 endif()
 
