@@ -320,19 +320,6 @@ namespace signalr
             });
     }
 
-    void timer(std::shared_ptr<scheduler> event_loop, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds time)
-    {
-        event_loop->schedule([func, event_loop, time]()
-            mutable
-            {
-                time = time + std::chrono::seconds(1);
-                if (!func(time))
-                {
-                    timer(event_loop, func, time);
-                }
-            }, std::chrono::seconds(1));
-    }
-
     void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
     {
         auto connection = shared_from_this();
@@ -462,7 +449,7 @@ namespace signalr
                 }
             }
             return true;
-        }, std::chrono::milliseconds::zero());
+        });
 
         connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {

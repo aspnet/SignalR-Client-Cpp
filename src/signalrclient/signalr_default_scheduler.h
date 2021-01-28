@@ -25,7 +25,7 @@ namespace signalr
 #pragma warning( disable: 4625 5026 4626 5027 )
         struct internals
         {
-            std::vector<signalr_base_cb> m_callbacks;
+            signalr_base_cb m_callback;
             std::mutex m_callback_lock;
             std::condition_variable m_callback_cv;
             bool m_closed;
@@ -71,4 +71,7 @@ namespace signalr
         void close();
     };
 #pragma warning( pop )
+
+    void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds time);
+    void timer(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func);
 }

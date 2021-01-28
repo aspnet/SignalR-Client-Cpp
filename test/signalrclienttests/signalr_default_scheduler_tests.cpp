@@ -25,7 +25,7 @@ TEST(scheduler, callbacks_run_on_different_thread)
     ASSERT_NE(current_thread, id);
 }
 
-TEST(scheduler, callback_can_be_called_when_timer_callback_called_first)
+TEST(scheduler, callback_can_be_called_when_delayed_callback_called_first)
 {
     signalr_default_scheduler scheduler;
 

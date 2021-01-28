@@ -22,16 +22,26 @@ namespace signalr
                         signalr_base_cb cb;
                         {
                             std::unique_lock<std::mutex> lock(internals->m_callback_lock);
-                            auto& callbacks = internals->m_callbacks;
+                            auto& callback = internals->m_callback;
                             auto& closed = internals->m_closed;
-                            internals->m_callback_cv.wait(lock, [&callbacks, &closed] { return closed || !callbacks.empty(); });
-                            if (internals->m_closed && callbacks.empty())
+
+                            if (closed && callback == nullptr)
                             {
-                                assert(callbacks.empty());
+                                assert(callback == nullptr);
                                 return;
                             }
-                            cb = internals->m_callbacks.front();
-                            internals->m_callbacks.erase(internals->m_callbacks.begin());
+
+                            if (callback == nullptr)
+                            {
+                                internals->m_callback_cv.wait(lock,
+                                    [&callback, &closed]
+                                    {
+                                        return closed || callback != nullptr;
+                                    });
+                            }
+
+                            cb = callback;
+                            internals->m_callback = nullptr;
                         } // unlock
 
                         try
@@ -49,7 +59,7 @@ namespace signalr
                     internals->m_busy = false;
                 }
 
-                assert(internals->m_callbacks.empty());
+                assert(internals->m_callback == nullptr);
             });
     }
 
@@ -57,8 +67,10 @@ namespace signalr
     {
         {
             assert(m_internals->m_closed == false);
+            assert(m_internals->m_busy == false);
+
             std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
-            m_internals->m_callbacks.push_back(cb);
+            m_internals->m_callback = cb;
             m_internals->m_busy = true;
         } // unlock
         m_internals->m_callback_cv.notify_one();
@@ -66,7 +78,10 @@ namespace signalr
 
     void thread::shutdown()
     {
-        m_internals->m_closed = true;
+        {
+            std::unique_lock<std::mutex> lock(m_internals->m_callback_lock);
+            m_internals->m_closed = true;
+        }
         m_internals->m_callback_cv.notify_one();
         m_thread.join();
     }
@@ -112,13 +127,18 @@ namespace signalr
                 {
                     auto& callbacks = internals->m_callbacks;
                     auto& closed = internals->m_closed;
-                    internals->m_callback_cv.wait_for(lock, std::chrono::milliseconds(105), [&callbacks, &closed, &prev_callback_count] { return closed || prev_callback_count != callbacks.size(); });
 
                     if (closed && callbacks.empty())
                     {
                         assert(callbacks.empty());
                         return;
                     }
+
+                    internals->m_callback_cv.wait_for(lock, std::chrono::milliseconds(15),
+                        [&callbacks, &closed, &prev_callback_count]
+                        {
+                            return closed || prev_callback_count != callbacks.size();
+                        });
 
                     // find the first callback that is ready to run, find a thread to run it and remove it from the list
                     auto curr_time = std::chrono::steady_clock::now();
@@ -169,5 +189,24 @@ namespace signalr
     signalr_default_scheduler::~signalr_default_scheduler()
     {
         close();
+    }
+
+    // This will schedule the given func to run every second until the func returns true.
+    void timer(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func)
+    {
+        timer_internal(scheduler, func, std::chrono::milliseconds::zero());
+    }
+
+    void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds time)
+    {
+        scheduler->schedule([func, scheduler, time]()
+            mutable
+            {
+                time = time + std::chrono::seconds(1);
+                if (!func(time))
+                {
+                    timer_internal(scheduler, func, time);
+                }
+            }, std::chrono::seconds(1));
     }
 }
