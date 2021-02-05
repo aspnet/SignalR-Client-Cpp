@@ -6,6 +6,7 @@
 
 #include <exception>
 #include <functional>
+#include <string>
 #include <chrono>
 
 namespace signalr
