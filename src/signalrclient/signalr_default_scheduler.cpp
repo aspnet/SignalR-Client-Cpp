@@ -40,6 +40,12 @@ namespace signalr
                                     });
                             }
 
+                            if (closed && callback == nullptr)
+                            {
+                                assert(callback == nullptr);
+                                return;
+                            }
+
                             cb = callback;
                             internals->m_callback = nullptr;
                         } // unlock
@@ -148,12 +154,11 @@ namespace signalr
                     {
                         if (it->second <= curr_time)
                         {
-                            auto cb = (*it).first;
                             for (auto& thread : threads)
                             {
                                 if (thread.is_free())
                                 {
-                                    thread.add(cb);
+                                    thread.add((*it).first);
                                     found = true;
                                     break;
                                 }
@@ -197,16 +202,16 @@ namespace signalr
         timer_internal(scheduler, func, std::chrono::milliseconds::zero());
     }
 
-    void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds time)
+    void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds duration)
     {
-        scheduler->schedule([func, scheduler, time]()
-            mutable
+        constexpr auto tick = std::chrono::seconds(1);
+        duration += tick;
+        scheduler->schedule([func, scheduler, duration]()
             {
-                time = time + std::chrono::seconds(1);
-                if (!func(time))
+                if (!func(duration))
                 {
-                    timer_internal(scheduler, func, time);
+                    timer_internal(scheduler, func, duration);
                 }
-            }, std::chrono::seconds(1));
+            }, tick);
     }
 }

@@ -50,6 +50,7 @@ namespace signalr
         void set_client_config(const signalr_client_config& config);
 
     private:
+        std::shared_ptr<scheduler> m_scheduler;
         std::string m_base_url;
         std::atomic<connection_state> m_connection_state;
         logger m_logger;

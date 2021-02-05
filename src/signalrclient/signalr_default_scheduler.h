@@ -6,6 +6,8 @@
 
 #include "../include/signalrclient/scheduler.h"
 #include <thread>
+#include <mutex>
+#include <vector>
 
 namespace signalr
 {
@@ -72,6 +74,6 @@ namespace signalr
     };
 #pragma warning( pop )
 
-    void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds time);
+    void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds duration);
     void timer(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func);
 }

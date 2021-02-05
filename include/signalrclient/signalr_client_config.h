@@ -43,7 +43,7 @@ namespace signalr
         SIGNALRCLIENT_API std::map<std::string, std::string>& __cdecl get_http_headers() noexcept;
         SIGNALRCLIENT_API void __cdecl set_http_headers(const std::map<std::string, std::string>& http_headers);
         SIGNALRCLIENT_API void __cdecl set_scheduler(std::shared_ptr<scheduler> scheduler);
-        SIGNALRCLIENT_API std::shared_ptr<scheduler> __cdecl get_scheduler() const noexcept;
+        SIGNALRCLIENT_API const std::shared_ptr<scheduler>& __cdecl get_scheduler() const noexcept;
 
     private:
 #ifdef USE_CPPRESTSDK

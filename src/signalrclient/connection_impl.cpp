@@ -143,13 +143,12 @@ namespace signalr
             m_connection_id = "";
         }
 
-        auto scheduler = m_signalr_client_config.get_scheduler();
-        if (!scheduler)
+        m_scheduler = m_signalr_client_config.get_scheduler();
+        if (!m_scheduler)
         {
-            scheduler = std::make_shared<signalr_default_scheduler>();
-            m_signalr_client_config.set_scheduler(scheduler);
+            m_scheduler = std::make_shared<signalr_default_scheduler>();
+            m_signalr_client_config.set_scheduler(m_scheduler);
         }
-        m_event_loop = scheduler;
 
         start_negotiate(m_base_url, 0, callback);
     }
@@ -414,7 +413,7 @@ namespace signalr
                 }
             });
 
-        timer(m_event_loop, [disconnect_cts, connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration) {
+        timer(m_scheduler, [disconnect_cts, connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration) {
             bool run_callback = false;
             {
                 std::lock_guard<std::mutex> lock(*connect_request_lock);

@@ -64,10 +64,10 @@ namespace signalr
 
     void signalr_client_config::set_scheduler(std::shared_ptr<scheduler> scheduler)
     {
-        m_scheduler = scheduler;
+        m_scheduler = std::move(scheduler);
     }
 
-    std::shared_ptr<scheduler> signalr_client_config::get_scheduler() const noexcept
+    const std::shared_ptr<scheduler>& signalr_client_config::get_scheduler() const noexcept
     {
         return m_scheduler;
     }

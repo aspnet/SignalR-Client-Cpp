@@ -5,7 +5,6 @@
 #include "stdafx.h"
 #include "signalrclient/hub_connection_builder.h"
 #include <stdexcept>
-#include "signalr_default_scheduler.h"
 
 namespace signalr
 {
