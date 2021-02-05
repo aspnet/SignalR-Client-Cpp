@@ -16,6 +16,7 @@
 #include <map>
 #include <string>
 #include "scheduler.h"
+#include <memory>
 
 namespace signalr
 {
