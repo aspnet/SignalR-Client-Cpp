@@ -64,5 +64,40 @@ namespace signalr
         virtual void send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback) = 0;
 
         virtual ~http_client() {}
+
+        void set_cookies(std::string&& cookies)
+        {
+            // TODO: validate, append, parse?
+            auto pos = cookies.find(';');
+            if (pos != -1)
+            {
+                m_cookies = cookies.substr(0, pos);
+            }
+            else
+            {
+                m_cookies = cookies;
+            }
+        }
+
+        void set_cookies(const std::string& cookies)
+        {
+            // TODO: validate, append, parse?
+            auto pos = cookies.find(';');
+            if (pos != -1)
+            {
+                m_cookies = cookies.substr(0, pos);
+            }
+            else
+            {
+                m_cookies = cookies;
+            }
+        }
+
+        const std::string& get_cookies() const noexcept
+        {
+            return m_cookies;
+        }
+    private:
+        std::string m_cookies;
     };
 }

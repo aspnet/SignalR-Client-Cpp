@@ -78,17 +78,19 @@ namespace signalr
 
         web::http::client::http_client client(utility::conversions::to_string_t(url));
         client.request(http_request, cts.get_token())
-            .then([context, callback](pplx::task<web::http::http_response> response_task)
+            .then([context, callback, this](pplx::task<web::http::http_response> response_task)
         {
             try
             {
                 auto http_response = response_task.get();
                 auto status_code = http_response.status_code();
+                auto& cookies = http_response.headers()[U("set-cookie")];
+                set_cookies(utility::conversions::to_utf8string(cookies));
                 http_response.extract_utf8string()
                     .then([callback, status_code](std::string response_body)
                 {
                     signalr::http_response response;
-                    response.content = response_body;
+                    response.content = std::move(response_body);
                     response.status_code = status_code;
                     callback(std::move(response), nullptr);
                 });

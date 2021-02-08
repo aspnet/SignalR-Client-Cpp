@@ -236,6 +236,8 @@ namespace signalr
                     return;
                 }
 
+                connection->m_signalr_client_config.get_http_headers()["Cookie"] = connection->m_http_client->get_cookies();
+
                 connection->start_transport(url, [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
                     {
                         auto connection = weak_connection.lock();
