@@ -58,7 +58,7 @@ stages:
         displayName: xcode-select
       - script: brew install gcc
         displayName: Install gcc
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
       - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
