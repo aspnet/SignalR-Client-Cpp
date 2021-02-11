@@ -33,7 +33,7 @@ namespace signalr
 
         SIGNALRCLIENT_API hub_connection_builder& with_http_client(std::shared_ptr<http_client> http_client);
 
-        SIGNALRCLIENT_API hub_connection build();
+        SIGNALRCLIENT_API std::shared_ptr<hub_connection> build();
     private:
         hub_connection_builder(const std::string& url);
 

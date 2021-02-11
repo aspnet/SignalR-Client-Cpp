@@ -17,17 +17,6 @@ namespace signalr
         : m_pImpl(hub_connection_impl::create(url, trace_level, log_writer, http_client, websocket_factory))
     {}
 
-    hub_connection::hub_connection(hub_connection&& rhs) noexcept
-        : m_pImpl(std::move(rhs.m_pImpl))
-    {}
-
-    hub_connection& hub_connection::operator=(hub_connection&& rhs) noexcept
-    {
-        m_pImpl = std::move(rhs.m_pImpl);
-
-        return *this;
-    }
-
     // Do NOT remove this destructor. Letting the compiler generate and inline the default dtor may lead to
     // undefined behavior since we are using an incomplete type. More details here:  http://herbsutter.com/gotw/_100/
     hub_connection::~hub_connection() = default;

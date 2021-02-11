@@ -27,13 +27,10 @@ namespace signalr
 
         SIGNALRCLIENT_API ~hub_connection();
 
-        hub_connection(const hub_connection&) = delete;
-
+        hub_connection(const hub_connection& rhs) = delete;
         hub_connection& operator=(const hub_connection&) = delete;
-
-        SIGNALRCLIENT_API hub_connection(hub_connection&&) noexcept;
-
-        SIGNALRCLIENT_API hub_connection& operator=(hub_connection&&) noexcept;
+        hub_connection(hub_connection&&) = delete;
+        hub_connection& operator=(hub_connection&&) = delete;
 
         SIGNALRCLIENT_API void __cdecl start(std::function<void(std::exception_ptr)> callback) noexcept;
         SIGNALRCLIENT_API void __cdecl stop(std::function<void(std::exception_ptr)> callback) noexcept;
