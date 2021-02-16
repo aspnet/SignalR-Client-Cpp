@@ -155,7 +155,7 @@ namespace signalr
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
         const auto& token = m_disconnect_cts;
 
-		const auto started = [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
+        const auto transport_started = [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
         {
             auto connection = weak_connection.lock();
             if (!connection)
@@ -209,10 +209,14 @@ namespace signalr
         };
 
         if (m_skip_negotiation)
-            return start_transport(url, started);
+        {
+            // TODO: check that the websockets transport is explicitly selected
+
+            return start_transport(url, transport_started);
+        }
 
         negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
-            [callback, weak_connection, redirect_count, token, url, started](negotiation_response&& response, std::exception_ptr exception)
+            [callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -288,7 +292,7 @@ namespace signalr
                     return;
                 }
 
-                connection->start_transport(url, started);
+                connection->start_transport(url, transport_started);
             });
     }
 
