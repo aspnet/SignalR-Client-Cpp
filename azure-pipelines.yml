@@ -21,7 +21,7 @@ variables:
     - group: DotNet-AspNet-SDLValidation-Params
 
 trigger:
-- master
+- main
 
 stages:
 - stage: build
