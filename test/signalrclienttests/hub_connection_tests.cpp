@@ -10,6 +10,7 @@
 #include "signalrclient/hub_exception.h"
 #include "signalrclient/signalr_exception.h"
 #include "test_websocket_client.h"
+#include <atomic>
 
 using namespace signalr;
 
@@ -1445,4 +1446,79 @@ TEST(invoke, invoke_handles_zero_value_as_int)
         {
             ASSERT_EQ(result, expected);
         });
+}
+
+class test_scheduler : public scheduler
+{
+public:
+    virtual void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) override
+    {
+        schedule_count++;
+        std::thread([cb, delay]()
+            {
+                std::this_thread::sleep_for(delay);
+                cb();
+            }).detach();
+    }
+
+    std::atomic<int> schedule_count = 0;
+};
+
+TEST(config, can_replace_scheduler)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = hub_connection_builder::create(create_uri())
+        .with_logging(std::make_shared<memory_log_writer>(), trace_level::all)
+        .with_http_client(create_test_http_client())
+        .with_websocket_factory([websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            })
+        .build();
+
+    signalr_client_config config{};
+    auto scheduler = std::make_shared<test_scheduler>();
+    config.set_scheduler(scheduler);
+    hub_connection.set_client_config(config);
+
+    // do some "work" to verify scheduler is used
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    auto invoke_mre = manual_reset_event<void>();
+    hub_connection.invoke("method", signalr::value(signalr::value_type::array), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
+        {
+            if (exception)
+            {
+                invoke_mre.set(exception);
+            }
+            else
+            {
+                invoke_mre.set();
+            }
+        });
+
+    websocket_client->receive_message("{ \"type\": 3, \"invocationId\": \"0\", \"result\": \"abc\" }\x1e");
+
+    invoke_mre.get();
+
+    hub_connection.stop([&mre](std::exception_ptr ex)
+        {
+            mre.set();
+        });
+
+    mre.get();
+
+    ASSERT_EQ(5, scheduler->schedule_count);
 }

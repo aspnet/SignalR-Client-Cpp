@@ -27,7 +27,6 @@ namespace signalr
 
                             if (closed && callback == nullptr)
                             {
-                                assert(callback == nullptr);
                                 return;
                             }
 
@@ -136,7 +135,6 @@ namespace signalr
 
                     if (closed && callbacks.empty())
                     {
-                        assert(callbacks.empty());
                         return;
                     }
 
