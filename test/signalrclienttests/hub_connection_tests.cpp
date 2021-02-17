@@ -1461,7 +1461,7 @@ public:
             }).detach();
     }
 
-    std::atomic<int> schedule_count = 0;
+    std::atomic<int> schedule_count{ 0 };
 };
 
 TEST(config, can_replace_scheduler)
