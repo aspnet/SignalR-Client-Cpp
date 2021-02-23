@@ -961,6 +961,44 @@ TEST(connection_impl_start, start_fails_if_connect_request_times_out)
     wait_connect_mre.get();
 }
 
+TEST(connection_impl_start, negotiate_can_be_skipped)
+{
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+
+    bool negotiate_called = false;
+
+    auto http_client = std::unique_ptr<test_http_client>(new test_http_client([&negotiate_called](const std::string& url, http_request request)
+        {
+            negotiate_called = true;
+
+            auto response_body =
+                url.find_first_of("/negotiate") != 0
+                ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
+                : "";
+
+            return http_response{ 200, response_body };
+        }));
+
+    auto websocket_client = std::make_shared<test_websocket_client>();
+
+    auto connection =
+        connection_impl::create(create_uri(), trace_level::messages, writer,
+            std::move(http_client), [websocket_client](const signalr_client_config&) { return websocket_client; }, true);
+
+    auto mre = manual_reset_event<void>();
+    connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    mre.get();
+
+    ASSERT_TRUE(connection->get_connection_state() == connection_state::connected);
+    ASSERT_TRUE(connection->get_connection_id().empty());
+    ASSERT_FALSE(negotiate_called);
+}
+
 TEST(connection_impl_process_response, process_response_logs_messages)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
