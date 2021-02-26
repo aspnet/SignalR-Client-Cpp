@@ -33,26 +33,9 @@ namespace signalr
     }
 
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::unique_ptr<http_client> http_client, std::unique_ptr<transport_factory> transport_factory, const bool skip_negotiation)
-        : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr),
-        m_transport_factory(std::move(transport_factory)), m_skip_negotiation(skip_negotiation), m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
-    {
-        if (http_client != nullptr)
-        {
-            m_http_client = std::move(http_client);
-        }
-        else
-        {
-#ifdef USE_CPPRESTSDK
-            m_http_client = std::unique_ptr<class http_client>(new default_http_client());
-#endif
-        }
-    }
-
-    connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
         std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr), m_skip_negotiation(skip_negotiation),
-        m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {})
+        m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {}), m_disconnect_cts(std::make_shared<cancellation_token>())
     {
         if (http_client != nullptr)
         {
@@ -138,7 +121,7 @@ namespace signalr
             // there should not be any active transport at this point
             assert(!m_transport);
 
-            m_disconnect_cts = std::make_shared<cancellation_token>();
+            m_disconnect_cts->reset();
             m_start_completed_event.reset();
             m_connection_id = "";
         }
@@ -413,7 +396,28 @@ namespace signalr
                 }
             });
 
-        timer(m_scheduler, [disconnect_cts, connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration) {
+        disconnect_cts->register_callback([connect_request_done, connect_request_lock, callback]()
+            {
+                bool run_callback = false;
+                {
+                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+
+                    // no op after connection started successfully
+                    if (*connect_request_done == false)
+                    {
+                        *connect_request_done = true;
+                        run_callback = true;
+                    }
+                } // unlock
+
+                if (run_callback)
+                {
+                    // The callback checks the disconnect_cts token and will handle it appropriately
+                    callback({}, nullptr);
+                }
+            });
+
+        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration) {
             bool run_callback = false;
             {
                 std::lock_guard<std::mutex> lock(*connect_request_lock);
@@ -421,7 +425,7 @@ namespace signalr
                 // no op after connection started successfully
                 if (*connect_request_done == false)
                 {
-                    if (!disconnect_cts->is_canceled() && duration < std::chrono::seconds(5))
+                    if (duration < std::chrono::seconds(5))
                     {
                         return false;
                     }
@@ -430,23 +434,11 @@ namespace signalr
                 }
             } // unlock
 
-            // if the disconnect_cts is canceled it means that the connection has been stopped or went out of scope in
-            // which case we should not throw due to timeout.
-            if (disconnect_cts->is_canceled())
+            if (run_callback)
             {
-                if (run_callback)
-                {
-                    // The callback checks the disconnect_cts token and will handle it appropriately
-                    callback({}, nullptr);
-                }
+                callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
             }
-            else
-            {
-                if (run_callback)
-                {
-                    callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
-                }
-            }
+
             return true;
         });
 
@@ -607,6 +599,7 @@ namespace signalr
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
             {
+                m_disconnect_cts->cancel();
                 callback(nullptr);
                 return;
             }
