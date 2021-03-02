@@ -40,9 +40,6 @@ namespace signalr
         std::thread m_thread;
     };
 
-#pragma warning( push )
-    // not all virtual functions of the base class are overridden
-#pragma warning( disable : 4266 )
     struct signalr_default_scheduler : scheduler
     {
         signalr_default_scheduler() : m_internals(std::make_shared<internals>())
@@ -73,7 +70,6 @@ namespace signalr
 
         void close();
     };
-#pragma warning( pop )
 
     void timer_internal(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func, std::chrono::milliseconds duration);
     void timer(const std::shared_ptr<scheduler>& scheduler, std::function<bool(std::chrono::milliseconds)> func);

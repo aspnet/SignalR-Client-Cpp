@@ -23,7 +23,7 @@ namespace signalr
                         {
                             std::unique_lock<std::mutex> lock(internals->m_callback_lock);
                             auto& callback = internals->m_callback;
-                            auto& closed = internals->m_closed;
+                            const auto& closed = internals->m_closed;
 
                             if (closed && callback == nullptr)
                             {
@@ -56,6 +56,7 @@ namespace signalr
                         catch (...)
                         {
                             // ignore exceptions?
+                            assert(false);
                         }
                     } // destruct cb, otherwise it's possible a shared_ptr is being held by the lambda/function and on destruction it could schedule work which could be
                     // added to this thread and if it then blocks waiting for completion it would deadlock. If we destruct before setting the m_busy flag,
@@ -104,8 +105,8 @@ namespace signalr
     void signalr_default_scheduler::schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay)
     {
         {
-            assert(m_internals->m_closed == false);
             std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
+            assert(m_internals->m_closed == false);
             m_internals->m_callbacks.push_back(std::make_pair(cb, std::chrono::steady_clock::now() + delay));
         } // unlock
 
@@ -131,7 +132,7 @@ namespace signalr
                 while (true)
                 {
                     auto& callbacks = internals->m_callbacks;
-                    auto& closed = internals->m_closed;
+                    const auto& closed = internals->m_closed;
 
                     if (closed && callbacks.empty())
                     {

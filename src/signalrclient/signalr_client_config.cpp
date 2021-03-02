@@ -64,6 +64,11 @@ namespace signalr
 
     void signalr_client_config::set_scheduler(std::shared_ptr<scheduler> scheduler)
     {
+        if (!scheduler)
+        {
+            return;
+        }
+
         m_scheduler = std::move(scheduler);
     }
 
