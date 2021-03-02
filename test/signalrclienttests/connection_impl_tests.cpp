@@ -1016,7 +1016,11 @@ TEST(connection_impl_start, negotiate_can_be_skipped)
 
     auto connection =
         connection_impl::create(create_uri(), trace_level::info, writer,
-            std::move(http_client), [websocket_client](const signalr_client_config&) { return websocket_client; }, true);
+            std::move(http_client), [websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            }, true);
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
