@@ -108,7 +108,7 @@ namespace signalr
         m_handshakeTask = std::make_shared<completion_event>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
-        m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
+        m_connection->start(m_protocol->transfer_format(), [weak_connection, callback](std::exception_ptr start_exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)

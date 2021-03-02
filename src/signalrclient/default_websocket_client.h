@@ -26,6 +26,7 @@ namespace signalr
         void receive(std::function<void(const std::string&, std::exception_ptr)> callback);
     private:
         web::websockets::client::websocket_client m_underlying_client;
+        transfer_format m_transfer_format;
     };
 }
 
