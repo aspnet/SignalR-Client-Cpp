@@ -4,92 +4,9 @@
 
 #include "stdafx.h"
 #include "json_hub_protocol.h"
+#include "test_utils.h"
 
 using namespace signalr;
-
-void assert_signalr_value_equality(const signalr::value& expected, const signalr::value& actual)
-{
-    ASSERT_EQ(expected.type(), actual.type());
-    switch (expected.type())
-    {
-    case value_type::string:
-        ASSERT_STREQ(expected.as_string().data(), actual.as_string().data());
-        break;
-    case value_type::boolean:
-        ASSERT_EQ(expected.as_bool(), actual.as_bool());
-        break;
-    case value_type::float64:
-        ASSERT_DOUBLE_EQ(expected.as_double(), actual.as_double());
-        break;
-    case value_type::map:
-    {
-        auto& expected_map = expected.as_map();
-        auto& actual_map = actual.as_map();
-        ASSERT_EQ(expected_map.size(), actual_map.size());
-        for (auto& pair : expected_map)
-        {
-            const auto& actual_found = actual_map.find(pair.first);
-            ASSERT_FALSE(actual_found == actual_map.end());
-            assert_signalr_value_equality(pair.second, actual_found->second);
-        }
-        break;
-    }
-    case value_type::array:
-    {
-        auto& expected_array = expected.as_array();
-        auto& actual_array = actual.as_array();
-        ASSERT_EQ(expected_array.size(), actual_array.size());
-        for (auto i = 0; i < expected_array.size(); ++i)
-        {
-            assert_signalr_value_equality(expected_array[i], actual_array[i]);
-        }
-        break;
-    }
-    case value_type::null:
-        break;
-    default:
-        ASSERT_TRUE(false);
-        break;
-    }
-}
-
-void assert_hub_message_equality(hub_message* expected, hub_message* actual)
-{
-    ASSERT_EQ(expected->message_type, actual->message_type);
-    switch (expected->message_type)
-    {
-    case message_type::invocation:
-    {
-        auto expected_message = reinterpret_cast<invocation_message*>(expected);
-        auto actual_message = reinterpret_cast<invocation_message*>(actual);
-
-        ASSERT_STREQ(expected_message->invocation_id.data(), actual_message->invocation_id.data());
-        ASSERT_STREQ(expected_message->target.data(), actual_message->target.data());
-        assert_signalr_value_equality(expected_message->arguments, actual_message->arguments);
-        //stream_ids
-        break;
-    }
-    case message_type::completion:
-    {
-        auto expected_message = reinterpret_cast<completion_message*>(expected);
-        auto actual_message = reinterpret_cast<completion_message*>(actual);
-
-        ASSERT_STREQ(expected_message->invocation_id.data(), actual_message->invocation_id.data());
-        ASSERT_STREQ(expected_message->error.data(), actual_message->error.data());
-        assert_signalr_value_equality(expected_message->result, actual_message->result);
-
-        break;
-    }
-    case message_type::ping:
-    {
-        // No fields on ping messages currently
-        break;
-    }
-    default:
-        ASSERT_TRUE(false);
-        break;
-    }
-}
 
 std::vector<std::pair<std::string, std::shared_ptr<hub_message>>> protocol_test_data
 {
@@ -131,11 +48,15 @@ std::vector<std::pair<std::string, std::shared_ptr<hub_message>>> protocol_test_
 
     // completion message with error
     { "{\"error\":\"error\",\"invocationId\":\"1\",\"type\":3}\x1e",
-    std::shared_ptr<hub_message>(new completion_message("1", "error", value())) },
+    std::shared_ptr<hub_message>(new completion_message("1", "error", value(), false)) },
 
     // completion message with result
     { "{\"invocationId\":\"1\",\"result\":42,\"type\":3}\x1e",
-    std::shared_ptr<hub_message>(new completion_message("1", "", value(42.f))) },
+    std::shared_ptr<hub_message>(new completion_message("1", "", value(42.f), true)) },
+
+    // completion message with no result or error
+    { "{\"invocationId\":\"1\",\"type\":3}\x1e",
+    std::shared_ptr<hub_message>(new completion_message("1", "", value(), false)) },
 };
 
 TEST(json_hub_protocol, write_message)
@@ -182,7 +103,7 @@ TEST(json_hub_protocol, can_parse_multiple_messages)
     invocation_message invocation = invocation_message("", "Target", std::vector<value>{});
     assert_hub_message_equality(&invocation, output[0].get());
 
-    completion_message completion = completion_message("1", "", value(42.f));
+    completion_message completion = completion_message("1", "", value(42.f), true);
     assert_hub_message_equality(&completion, output[1].get());
 }
 

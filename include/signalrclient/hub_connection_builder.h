@@ -35,6 +35,10 @@ namespace signalr
 
         SIGNALRCLIENT_API hub_connection_builder& skip_negotiation(bool skip = true);
 
+#ifdef USE_MSGPACK
+        SIGNALRCLIENT_API hub_connection_builder& with_messagepack_hub_protocol();
+#endif
+
         SIGNALRCLIENT_API hub_connection build();
     private:
         hub_connection_builder(const std::string& url);
@@ -45,5 +49,6 @@ namespace signalr
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> m_websocket_factory;
         std::function<std::shared_ptr<http_client>(const signalr_client_config&)> m_http_client_factory;
         bool m_skip_negotiation = false;
+        bool m_use_messagepack = false;
     };
 }

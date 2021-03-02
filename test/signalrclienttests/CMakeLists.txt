@@ -19,6 +19,14 @@ set (SOURCES
   signalr_default_scheduler_tests.cpp
 )
 
+if(USE_MSGPACK)
+  list (APPEND SOURCES
+    binary_message_formatter_tests.cpp
+    binary_message_parser_tests.cpp
+    messagepack_hub_protocol_tests.cpp
+  )
+endif()
+
 include_directories(
   ../../src/signalrclient
 )

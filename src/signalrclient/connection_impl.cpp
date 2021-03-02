@@ -108,7 +108,7 @@ namespace signalr
         change_state(connection_state::disconnected);
     }
 
-    void connection_impl::start(transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
     {
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
@@ -133,10 +133,10 @@ namespace signalr
             m_signalr_client_config.set_scheduler(m_scheduler);
         }
 
-        start_negotiate(format, m_base_url, 0, callback);
+        start_negotiate(m_base_url, 0, callback);
     }
 
-    void connection_impl::start_negotiate(transfer_format format, const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
+    void connection_impl::start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
     {
         if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
         {
@@ -212,12 +212,12 @@ namespace signalr
         {
             // TODO: check that the websockets transport is explicitly selected
 
-            return start_transport(format, url, transport_started);
+            return start_transport(url, transport_started);
         }
 
         auto http_client = m_http_client_factory(m_signalr_client_config);
         negotiate::negotiate(http_client, url, m_signalr_client_config,
-            [format, callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
+            [callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -262,7 +262,7 @@ namespace signalr
                         auto& headers = connection->m_signalr_client_config.get_http_headers();
                         headers["Authorization"] = "Bearer " + response.accessToken;
                     }
-                    connection->start_negotiate(format, response.url, redirect_count + 1, callback);
+                    connection->start_negotiate(response.url, redirect_count + 1, callback);
                     return;
                 }
 
@@ -299,11 +299,11 @@ namespace signalr
                     return;
                 }
 
-                connection->start_transport(format, url, transport_started);
+                connection->start_transport(url, transport_started);
             });
     }
 
-    void connection_impl::start_transport(transfer_format format, const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
+    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
     {
         auto connection = shared_from_this();
 
@@ -418,32 +418,33 @@ namespace signalr
                 }
             });
 
-        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration) {
-            bool run_callback = false;
+        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration)
             {
-                std::lock_guard<std::mutex> lock(*connect_request_lock);
-
-                // no op after connection started successfully
-                if (*connect_request_done == false)
+                bool run_callback = false;
                 {
-                    if (duration < std::chrono::seconds(5))
+                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+
+                    // no op after connection started successfully
+                    if (*connect_request_done == false)
                     {
-                        return false;
+                        if (duration < std::chrono::seconds(5))
+                        {
+                            return false;
+                        }
+                        *connect_request_done = true;
+                        run_callback = true;
                     }
-                    *connect_request_done = true;
-                    run_callback = true;
+                } // unlock
+
+                if (run_callback)
+                {
+                    callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
                 }
-            } // unlock
 
-            if (run_callback)
-            {
-                callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
-            }
+                return true;
+            });
 
-            return true;
-        });
-
-        connection->send_connect_request(format, transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
+        connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {
                 bool run_callback = false;
                 {
@@ -470,7 +471,7 @@ namespace signalr
             });
     }
 
-    void connection_impl::send_connect_request(transfer_format format, const std::shared_ptr<transport>& transport, const std::string& url, std::function<void(std::exception_ptr)> callback)
+    void connection_impl::send_connect_request(const std::shared_ptr<transport>& transport, const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         auto logger = m_logger;
         auto query_string = "id=" + m_connection_token;

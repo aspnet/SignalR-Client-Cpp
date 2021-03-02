@@ -73,7 +73,10 @@ namespace signalr
         connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
             std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation);
 
+        void start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback);
+        void send_connect_request(const std::shared_ptr<transport>& transport,
             const std::string& url, std::function<void(std::exception_ptr)> callback);
+        void start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback);
 
         void process_response(std::string&& response);
 
