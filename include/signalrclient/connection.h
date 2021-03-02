@@ -11,6 +11,7 @@
 #include "trace_level.h"
 #include "log_writer.h"
 #include "signalr_client_config.h"
+#include "transfer_format.h"
 
 namespace signalr
 {
@@ -29,7 +30,7 @@ namespace signalr
 
         connection& operator=(const connection&) = delete;
 
-        SIGNALRCLIENT_API void __cdecl start(std::function<void(std::exception_ptr)> callback) noexcept;
+        SIGNALRCLIENT_API void __cdecl start(transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept;
 
         SIGNALRCLIENT_API void __cdecl send(const std::string& data, std::function<void(std::exception_ptr)> callback) noexcept;
 

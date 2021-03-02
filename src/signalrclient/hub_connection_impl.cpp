@@ -17,16 +17,17 @@ namespace signalr
     // unnamed namespace makes it invisble outside this translation unit
     namespace
     {
-        static std::function<void(const signalr::value&)> create_hub_invocation_callback(const logger& logger,
+        static std::function<void(const char*, const signalr::value&)> create_hub_invocation_callback(const logger& logger,
             const std::function<void(const signalr::value&)>& set_result,
             const std::function<void(const std::exception_ptr e)>& set_exception);
     }
 
-    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url,
+        trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
-        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, trace_level, log_writer, http_client, websocket_factory, skip_negotiation));
+        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url,
+            trace_level, log_writer, http_client, websocket_factory, skip_negotiation));
 
         connection->initialize();
 
@@ -38,8 +39,8 @@ namespace signalr
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_connection(connection_impl::create(url, trace_level, log_writer,
             http_client, websocket_factory, skip_negotiation)), m_logger(log_writer, trace_level),
-        m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),
-        m_handshakeReceived(false), m_disconnected([]() noexcept {}), m_protocol(std::make_shared<json_hub_protocol>())
+        m_callback_manager("connection went out of scope before invocation result was received"),
+        m_handshakeReceived(false), m_disconnected([]() noexcept {}), m_protocol(std::unique_ptr<json_hub_protocol>(new json_hub_protocol()))
     {}
 
     void hub_connection_impl::initialize()
@@ -64,7 +65,7 @@ namespace signalr
                 // start may be waiting on the handshake response so we complete it here, this no-ops if already set
                 connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
 
-                connection->m_callback_manager.clear(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection was stopped before invocation result was received") } }));
+                connection->m_callback_manager.clear("connection was stopped before invocation result was received");
 
                 connection->m_disconnected();
             }
@@ -107,7 +108,7 @@ namespace signalr
         m_handshakeTask = std::make_shared<completion_event>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
-        m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
+        m_connection->start(m_protocol->transfer_format(), [weak_connection, callback](std::exception_ptr start_exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -262,25 +263,18 @@ namespace signalr
 
             for (const auto& val : messages)
             {
-                if (!val.is_map())
-                {
-                    m_logger.log(trace_level::info, std::string("unexpected response received from the server: ")
-                        .append(response));
-
-                    return;
-                }
-
-                const auto &obj = val.as_map();
-
-                switch ((int)obj.at("type").as_double())
+                switch (val->message_type)
                 {
                 case message_type::invocation:
                 {
-                    auto method = obj.at("target").as_string();
-                    auto event = m_subscriptions.find(method);
+                    auto invocation = static_cast<invocation_message*>(val.get());
+                    //auto method = obj.at("target").as_string();
+                    //auto event = m_subscriptions.find(method);
+                    auto event = m_subscriptions.find(invocation->target);
                     if (event != m_subscriptions.end())
                     {
-                        const auto& args = obj.at("arguments");
+                        //const auto& args = obj.at("arguments");
+                        const auto& args = invocation->arguments;
                         event->second(args);
                     }
                     else
@@ -297,13 +291,8 @@ namespace signalr
                     break;
                 case message_type::completion:
                 {
-                    auto error = obj.find("error");
-                    auto result = obj.find("result");
-                    if (error != obj.end() && result != obj.end())
-                    {
-                        // TODO: error
-                    }
-                    invoke_callback(obj);
+                    auto completion = static_cast<completion_message*>(val.get());
+                    invoke_callback(completion);
                     break;
                 }
                 case message_type::cancel_invocation:
@@ -330,23 +319,19 @@ namespace signalr
         }
     }
 
-    bool hub_connection_impl::invoke_callback(const signalr::value& message)
+    bool hub_connection_impl::invoke_callback(completion_message* completion)
     {
-        if (!message.is_map())
+        const char* error = nullptr;
+        if (!completion->error.empty())
         {
-            throw signalr_exception("expected object");
+            error = completion->error.data();
         }
 
-        auto& invocationId = message.as_map().at("invocationId");
-        if (!invocationId.is_string())
+        // TODO: consider transferring ownership of 'result' so that if we run user callbacks on a different thread we don't need to
+        // worry about object lifetime
+        if (!m_callback_manager.invoke_callback(completion->invocation_id, error, completion->result, true))
         {
-            throw signalr_exception("invocationId is not a string");
-        }
-
-        auto& id = invocationId.as_string();
-        if (!m_callback_manager.invoke_callback(id, message, true))
-        {
-            m_logger.log(trace_level::info, std::string("no callback found for id: ").append(id));
+            m_logger.log(trace_level::info, std::string("no callback found for id: ").append(completion->invocation_id));
             return false;
         }
 
@@ -385,19 +370,8 @@ namespace signalr
     void hub_connection_impl::invoke_hub_method(const std::string& method_name, const signalr::value& arguments,
         const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept
     {
-        auto map = std::map<std::string, signalr::value>
-        {
-            { "type", signalr::value((double)message_type::invocation) },
-            { "target", signalr::value(method_name) },
-            { "arguments", arguments }
-        };
-
-        if (!callback_id.empty())
-        {
-            map["invocationId"] = signalr::value(callback_id);
-        }
-
-        auto message = m_protocol->write_message(signalr::value(std::move(map)));
+        invocation_message invocation(callback_id, method_name, arguments);
+        auto message = m_protocol->write_message(&invocation);
 
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
@@ -448,29 +422,21 @@ namespace signalr
     // unnamed namespace makes it invisble outside this translation unit
     namespace
     {
-        static std::function<void(const signalr::value&)> create_hub_invocation_callback(const logger& logger,
+        static std::function<void(const char* error, const signalr::value&)> create_hub_invocation_callback(const logger& logger,
             const std::function<void(const signalr::value&)>& set_result,
             const std::function<void(const std::exception_ptr)>& set_exception)
         {
-            return [logger, set_result, set_exception](const signalr::value& message)
+            return [logger, set_result, set_exception](const char* error, const signalr::value& message)
             {
-                assert(message.is_map());
-                const auto& map = message.as_map();
-                auto found = map.find("result");
-                if (found != map.end())
+                if (error != nullptr)
                 {
-                    set_result(found->second);
-                }
-                else if ((found = map.find("error")) != map.end())
-                {
-                    assert(found->second.is_string());
                     set_exception(
                         std::make_exception_ptr(
-                            hub_exception(found->second.as_string())));
+                            hub_exception(error)));
                 }
                 else
                 {
-                    set_result(signalr::value());
+                    set_result(message);
                 }
             };
         }

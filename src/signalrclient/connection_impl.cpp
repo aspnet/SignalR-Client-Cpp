@@ -122,7 +122,7 @@ namespace signalr
         change_state(connection_state::disconnected);
     }
 
-    void connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::start(transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept
     {
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
@@ -140,10 +140,10 @@ namespace signalr
             m_connection_id = "";
         }
 
-        start_negotiate(m_base_url, 0, callback);
+        start_negotiate(format, m_base_url, 0, callback);
     }
 
-    void connection_impl::start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
+    void connection_impl::start_negotiate(transfer_format format, const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
     {
         if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
         {
@@ -213,11 +213,11 @@ namespace signalr
         {
             // TODO: check that the websockets transport is explicitly selected
 
-            return start_transport(url, transport_started);
+            return start_transport(format, url, transport_started);
         }
 
         negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
-            [callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
+            [format, callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -259,7 +259,7 @@ namespace signalr
                         auto& headers = connection->m_signalr_client_config.get_http_headers();
                         headers["Authorization"] = "Bearer " + response.accessToken;
                     }
-                    connection->start_negotiate(response.url, redirect_count + 1, callback);
+                    connection->start_negotiate(format, response.url, redirect_count + 1, callback);
                     return;
                 }
 
@@ -296,11 +296,11 @@ namespace signalr
                     return;
                 }
 
-                connection->start_transport(url, transport_started);
+                connection->start_transport(format, url, transport_started);
             });
     }
 
-    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
+    void connection_impl::start_transport(transfer_format format, const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
     {
         auto connection = shared_from_this();
 
@@ -422,7 +422,7 @@ namespace signalr
             }
         }).detach();
 
-        connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
+        connection->send_connect_request(format, transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {
                 bool run_callback = false;
                 {
@@ -449,13 +449,13 @@ namespace signalr
             });
     }
 
-    void connection_impl::send_connect_request(const std::shared_ptr<transport>& transport, const std::string& url, std::function<void(std::exception_ptr)> callback)
+    void connection_impl::send_connect_request(transfer_format format, const std::shared_ptr<transport>& transport, const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         auto logger = m_logger;
         auto query_string = "id=" + m_connection_token;
         auto connect_url = url_builder::build_connect(url, transport->get_transport_type(), query_string);
 
-        transport->start(connect_url, transfer_format::text, [callback, logger](std::exception_ptr exception)
+        transport->start(connect_url, format, [callback, logger](std::exception_ptr exception)
             mutable {
                 try
                 {
@@ -479,6 +479,7 @@ namespace signalr
 
     void connection_impl::process_response(std::string&& response)
     {
+        // TODO: log binary data better
         m_logger.log(trace_level::messages,
             std::string("processing message: ").append(response));
 

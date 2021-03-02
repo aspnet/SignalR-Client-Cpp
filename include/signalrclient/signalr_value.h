@@ -35,6 +35,11 @@ namespace signalr
         value();
 
         /**
+         * Create an object representing a value_type::null value.
+         */
+        value(nullptr_t);
+
+        /**
          * Create an object representing a default value for the given value_type.
          */
         value(value_type t);
@@ -63,6 +68,11 @@ namespace signalr
          * Create an object representing a value_type::string with the given string value.
          */
         value(const char* val);
+
+        /**
+         * Create an object representing a value_type::string with the given string value.
+         */
+        value(const char* val, size_t length);
 
         /**
          * Create an object representing a value_type::array with the given vector of value's.

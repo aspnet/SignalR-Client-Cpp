@@ -11,7 +11,7 @@ namespace signalr
 {
     namespace handshake
     {
-        std::string write_handshake(std::shared_ptr<hub_protocol>& protocol)
+        std::string write_handshake(const std::unique_ptr<hub_protocol>& protocol)
         {
             auto map = std::map<std::string, signalr::value>
             {
