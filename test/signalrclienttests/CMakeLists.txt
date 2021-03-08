@@ -17,7 +17,8 @@ set (SOURCES
   test_utils.cpp
   test_websocket_client.cpp
   url_builder_tests.cpp
-  websocket_transport_tests.cpp)
+  websocket_transport_tests.cpp
+)
 
 include_directories(
     ../../src/signalrclient)

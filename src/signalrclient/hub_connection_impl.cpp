@@ -268,12 +268,9 @@ namespace signalr
                 case message_type::invocation:
                 {
                     auto invocation = static_cast<invocation_message*>(val.get());
-                    //auto method = obj.at("target").as_string();
-                    //auto event = m_subscriptions.find(method);
                     auto event = m_subscriptions.find(invocation->target);
                     if (event != m_subscriptions.end())
                     {
-                        //const auto& args = obj.at("arguments");
                         const auto& args = invocation->arguments;
                         event->second(args);
                     }
