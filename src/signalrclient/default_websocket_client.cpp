@@ -29,7 +29,7 @@ namespace signalr
         : m_underlying_client(create_client_config(signalr_client_config))
     { }
 
-    void default_websocket_client::start(const std::string& url, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::start(const std::string& url, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback)
     {
         m_transfer_format = transfer_format;
         m_underlying_client.connect(utility::conversions::to_string_t(url))
@@ -68,7 +68,7 @@ namespace signalr
     {
         web::websockets::client::websocket_outgoing_message msg;
 
-        if (m_transfer_format == transfer_format::binary)
+        if (m_transfer_format == signalr::transfer_format::binary)
         {
             throw signalr_exception("binary isn't supported currently");
         }
@@ -99,7 +99,7 @@ namespace signalr
             {
                 try
                 {
-                    if (transfer_format == transfer_format::binary)
+                    if (transfer_format == signalr::transfer_format::binary)
                     {
                         throw signalr_exception("binary isn't supported currently");
                     }

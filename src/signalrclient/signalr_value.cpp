@@ -32,7 +32,7 @@ namespace signalr
 
     value::value() : mType(value_type::null) {}
 
-    value::value(nullptr_t) : mType(value_type::null) {}
+    value::value(std::nullptr_t) : mType(value_type::null) {}
 
     value::value(value_type t) : mType(t)
     {

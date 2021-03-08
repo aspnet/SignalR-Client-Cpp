@@ -27,7 +27,7 @@ namespace signalr
 
         signalr::transfer_format transfer_format() const
         {
-            return transfer_format::text;
+            return signalr::transfer_format::text;
         }
 
         ~json_hub_protocol() {}

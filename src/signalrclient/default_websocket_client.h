@@ -20,7 +20,7 @@ namespace signalr
     public:
         explicit default_websocket_client(const signalr_client_config& signalr_client_config = {}) noexcept;
 
-        void start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback);
+        void start(const std::string& url, signalr::transfer_format format, std::function<void(std::exception_ptr)> callback);
         void stop(std::function<void(std::exception_ptr)> callback);
         void send(const std::string& payload, std::function<void(std::exception_ptr)> callback);
         void receive(std::function<void(const std::string&, std::exception_ptr)> callback);

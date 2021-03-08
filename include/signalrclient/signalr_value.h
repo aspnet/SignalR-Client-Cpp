@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstddef>
 
 namespace signalr
 {
@@ -37,7 +38,7 @@ namespace signalr
         /**
          * Create an object representing a value_type::null value.
          */
-        value(nullptr_t);
+        value(std::nullptr_t);
 
         /**
          * Create an object representing a default value for the given value_type.

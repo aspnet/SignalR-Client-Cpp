@@ -218,6 +218,6 @@ namespace signalr
             break;
         }
 
-        return std::move(hub_message);
+        return hub_message;
     }
 }

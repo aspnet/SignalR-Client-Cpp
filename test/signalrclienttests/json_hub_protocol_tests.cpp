@@ -28,7 +28,7 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
         ASSERT_EQ(expected_map.size(), actual_map.size());
         for (auto& pair : expected_map)
         {
-            auto& actual_found = actual_map.find(pair.first);
+            const auto& actual_found = actual_map.find(pair.first);
             ASSERT_FALSE(actual_found == actual_map.end());
             assert_signalr_value_equality(pair.second, actual_found->second);
         }
