@@ -6,7 +6,7 @@
 
 #ifdef USE_CPPRESTSDK
 #include "default_websocket_client.h"
-#include <cpprest/producerconsumerstream.h>
+#include <signalrclient/signalr_exception.h>
 
 namespace signalr
 {
@@ -69,9 +69,7 @@ namespace signalr
 
         if (transfer_format == signalr::transfer_format::binary)
         {
-            concurrency::streams::producer_consumer_buffer<uint8_t> b;
-            b.putn_nocopy(reinterpret_cast<const uint8_t*>(payload.data()), payload.length());
-            msg.set_binary_message(b.create_istream(), payload.length());
+            throw signalr_exception("binary isn't supported currently");
         }
         else
         {
@@ -95,6 +93,7 @@ namespace signalr
     void default_websocket_client::receive(std::function<void(const std::string&, std::exception_ptr)> callback)
     {
         m_underlying_client.receive()
+            .then([callback](pplx::task<web::websockets::client::websocket_incoming_message> task)
             {
                 try
                 {
