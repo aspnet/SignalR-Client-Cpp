@@ -101,23 +101,6 @@ stages:
       - script: brew install gcc
         displayName: Install gcc
 
-  # Publish to the BAR
-  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - template: /eng/common/templates/job/publish-build-assets.yml
-      parameters:
-        dependsOn:
-          - Windows_Build_Test_With_CppRestSDK
-          - Mac_Build_Test_With_CppRestSDK
-          - Linux_Build_Test_With_CppRestSDK
-          - Windows_Build_Test
-          - Mac_Build_Test
-          - Linux_Build_Test
-        pool:
-          vmImage: vs2017-win2016
-        publishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-        enablePublishBuildArtifacts: false # publish artifacts/log files
-        continueOnError: true
-
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - template: /eng/common/templates/post-build/post-build.yml
     parameters:
