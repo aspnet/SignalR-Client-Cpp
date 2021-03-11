@@ -111,6 +111,7 @@ stages:
       # This is to enable SDL runs as part of Post-Build Validation Stage
       SDLValidationParameters:
         enable: true
+        downloadArtifacts: false
         continueOnError: false
         params: ' -SourceToolsList @("policheck","credscan")
         -TsaInstanceURL $(_TsaInstanceURL)
