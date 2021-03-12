@@ -14,7 +14,7 @@
 using namespace signalr;
 
 hub_connection create_hub_connection(std::shared_ptr<websocket_client> websocket_client = create_test_websocket_client(),
-    std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::all)
+    std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::verbose)
 {
     return hub_connection_builder::create(create_uri())
         .with_logging(log_writer, trace_level)
@@ -517,7 +517,7 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
 
     {
         auto websocket_client = create_test_websocket_client();
-        auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::state_changes);
+        auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::verbose);
 
         auto mre = manual_reset_event<void>();
         hub_connection.start([&mre](std::exception_ptr exception)
@@ -543,11 +543,11 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
     }
 
     auto log_entries = memory_writer->get_log_entries();
-    ASSERT_EQ(4U, log_entries.size()) << dump_vector(log_entries);
-    ASSERT_EQ("[state change] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
-    ASSERT_EQ("[state change] connecting -> connected\n", remove_date_from_log_entry(log_entries[1]));
-    ASSERT_EQ("[state change] connected -> disconnecting\n", remove_date_from_log_entry(log_entries[2]));
-    ASSERT_EQ("[state change] disconnecting -> disconnected\n", remove_date_from_log_entry(log_entries[3]));
+
+    ASSERT_TRUE(has_log_entry("[verbose  ] disconnected -> connecting\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> connected\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] connected -> disconnecting\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] disconnecting -> disconnected\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(stop, stop_cancels_pending_callbacks)
@@ -741,7 +741,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     auto websocket_client = create_test_websocket_client();
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
-    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::errors);
+    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::error);
 
     auto on_closed_event = std::make_shared<cancellation_token>();
     hub_connection.set_disconnected([on_closed_event]()
@@ -767,8 +767,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_TRUE(log_entries.size() == 1);
 
-    auto entry = remove_date_from_log_entry(log_entries[0]);
-    ASSERT_EQ("[error       ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", entry) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_target)
@@ -776,7 +775,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     auto websocket_client = create_test_websocket_client();
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
-    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::errors);
+    auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::error);
 
     auto on_closed_event = std::make_shared<cancellation_token>();
     hub_connection.set_disconnected([on_closed_event]()
@@ -802,8 +801,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_TRUE(log_entries.size() == 1);
 
-    auto entry = remove_date_from_log_entry(log_entries[0]);
-    ASSERT_EQ("[error       ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", entry) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(send, creates_correct_payload)
@@ -1174,10 +1172,8 @@ TEST(receive, logs_if_callback_for_given_id_not_found)
     websocket_client->receive_message("{ \"type\": 6 }\x1e");
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_TRUE(log_entries.size() > 2);
 
-    auto entry = remove_date_from_log_entry(log_entries[2]);
-    ASSERT_EQ("[info        ] no callback found for id: 0\n", entry) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[info     ] no callback found for id: 0\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(receive, closes_if_error_from_parsing)

@@ -24,7 +24,12 @@ namespace signalr
 
     void logger::log(trace_level level, const std::string& entry) const
     {
-        if ((level & m_trace_level) != trace_level::none && m_log_writer)
+        log(level, entry.data(), entry.length());
+    }
+
+    void logger::log(trace_level level, const char* entry, size_t entry_count) const
+    {
+        if (level >= m_trace_level && m_log_writer)
         {
             try
             {
@@ -48,11 +53,12 @@ namespace signalr
                 snprintf(timeString + sizeof(timeString) - 5, 5, "%03dZ", (int)milliseconds.count());
 
                 auto trace_level = translate_trace_level(level);
-                assert(trace_level.length() <= 12);
+                assert(trace_level.length() <= 9);
 
                 std::stringstream os;
                 os << timeString << " ["
-                    << std::left << std::setw(12) << trace_level << "] "<< entry << std::endl;
+                    << std::left << std::setw(9) << trace_level << "] ";
+                os.write(entry, (std::streamsize)entry_count) << std::endl;
                 m_log_writer->write(os.str());
             }
             catch (const std::exception &e)
@@ -71,20 +77,20 @@ namespace signalr
     {
         switch (trace_level)
         {
-        case signalr::trace_level::messages:
-            return "message";
-        case signalr::trace_level::state_changes:
-            return "state change";
-        case signalr::trace_level::events:
-            return "event";
-        case signalr::trace_level::errors:
-            return "error";
+        case signalr::trace_level::verbose:
+            return "verbose";
+        case signalr::trace_level::debug:
+            return "debug";
         case signalr::trace_level::info:
             return "info";
+        case signalr::trace_level::warning:
+            return "warning";
+        case signalr::trace_level::error:
+            return "error";
+        case signalr::trace_level::critical:
+            return "critical";
         case signalr::trace_level::none:
             return "none";
-        case signalr::trace_level::all:
-            return "all";
         default:
             assert(false);
             return "(unknown)";

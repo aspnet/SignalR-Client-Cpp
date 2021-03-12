@@ -52,7 +52,7 @@ void send_message(signalr::hub_connection& connection, const std::string& messag
 void chat()
 {
     signalr::hub_connection connection = signalr::hub_connection_builder::create("http://localhost:5000/default")
-        .with_logging(std::make_shared <logger>(), signalr::trace_level::all)
+        .with_logging(std::make_shared <logger>(), signalr::trace_level::verbose)
         .build();
 
     connection.on("Send", [](const signalr::value & m)

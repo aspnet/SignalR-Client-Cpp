@@ -96,16 +96,19 @@ namespace signalr
                         }
                         catch (const std::exception& e)
                         {
-                            logger.log(
-                                trace_level::errors,
-                                std::string("shutdown threw an exception: ")
-                                .append(e.what()));
+                            if (logger.is_enabled(trace_level::error))
+                            {
+                                logger.log(
+                                    trace_level::error,
+                                    std::string("shutdown threw an exception: ")
+                                    .append(e.what()));
+                            }
                         }
                         catch (...)
                         {
                             logger.log(
-                                trace_level::errors,
-                                std::string("shutdown threw an unknown exception."));
+                                trace_level::error,
+                                "shutdown threw an unknown exception.");
                         }
                     }
 
@@ -182,9 +185,12 @@ namespace signalr
                 }
                 else
                 {
-                    connection->m_logger.log(trace_level::errors,
-                        std::string("connection could not be started due to: ")
-                        .append(e.what()));
+                    if (connection->m_logger.is_enabled(trace_level::error))
+                    {
+                        connection->m_logger.log(trace_level::error,
+                            std::string("connection could not be started due to: ")
+                            .append(e.what()));
+                    }
                 }
 
                 connection->m_transport = nullptr;
@@ -198,9 +204,12 @@ namespace signalr
 
             if (!connection->change_state(connection_state::connecting, connection_state::connected))
             {
-                connection->m_logger.log(trace_level::errors,
-                    std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
-                    .append(translate_connection_state(connection->get_connection_state())));
+                if (connection->m_logger.is_enabled(trace_level::error))
+                {
+                    connection->m_logger.log(trace_level::error,
+                        std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
+                        .append(translate_connection_state(connection->get_connection_state())));
+                }
 
                 assert(false);
             }
@@ -234,9 +243,12 @@ namespace signalr
                     }
                     catch (const std::exception& e)
                     {
-                        connection->m_logger.log(trace_level::errors,
-                            std::string("connection could not be started due to: ")
-                            .append(e.what()));
+                        if (connection->m_logger.is_enabled(trace_level::error))
+                        {
+                            connection->m_logger.log(trace_level::error,
+                                std::string("connection could not be started due to: ")
+                                .append(e.what()));
+                        }
                     }
                     connection->change_state(connection_state::disconnected);
                     connection->m_start_completed_event.cancel();
@@ -335,9 +347,12 @@ namespace signalr
                 {
                     if (disconnect_cts->is_canceled())
                     {
-                        logger.log(trace_level::info,
-                            std::string{ "ignoring stray message received after connection was restarted. message: " }
-                        .append(message));
+                        if (logger.is_enabled(trace_level::info))
+                        {
+                            logger.log(trace_level::info,
+                                std::string{ "ignoring stray message received after connection was restarted. message: " }
+                            .append(message));
+                        }
                         return;
                     }
 
@@ -362,9 +377,12 @@ namespace signalr
                         // or for the one that was already stopped. If this is the latter we just ignore it.
                         if (disconnect_cts->is_canceled())
                         {
-                            logger.log(trace_level::info,
-                                std::string{ "ignoring stray error received after connection was restarted. error: " }
-                            .append(e.what()));
+                            if (logger.is_enabled(trace_level::info))
+                            {
+                                logger.log(trace_level::info,
+                                    std::string{ "ignoring stray error received after connection was restarted. error: " }
+                                .append(e.what()));
+                            }
 
                             return;
                         }
@@ -467,10 +485,13 @@ namespace signalr
                 }
                 catch (const std::exception& e)
                 {
-                    logger.log(
-                        trace_level::errors,
-                        std::string("transport could not connect due to: ")
+                    if (logger.is_enabled(trace_level::error))
+                    {
+                        logger.log(
+                            trace_level::error,
+                            std::string("transport could not connect due to: ")
                             .append(e.what()));
+                    }
 
                     callback(exception);
                 }
@@ -479,9 +500,12 @@ namespace signalr
 
     void connection_impl::process_response(std::string&& response)
     {
-        // TODO: log binary data better
-        m_logger.log(trace_level::messages,
-            std::string("processing message: ").append(response));
+        if (m_logger.is_enabled(trace_level::debug))
+        {
+            // TODO: log binary data better
+            m_logger.log(trace_level::debug,
+                std::string("processing message: ").append(response));
+        }
 
         invoke_message_received(std::move(response));
     }
@@ -494,14 +518,17 @@ namespace signalr
         }
         catch (const std::exception &e)
         {
-            m_logger.log(
-                trace_level::errors,
-                std::string("message_received callback threw an exception: ")
-                .append(e.what()));
+            if (m_logger.is_enabled(trace_level::error))
+            {
+                m_logger.log(
+                    trace_level::error,
+                    std::string("message_received callback threw an exception: ")
+                    .append(e.what()));
+            }
         }
         catch (...)
         {
-            m_logger.log(trace_level::errors, "message_received callback threw an unknown exception");
+            m_logger.log(trace_level::error, "message_received callback threw an unknown exception");
         }
     }
 
@@ -523,7 +550,10 @@ namespace signalr
 
         auto logger = m_logger;
 
-        logger.log(trace_level::info, std::string("sending data: ").append(data));
+        if (logger.is_enabled(trace_level::info))
+        {
+            logger.log(trace_level::info, std::string("sending data: ").append(data));
+        }
 
         transport->send(data, transfer_format, [logger, callback](std::exception_ptr exception)
             mutable {
@@ -537,10 +567,13 @@ namespace signalr
                 }
                 catch (const std::exception &e)
                 {
-                    logger.log(
-                        trace_level::errors,
-                        std::string("error sending data: ")
-                        .append(e.what()));
+                    if (logger.is_enabled(trace_level::error))
+                    {
+                        logger.log(
+                            trace_level::error,
+                            std::string("error sending data: ")
+                            .append(e.what()));
+                    }
 
                     callback(exception);
                 }
@@ -582,7 +615,7 @@ namespace signalr
 
             while (m_start_completed_event.wait(60000) != 0)
             {
-                m_logger.log(trace_level::errors,
+                m_logger.log(trace_level::error,
                     "internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out");
             }
 
@@ -629,7 +662,10 @@ namespace signalr
             }
             catch (const std::exception & ex)
             {
-                m_logger.log(trace_level::errors, std::string("Connection closed with error: ").append(ex.what()));
+                if (m_logger.is_enabled(trace_level::error))
+                {
+                    m_logger.log(trace_level::error, std::string("Connection closed with error: ").append(ex.what()));
+                }
             }
         }
         else
@@ -643,16 +679,19 @@ namespace signalr
         }
         catch (const std::exception & e)
         {
-            m_logger.log(
-                trace_level::errors,
-                std::string("disconnected callback threw an exception: ")
-                .append(e.what()));
+            if (m_logger.is_enabled(trace_level::error))
+            {
+                m_logger.log(
+                    trace_level::error,
+                    std::string("disconnected callback threw an exception: ")
+                    .append(e.what()));
+            }
         }
         catch (...)
         {
             m_logger.log(
-                trace_level::errors,
-                std::string("disconnected callback threw an unknown exception"));
+                trace_level::error,
+                "disconnected callback threw an unknown exception");
         }
     }
 
@@ -723,11 +762,14 @@ namespace signalr
 
     void connection_impl::handle_connection_state_change(connection_state old_state, connection_state new_state)
     {
-        m_logger.log(
-            trace_level::state_changes,
-            translate_connection_state(old_state)
-            .append(" -> ")
-            .append(translate_connection_state(new_state)));
+        if (m_logger.is_enabled(trace_level::verbose))
+        {
+            m_logger.log(
+                trace_level::verbose,
+                translate_connection_state(old_state)
+                .append(" -> ")
+                .append(translate_connection_state(new_state)));
+        }
 
         // Words of wisdom (if we decide to add a state_changed callback and invoke it from here):
         // "Be extra careful when you add this callback, because this is sometimes being called with the m_stop_lock.
