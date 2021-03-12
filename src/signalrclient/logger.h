@@ -23,6 +23,7 @@ namespace signalr
         template <size_t N>
         void log(trace_level level, const char (&entry)[N]) const
         {
+            // remove '\0'
             log(level, entry, N - 1);
         }
 
