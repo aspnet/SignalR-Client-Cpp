@@ -36,6 +36,6 @@ namespace signalr
         std::shared_ptr<log_writer> m_log_writer;
         trace_level m_trace_level;
 
-        static std::string translate_trace_level(trace_level trace_level);
+        static void write_trace_level(trace_level trace_level, std::ostream& stream);
     };
 }

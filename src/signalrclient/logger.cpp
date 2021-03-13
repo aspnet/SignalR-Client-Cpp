@@ -52,12 +52,11 @@ namespace signalr
                 // 5 = 3 digits of millisecond precision + 'Z' + null character ending
                 snprintf(timeString + sizeof(timeString) - 5, 5, "%03dZ", (int)milliseconds.count());
 
-                auto trace_level = translate_trace_level(level);
-                assert(trace_level.length() <= 9);
-
                 std::stringstream os;
-                os << timeString << " ["
-                    << std::left << std::setw(9) << trace_level << "] ";
+                os << timeString;
+
+                write_trace_level(level, os);
+
                 os.write(entry, (std::streamsize)entry_count) << std::endl;
                 m_log_writer->write(os.str());
             }
@@ -73,27 +72,35 @@ namespace signalr
         }
     }
 
-    std::string logger::translate_trace_level(trace_level trace_level)
+    void logger::write_trace_level(trace_level trace_level, std::ostream& stream)
     {
         switch (trace_level)
         {
         case signalr::trace_level::verbose:
-            return "verbose";
+            stream << " [verbose  ] ";
+            break;
         case signalr::trace_level::debug:
-            return "debug";
+            stream << " [debug    ] ";
+            break;
         case signalr::trace_level::info:
-            return "info";
+            stream << " [info     ] ";
+            break;
         case signalr::trace_level::warning:
-            return "warning";
+            stream << " [warning  ] ";
+            break;
         case signalr::trace_level::error:
-            return "error";
+            stream << " [error    ] ";
+            break;
         case signalr::trace_level::critical:
-            return "critical";
+            stream << " [critical ] ";
+            break;
         case signalr::trace_level::none:
-            return "none";
+            stream << " [none     ] ";
+            break;
         default:
             assert(false);
-            return "(unknown)";
+            stream << " [(unknown)] ";
+            break;
         }
     }
 }
