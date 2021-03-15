@@ -65,7 +65,6 @@ if(INCLUDE_JSONCPP)
   target_include_directories(signalrclient PRIVATE ../../third_party_code/jsoncpp)
 else()
   target_link_libraries(signalrclient PUBLIC ${JSONCPP_LIB})
-  unset(JSONCPP_LIB CACHE)
 endif()
 
 if(NOT USE_CPPRESTSDK)

@@ -21,6 +21,7 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DBUILD_SAMPLES | Build the included sample project | false |
 | -DBUILD_TESTING | Builds the test project | true |
 | -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) | false |
+| -DINCLUDE_JSONCPP | Builds jsoncpp source code as part of the output binary | true |
 | -DWERROR | Enables warnings as errors | true |
 | -DWALL | Enables all warnings | true |
 | -DINJECT_HEADER_AFTER_STDAFX=`<header path>` | Adds the provided header to the library compilation in stdafx.cpp, intended to allow "new" and "delete" to be replaced. | `<none>` |
