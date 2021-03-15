@@ -37,6 +37,9 @@ endif()
 
 if(NOT INCLUDE_JSONCPP)
   find_package(jsoncpp REQUIRED)
+  # jsoncpp has different target names depending on whether it
+  # was built as a shared or static library. We make this override-able
+  # so we can be resilient to the changes between versions.
   set(JSONCPP_LIB "jsoncpp_lib" CACHE STRING "jsoncpp target name")
 endif()
 
