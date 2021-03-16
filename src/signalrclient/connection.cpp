@@ -32,7 +32,7 @@ namespace signalr
         m_pImpl->set_message_received(message_received_callback);
     }
 
-    void connection::set_disconnected(const std::function<void()>& disconnected_callback)
+    void connection::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected_callback)
     {
         m_pImpl->set_disconnected(disconnected_callback);
     }

@@ -40,7 +40,7 @@ namespace signalr
         : m_connection(connection_impl::create(url, trace_level, log_writer,
             http_client_factory, websocket_factory, skip_negotiation)), m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
-        m_handshakeReceived(false), m_disconnected([]() noexcept {}), m_protocol(std::unique_ptr<json_hub_protocol>(new json_hub_protocol()))
+        m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::unique_ptr<json_hub_protocol>(new json_hub_protocol()))
     {}
 
     void hub_connection_impl::initialize()
@@ -57,7 +57,7 @@ namespace signalr
             }
         });
 
-        m_connection->set_disconnected([weak_hub_connection]()
+        m_connection->set_disconnected([weak_hub_connection](std::exception_ptr exception)
         {
             auto connection = weak_hub_connection.lock();
             if (connection)
@@ -67,7 +67,7 @@ namespace signalr
 
                 connection->m_callback_manager.clear("connection was stopped before invocation result was received");
 
-                connection->m_disconnected();
+                connection->m_disconnected(exception);
             }
         });
     }
@@ -419,7 +419,7 @@ namespace signalr
         m_connection->set_client_config(config);
     }
 
-    void hub_connection_impl::set_disconnected(const std::function<void()>& disconnected)
+    void hub_connection_impl::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected)
     {
         m_disconnected = disconnected;
     }

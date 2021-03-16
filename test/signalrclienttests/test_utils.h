@@ -99,3 +99,20 @@ public:
 private:
     std::promise<void> m_promise;
 };
+
+class custom_exception : public std::exception
+{
+public:
+    custom_exception() : m_message("custom exception") {}
+
+    custom_exception(const char* message)
+        : m_message(message)
+    { }
+
+    char const* what() const override
+    {
+        return m_message.data();
+    }
+private:
+    std::string m_message;
+};

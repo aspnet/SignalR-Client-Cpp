@@ -280,9 +280,9 @@ TEST(connection_impl_start, start_logs_exceptions)
 
 TEST(connection_impl_start, start_propagates_exceptions_from_negotiate)
 {
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request) -> http_response
         {
-            return http_response{ 404, "" };
+            throw custom_exception();
         }));
 
     auto connection =
@@ -303,9 +303,9 @@ TEST(connection_impl_start, start_propagates_exceptions_from_negotiate)
         mre.get();
         ASSERT_TRUE(false); // exception not thrown
     }
-    catch (const std::exception & e)
+    catch (const custom_exception& e)
     {
-        ASSERT_STREQ("negotiate failed with status code 404", e.what());
+        ASSERT_STREQ("custom exception", e.what());
     }
 }
 
@@ -1367,7 +1367,7 @@ TEST(connection_impl_set_configuration, set_message_received_callback_can_be_set
 TEST(connection_impl_set_configuration, set_disconnected_callback_can_be_set_only_in_disconnected_state)
 {
     can_be_set_only_in_disconnected_state(
-        [](connection_impl* connection) { connection->set_disconnected([]() {}); },
+        [](connection_impl* connection) { connection->set_disconnected([](std::exception_ptr) {}); },
         "cannot set the disconnected callback when the connection is not in the disconnected state. current connection state: connected");
 }
 
@@ -1707,7 +1707,7 @@ TEST(connection_impl_stop, stop_invokes_disconnected_callback)
     auto connection = create_connection(websocket_client);
 
     auto disconnected_invoked = false;
-    connection->set_disconnected([&disconnected_invoked]() { disconnected_invoked = true; });
+    connection->set_disconnected([&disconnected_invoked](std::exception_ptr) { disconnected_invoked = true; });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
@@ -1727,14 +1727,14 @@ TEST(connection_impl_stop, stop_invokes_disconnected_callback)
     ASSERT_TRUE(disconnected_invoked);
 }
 
-TEST(connection_impl_stop, std_exception_for_disconnected_callback_caught_and_logged)
+TEST(connection_impl_stop, std_exception_from_disconnected_callback_caught_and_logged)
 {
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
 
     auto websocket_client = create_test_websocket_client();
     auto connection = create_connection(websocket_client, writer, trace_level::error);
 
-    connection->set_disconnected([]() { throw std::runtime_error("exception from disconnected"); });
+    connection->set_disconnected([](std::exception_ptr) { throw std::runtime_error("exception from disconnected"); });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
@@ -1756,14 +1756,14 @@ TEST(connection_impl_stop, std_exception_for_disconnected_callback_caught_and_lo
     ASSERT_TRUE(has_log_entry("[error    ] disconnected callback threw an exception: exception from disconnected\n", log_entries)) << dump_vector(log_entries);
 }
 
-TEST(connection_impl_stop, exception_for_disconnected_callback_caught_and_logged)
+TEST(connection_impl_stop, exception_from_disconnected_callback_caught_and_logged)
 {
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
 
     auto websocket_client = create_test_websocket_client();
     auto connection = create_connection(websocket_client, writer, trace_level::error);
 
-    connection->set_disconnected([]() { throw 42; });
+    connection->set_disconnected([](std::exception_ptr) { throw 42; });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
@@ -1791,7 +1791,7 @@ TEST(connection_impl_stop, transport_error_invokes_disconnected_callback)
     auto connection = create_connection(websocket_client);
 
     auto disconnect_mre = manual_reset_event<void>();
-    connection->set_disconnected([&disconnect_mre]() { disconnect_mre.set(); });
+    connection->set_disconnected([&disconnect_mre](std::exception_ptr) { disconnect_mre.set(); });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)

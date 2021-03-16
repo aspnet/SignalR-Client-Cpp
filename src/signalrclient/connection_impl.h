@@ -46,7 +46,7 @@ namespace signalr
         std::string get_connection_id() const noexcept;
 
         void set_message_received(const std::function<void(std::string&&)>& message_received);
-        void set_disconnected(const std::function<void()>& disconnected);
+        void set_disconnected(const std::function<void(std::exception_ptr)>& disconnected);
         void set_client_config(const signalr_client_config& config);
 
     private:
@@ -59,7 +59,7 @@ namespace signalr
         bool m_skip_negotiation;
 
         std::function<void(std::string&&)> m_message_received;
-        std::function<void()> m_disconnected;
+        std::function<void(std::exception_ptr)> m_disconnected;
         signalr_client_config m_signalr_client_config;
 
         std::shared_ptr<cancellation_token> m_disconnect_cts;
