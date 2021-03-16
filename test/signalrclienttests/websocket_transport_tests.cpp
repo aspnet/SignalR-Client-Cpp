@@ -29,7 +29,7 @@ TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&) { return client; }, signalr_client_config{}, logger(writer, trace_level::info));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org/connect?param=42", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org/connect?param=42", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -59,7 +59,7 @@ TEST(websocket_transport_connect, connect_propagates_exceptions)
     try
     {
         auto mre = manual_reset_event<void>();
-        ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+        ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -84,7 +84,7 @@ TEST(websocket_transport_connect, connect_logs_exceptions)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(writer, trace_level::errors));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -111,7 +111,7 @@ TEST(websocket_transport_connect, cannot_call_connect_on_already_connected_trans
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -119,7 +119,7 @@ TEST(websocket_transport_connect, cannot_call_connect_on_already_connected_trans
 
     try
     {
-        ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+        ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -138,7 +138,7 @@ TEST(websocket_transport_connect, can_connect_after_disconnecting)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -150,7 +150,7 @@ TEST(websocket_transport_connect, can_connect_after_disconnecting)
     });
     mre.get();
 
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -172,13 +172,13 @@ TEST(websocket_transport_send, send_creates_and_sends_websocket_messages)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://url", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://url", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
     mre.get();
 
-    ws_transport->send("ABC", [&mre](std::exception_ptr exception)
+    ws_transport->send("ABC", transfer_format::text, [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -202,7 +202,7 @@ TEST(websocket_transport_disconnect, disconnect_closes_websocket)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://url", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://url", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -231,7 +231,7 @@ TEST(websocket_transport_stop, propogates_exception_from_close)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://url", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://url", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -264,7 +264,7 @@ TEST(websocket_transport_disconnect, disconnect_logs_exceptions)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(writer, trace_level::errors));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://url", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://url", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -309,7 +309,7 @@ TEST(websocket_transport_disconnect, receive_not_called_after_disconnect)
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr)
     {
         mre.set();
     });
@@ -323,7 +323,7 @@ TEST(websocket_transport_disconnect, receive_not_called_after_disconnect)
     });
     mre.get();
 
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -383,7 +383,7 @@ void receive_loop_logs_exception_runner(const T& e, const std::string& expected_
     auto ws_transport = websocket_transport::create([&](const signalr_client_config&) { return client; }, signalr_client_config{}, logger(writer, trace_level));
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://url", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://url", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -434,7 +434,7 @@ TEST(websocket_transport_receive_loop, process_response_callback_called_when_mes
     ws_transport->on_receive(process_response);
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -478,7 +478,7 @@ TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thro
     ws_transport->on_close(error_callback);
 
     auto mre = manual_reset_event<void>();
-    ws_transport->start("ws://fakeuri.org", transfer_format::text, [&mre](std::exception_ptr exception)
+    ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });

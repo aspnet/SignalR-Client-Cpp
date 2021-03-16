@@ -12,7 +12,7 @@ namespace signalr
 {
     namespace handshake
     {
-        std::string write_handshake(std::shared_ptr<hub_protocol>&);
+        std::string write_handshake(const std::unique_ptr<hub_protocol>&);
         std::tuple<std::string, signalr::value> parse_handshake(const std::string&);
     }
 }

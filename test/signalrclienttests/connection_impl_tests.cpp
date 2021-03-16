@@ -348,7 +348,7 @@ TEST(connection_impl_send, send_fails_if_transport_fails_when_receiving_messages
 
     mre.get();
 
-    connection->send("message", [&mre](std::exception_ptr exception)
+    connection->send("message", transfer_format::text, [&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1055,7 +1055,7 @@ TEST(connection_impl_send, message_sent)
 
     mre.get();
 
-    connection->send(message, [&mre](std::exception_ptr exception)
+    connection->send(message, transfer_format::text, [&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1071,7 +1071,7 @@ TEST(connection_impl_send, send_throws_if_connection_not_connected)
         connection_impl::create(create_uri(), trace_level::none, std::make_shared<memory_log_writer>());
 
     auto mre = manual_reset_event<void>();
-    connection->send("whatever", [&mre](std::exception_ptr exception)
+    connection->send("whatever", transfer_format::text, [&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1106,7 +1106,7 @@ TEST(connection_impl_send, exceptions_from_send_logged_and_propagated)
 
     mre.get();
 
-    connection->send("Test message", [&mre](std::exception_ptr exception)
+    connection->send("Test message", transfer_format::text, [&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });

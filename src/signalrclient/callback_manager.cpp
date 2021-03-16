@@ -10,17 +10,17 @@ namespace signalr
 {
     // dtor_clear_arguments will be passed when closing any pending callbacks when the `callback_manager` is
     // destroyed (i.e. in the dtor)
-    callback_manager::callback_manager(const signalr::value& dtor_clear_arguments)
+    callback_manager::callback_manager(const char* dtor_clear_arguments)
         : m_dtor_clear_arguments(dtor_clear_arguments)
     { }
 
     callback_manager::~callback_manager()
     {
-        clear(m_dtor_clear_arguments);
+        clear(m_dtor_clear_arguments.data());
     }
 
     // note: callback must not throw except for the `on_progress` callback which will never be invoked from the dtor
-    std::string callback_manager::register_callback(const std::function<void(const signalr::value&)>& callback)
+    std::string callback_manager::register_callback(const std::function<void(const char*, const signalr::value&)>& callback)
     {
         auto callback_id = get_callback_id();
 
@@ -35,9 +35,9 @@ namespace signalr
 
 
     // invokes a callback and stops tracking it if remove callback set to true
-    bool callback_manager::invoke_callback(const std::string& callback_id, const signalr::value& arguments, bool remove_callback)
+    bool callback_manager::invoke_callback(const std::string& callback_id, const char* error, const signalr::value& arguments, bool remove_callback)
     {
-        std::function<void(const signalr::value& arguments)> callback;
+        std::function<void(const char*, const signalr::value& arguments)> callback;
 
         {
             std::lock_guard<std::mutex> lock(m_map_lock);
@@ -56,7 +56,7 @@ namespace signalr
             }
         }
 
-        callback(arguments);
+        callback(error, arguments);
         return true;
     }
 
@@ -69,14 +69,14 @@ namespace signalr
         }
     }
 
-    void callback_manager::clear(const signalr::value& arguments)
+    void callback_manager::clear(const char* error)
     {
         {
             std::lock_guard<std::mutex> lock(m_map_lock);
 
             for (auto& kvp : m_callbacks)
             {
-                kvp.second(arguments);
+                kvp.second(error, signalr::value());
             }
 
             m_callbacks.clear();

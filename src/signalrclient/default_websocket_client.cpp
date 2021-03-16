@@ -6,6 +6,7 @@
 
 #ifdef USE_CPPRESTSDK
 #include "default_websocket_client.h"
+#include <signalrclient/signalr_exception.h>
 
 namespace signalr
 {
@@ -28,7 +29,7 @@ namespace signalr
         : m_underlying_client(create_client_config(signalr_client_config))
     { }
 
-    void default_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::start(const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         m_underlying_client.connect(utility::conversions::to_string_t(url))
             .then([callback](pplx::task<void> task)
@@ -62,10 +63,18 @@ namespace signalr
             });
     }
 
-    void default_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback)
     {
         web::websockets::client::websocket_outgoing_message msg;
-        msg.set_utf8_message(payload);
+
+        if (transfer_format == signalr::transfer_format::binary)
+        {
+            throw signalr_exception("binary isn't supported currently");
+        }
+        else
+        {
+            msg.set_utf8_message(payload);
+        }
         m_underlying_client.send(msg)
             .then([callback](pplx::task<void> task)
             {
@@ -88,8 +97,15 @@ namespace signalr
             {
                 try
                 {
+
+                    std::string msg;
                     auto response = task.get();
-                    auto msg = response.extract_string().get();
+                    if (response.message_type() == web::websockets::client::websocket_message_type::binary_message)
+                    {
+                        throw signalr_exception("binary isn't supported currently");
+                    }
+                    msg = response.extract_string().get();
+
                     callback(msg, nullptr);
                 }
                 catch (...)

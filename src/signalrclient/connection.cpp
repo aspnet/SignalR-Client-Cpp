@@ -22,9 +22,9 @@ namespace signalr
         m_pImpl->start(callback);
     }
 
-    void connection::send(const std::string& data, std::function<void(std::exception_ptr)> callback) noexcept
+    void connection::send(const std::string& data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        m_pImpl->send(data, callback);
+        m_pImpl->send(data, transfer_format, callback);
     }
 
     void connection::set_message_received(const message_received_handler& message_received_callback)

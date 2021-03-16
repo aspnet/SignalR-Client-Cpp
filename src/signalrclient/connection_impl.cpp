@@ -455,7 +455,7 @@ namespace signalr
         auto query_string = "id=" + m_connection_token;
         auto connect_url = url_builder::build_connect(url, transport->get_transport_type(), query_string);
 
-        transport->start(connect_url, transfer_format::text, [callback, logger](std::exception_ptr exception)
+        transport->start(connect_url, [callback, logger](std::exception_ptr exception)
             mutable {
                 try
                 {
@@ -479,6 +479,7 @@ namespace signalr
 
     void connection_impl::process_response(std::string&& response)
     {
+        // TODO: log binary data better
         m_logger.log(trace_level::messages,
             std::string("processing message: ").append(response));
 
@@ -504,7 +505,7 @@ namespace signalr
         }
     }
 
-    void connection_impl::send(const std::string& data, std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::send(const std::string& data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
     {
         // To prevent an (unlikely) condition where the transport is nulled out after we checked the connection_state
         // and before sending data we store the pointer in the local variable. In this case `send()` will throw but
@@ -524,7 +525,7 @@ namespace signalr
 
         logger.log(trace_level::info, std::string("sending data: ").append(data));
 
-        transport->send(data, [logger, callback](std::exception_ptr exception)
+        transport->send(data, transfer_format, [logger, callback](std::exception_ptr exception)
             mutable {
                 try
                 {

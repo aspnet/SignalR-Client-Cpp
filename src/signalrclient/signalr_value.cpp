@@ -32,6 +32,8 @@ namespace signalr
 
     value::value() : mType(value_type::null) {}
 
+    value::value(std::nullptr_t) : mType(value_type::null) {}
+
     value::value(value_type t) : mType(t)
     {
         switch (mType)
@@ -80,6 +82,11 @@ namespace signalr
     value::value(const char* val) : mType(value_type::string)
     {
         new (&mStorage.string) std::string(val);
+    }
+
+    value::value(const char* val, size_t length) : mType(value_type::string)
+    {
+        new (&mStorage.string) std::string(val, length);
     }
 
     value::value(const std::vector<value>& val) : mType(value_type::array)
