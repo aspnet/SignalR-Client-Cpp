@@ -149,7 +149,7 @@ namespace signalr
         }
     }
 
-    void websocket_transport::start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept
+    void websocket_transport::start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept
     {
         signalr::uri uri(url);
         assert(uri.scheme() == "ws" || uri.scheme() == "wss");
@@ -178,7 +178,7 @@ namespace signalr
 
             auto transport = shared_from_this();
 
-            websocket_client->start(url, format, [transport, receive_loop_cts, callback](std::exception_ptr exception)
+            websocket_client->start(url, [transport, receive_loop_cts, callback](std::exception_ptr exception)
                 {
                     try
                     {
@@ -261,9 +261,9 @@ namespace signalr
         m_process_response_callback = callback;
     }
 
-    void websocket_transport::send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept
+    void websocket_transport::send(const std::string& payload, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        safe_get_websocket_client()->send(payload, [callback](std::exception_ptr exception)
+        safe_get_websocket_client()->send(payload, transfer_format, [callback](std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {

@@ -53,7 +53,7 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
     }
 }
 
-void assert_hub_message_equality(hub_message_base* expected, hub_message_base* actual)
+void assert_hub_message_equality(hub_message* expected, hub_message* actual)
 {
     ASSERT_EQ(expected->message_type, actual->message_type);
     switch (expected->message_type)
@@ -91,51 +91,51 @@ void assert_hub_message_equality(hub_message_base* expected, hub_message_base* a
     }
 }
 
-std::vector<std::pair<std::string, std::shared_ptr<hub_message_base>>> protocol_test_data
+std::vector<std::pair<std::string, std::shared_ptr<hub_message>>> protocol_test_data
 {
     // invocation message without invocation id
     { "{\"arguments\":[1,\"Foo\"],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{ value(1.f), value("Foo") })) },
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{ value(1.f), value("Foo") })) },
 
     // invocation message with multiple arguments
     { "{\"arguments\":[1,\"Foo\"],\"invocationId\":\"123\",\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("123", "Target", std::vector<value>{ value(1.f), value("Foo") })) },
+    std::shared_ptr<hub_message>(new invocation_message("123", "Target", std::vector<value>{ value(1.f), value("Foo") })) },
 
     // invocation message with bool argument
     { "{\"arguments\":[true],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{ value(true) })) },
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{ value(true) })) },
 
     // invocation message with null argument
     { "{\"arguments\":[null],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{ value(nullptr) })) },
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{ value(nullptr) })) },
 
     // invocation message with no arguments
     { "{\"arguments\":[],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{})) },
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{})) },
 
     // invocation message with non-ascii string argument
     /*{ "{\"arguments\":[\"\xD7\x9E\xD7\x97\xD7\xA8\xD7\x95\xD7\x96\xD7\xAA\x20\xD7\x9B\xD7\x9C\xD7\xA9\xD7\x94\xD7\x99\"],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{ value("\xD7\x9E\xD7\x97\xD7\xA8\xD7\x95\xD7\x96\xD7\xAA\x20\xD7\x9B\xD7\x9C\xD7\xA9\xD7\x94\xD7\x99") })) },*/
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{ value("\xD7\x9E\xD7\x97\xD7\xA8\xD7\x95\xD7\x96\xD7\xAA\x20\xD7\x9B\xD7\x9C\xD7\xA9\xD7\x94\xD7\x99") })) },*/
 
     // invocation message with object argument
     { "{\"arguments\":[{\"property\":5}],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{ value(std::map<std::string, value>{ {"property", value(5.f)} }) })) },
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{ value(std::map<std::string, value>{ {"property", value(5.f)} }) })) },
 
     // invocation message with array argument
     { "{\"arguments\":[[1,5]],\"target\":\"Target\",\"type\":1}\x1e",
-    std::shared_ptr<hub_message_base>(new invocation_message("", "Target", std::vector<value>{ value(std::vector<value>{value(1.f), value(5.f)}) })) },
+    std::shared_ptr<hub_message>(new invocation_message("", "Target", std::vector<value>{ value(std::vector<value>{value(1.f), value(5.f)}) })) },
 
     // ping message
     { "{\"type\":6}\x1e",
-    std::shared_ptr<hub_message_base>(new ping_message()) },
+    std::shared_ptr<hub_message>(new ping_message()) },
 
     // completion message with error
     { "{\"error\":\"error\",\"invocationId\":\"1\",\"type\":3}\x1e",
-    std::shared_ptr<hub_message_base>(new completion_message("1", "error", value())) },
+    std::shared_ptr<hub_message>(new completion_message("1", "error", value())) },
 
     // completion message with result
     { "{\"invocationId\":\"1\",\"result\":42,\"type\":3}\x1e",
-    std::shared_ptr<hub_message_base>(new completion_message("1", "", value(42.f))) },
+    std::shared_ptr<hub_message>(new completion_message("1", "", value(42.f))) },
 };
 
 TEST(json_hub_protocol, write_message)

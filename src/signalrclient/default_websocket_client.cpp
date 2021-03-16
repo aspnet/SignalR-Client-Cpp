@@ -29,9 +29,8 @@ namespace signalr
         : m_underlying_client(create_client_config(signalr_client_config))
     { }
 
-    void default_websocket_client::start(const std::string& url, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::start(const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
-        m_transfer_format = transfer_format;
         m_underlying_client.connect(utility::conversions::to_string_t(url))
             .then([callback](pplx::task<void> task)
             {
@@ -64,11 +63,11 @@ namespace signalr
             });
     }
 
-    void default_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback)
     {
         web::websockets::client::websocket_outgoing_message msg;
 
-        if (m_transfer_format == signalr::transfer_format::binary)
+        if (transfer_format == signalr::transfer_format::binary)
         {
             throw signalr_exception("binary isn't supported currently");
         }
@@ -93,19 +92,18 @@ namespace signalr
 
     void default_websocket_client::receive(std::function<void(const std::string&, std::exception_ptr)> callback)
     {
-        auto transfer_format = m_transfer_format;
         m_underlying_client.receive()
-            .then([callback, transfer_format](pplx::task<web::websockets::client::websocket_incoming_message> task)
+            .then([callback](pplx::task<web::websockets::client::websocket_incoming_message> task)
             {
                 try
                 {
-                    if (transfer_format == signalr::transfer_format::binary)
-                    {
-                        throw signalr_exception("binary isn't supported currently");
-                    }
 
                     std::string msg;
                     auto response = task.get();
+                    if (response.message_type() == web::websockets::client::websocket_message_type::binary_message)
+                    {
+                        throw signalr_exception("binary isn't supported currently");
+                    }
                     msg = response.extract_string().get();
 
                     callback(msg, nullptr);

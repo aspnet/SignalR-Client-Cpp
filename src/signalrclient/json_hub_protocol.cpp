@@ -10,7 +10,7 @@
 
 namespace signalr
 {
-    std::string signalr::json_hub_protocol::write_message(const hub_message_base* hub_message) const
+    std::string signalr::json_hub_protocol::write_message(const hub_message* hub_message) const
     {
         Json::Value object(Json::ValueType::objectValue);
 
@@ -62,9 +62,9 @@ namespace signalr
         return Json::writeString(getJsonWriter(), object) + record_separator;
     }
 
-    std::vector<std::unique_ptr<hub_message_base>> json_hub_protocol::parse_messages(const std::string& message) const
+    std::vector<std::unique_ptr<hub_message>> json_hub_protocol::parse_messages(const std::string& message) const
     {
-        std::vector<std::unique_ptr<hub_message_base>> vec;
+        std::vector<std::unique_ptr<hub_message>> vec;
         size_t offset = 0;
         auto pos = message.find(record_separator, offset);
         while (pos != std::string::npos)
@@ -80,7 +80,7 @@ namespace signalr
         return vec;
     }
 
-    std::unique_ptr<hub_message_base> json_hub_protocol::parse_message(const char* begin, size_t length) const
+    std::unique_ptr<hub_message> json_hub_protocol::parse_message(const char* begin, size_t length) const
     {
         Json::Value root;
         auto reader = getJsonReader();
@@ -107,7 +107,7 @@ namespace signalr
             throw signalr_exception("Field 'type' not found");
         }
 
-        std::unique_ptr<hub_message_base> hub_message;
+        std::unique_ptr<hub_message> hub_message;
 
         switch ((int)found->second.as_double())
         {
@@ -149,7 +149,7 @@ namespace signalr
                 invocation_id = found->second.as_string();
             }
 
-            hub_message = std::unique_ptr<hub_message_base>(new invocation_message(invocation_id,
+            hub_message = std::unique_ptr<signalr::hub_message>(new invocation_message(invocation_id,
                 obj.find("target")->second.as_string(), obj.find("arguments")->second.as_array()));
 
             break;
@@ -201,14 +201,14 @@ namespace signalr
                 throw signalr_exception("The 'error' and 'result' properties are mutually exclusive.");
             }
 
-            hub_message = std::unique_ptr<hub_message_base>(new completion_message(obj.find("invocationId")->second.as_string(),
+            hub_message = std::unique_ptr<signalr::hub_message>(new completion_message(obj.find("invocationId")->second.as_string(),
                 error, result));
 
             break;
         }
         case message_type::ping:
         {
-            hub_message = std::unique_ptr<hub_message_base>(new ping_message());
+            hub_message = std::unique_ptr<signalr::hub_message>(new ping_message());
             break;
         }
         // TODO: other message types

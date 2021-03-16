@@ -38,8 +38,8 @@ namespace signalr
 
         ~connection_impl();
 
-        void start(transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept;
-        void send(const std::string &data, std::function<void(std::exception_ptr)> callback) noexcept;
+        void start(std::function<void(std::exception_ptr)> callback) noexcept;
+        void send(const std::string &data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept;
         void stop(std::function<void(std::exception_ptr)> callback) noexcept;
 
         connection_state get_connection_state() const noexcept;
@@ -74,10 +74,10 @@ namespace signalr
         connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
             std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation);
 
-        void start_transport(transfer_format format, const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback);
-        void send_connect_request(transfer_format format, const std::shared_ptr<transport>& transport,
+        void start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback);
+        void send_connect_request(const std::shared_ptr<transport>& transport,
             const std::string& url, std::function<void(std::exception_ptr)> callback);
-        void start_negotiate(transfer_format format, const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback);
+        void start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback);
 
         void process_response(std::string&& response);
 

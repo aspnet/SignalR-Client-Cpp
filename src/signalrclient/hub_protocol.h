@@ -11,19 +11,19 @@
 
 namespace signalr
 {
-    struct hub_message_base
+    struct hub_message
     {
-        hub_message_base(signalr::message_type message_type) : message_type(message_type) {}
+        hub_message(signalr::message_type message_type) : message_type(message_type) {}
 
-        virtual ~hub_message_base() {}
+        virtual ~hub_message() {}
 
         signalr::message_type message_type;
     };
 
-    struct hub_invocation_message : hub_message_base
+    struct hub_invocation_message : hub_message
     {
         hub_invocation_message(const std::string& invocation_id, signalr::message_type message_type)
-            : hub_message_base(message_type), invocation_id(invocation_id)
+            : hub_message(message_type), invocation_id(invocation_id)
         { }
 
         std::string invocation_id;
@@ -60,16 +60,16 @@ namespace signalr
         signalr::value result;
     };
 
-    struct ping_message : hub_message_base
+    struct ping_message : hub_message
     {
-        ping_message() : hub_message_base(signalr::message_type::ping) {}
+        ping_message() : hub_message(signalr::message_type::ping) {}
     };
 
     class hub_protocol
     {
     public:
-        virtual std::string write_message(const hub_message_base*) const = 0;
-        virtual std::vector<std::unique_ptr<hub_message_base>> parse_messages(const std::string&) const = 0;
+        virtual std::string write_message(const hub_message*) const = 0;
+        virtual std::vector<std::unique_ptr<hub_message>> parse_messages(const std::string&) const = 0;
         virtual const std::string& name() const = 0;
         virtual int version() const = 0;
         virtual signalr::transfer_format transfer_format() const = 0;

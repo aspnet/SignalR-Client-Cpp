@@ -108,7 +108,7 @@ namespace signalr
         m_handshakeTask = std::make_shared<completion_event>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
-        m_connection->start(m_protocol->transfer_format(), [weak_connection, callback](std::exception_ptr start_exception)
+        m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -140,7 +140,7 @@ namespace signalr
 
                 auto handshake_request = handshake::write_handshake(connection->m_protocol);
 
-                connection->m_connection->send(handshake_request, [weak_connection, callback](std::exception_ptr exception)
+                connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(), [weak_connection, callback](std::exception_ptr exception)
                 {
                     auto connection = weak_connection.lock();
                     if (!connection)
@@ -373,7 +373,7 @@ namespace signalr
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
 
-        m_connection->send(message, [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+        m_connection->send(message, m_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
         {
             if (exception)
             {

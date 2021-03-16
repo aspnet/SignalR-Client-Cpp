@@ -12,8 +12,8 @@ namespace signalr
     class json_hub_protocol : public hub_protocol
     {
     public:
-        std::string write_message(const hub_message_base*) const;
-        std::vector<std::unique_ptr<hub_message_base>> parse_messages(const std::string&) const;
+        std::string write_message(const hub_message*) const;
+        std::vector<std::unique_ptr<hub_message>> parse_messages(const std::string&) const;
 
         const std::string& name() const
         {
@@ -32,7 +32,7 @@ namespace signalr
 
         ~json_hub_protocol() {}
     private:
-        std::unique_ptr<hub_message_base> parse_message(const char* begin, size_t length) const;
+        std::unique_ptr<hub_message> parse_message(const char* begin, size_t length) const;
 
         std::string m_protocol_name = "json";
     };

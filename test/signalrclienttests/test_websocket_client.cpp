@@ -51,7 +51,7 @@ test_websocket_client::~test_websocket_client()
     }
 }
 
-void test_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
+void test_websocket_client::start(const std::string& url, std::function<void(std::exception_ptr)> callback)
 {
     std::lock_guard<std::mutex> lock(m_receive_lock);
     m_stopped = false;
@@ -99,7 +99,7 @@ void test_websocket_client::stop(std::function<void(std::exception_ptr)> callbac
         }).detach();
 }
 
-void test_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
+void test_websocket_client::send(const std::string& payload, signalr::transfer_format, std::function<void(std::exception_ptr)> callback)
 {
     handshake_sent.cancel();
     auto local_copy = m_send_function;
