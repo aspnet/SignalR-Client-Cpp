@@ -22,12 +22,11 @@ set (SOURCES
   websocket_transport.cpp
   ../../third_party_code/cpprestsdk/uri.cpp
   ../../third_party_code/cpprestsdk/uri_builder.cpp
-  ../../third_party_code/jsoncpp/jsoncpp.cpp
 )
 
 include_directories(
-    ../../third_party_code/cpprestsdk
-    ../../third_party_code/jsoncpp)
+  ../../third_party_code/cpprestsdk
+)
 
 add_library (signalrclient ${SOURCES})
 
@@ -59,6 +58,13 @@ else()
     endif()
 
     target_compile_options(signalrclient PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
+endif()
+
+if(INCLUDE_JSONCPP)
+  target_sources(signalrclient PRIVATE ../../third_party_code/jsoncpp/jsoncpp.cpp)
+  target_include_directories(signalrclient PRIVATE ../../third_party_code/jsoncpp)
+else()
+  target_link_libraries(signalrclient PUBLIC ${JSONCPP_LIB})
 endif()
 
 if(NOT USE_CPPRESTSDK)
