@@ -6,6 +6,13 @@
 #include "trace_log_writer.h"
 #include <iostream>
 
+#ifdef _WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#endif
+
 namespace signalr
 {
     void trace_log_writer::write(const std::string &entry)

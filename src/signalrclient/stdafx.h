@@ -7,14 +7,14 @@
 #define STRINGIFY_2(s) #s
 #define STRINGIFY(s) STRINGIFY_2(s)
 
-#ifdef _WIN32 // used in the default log writer and to build the dll
+#ifdef INJECT_TRACE_HEADER
+#include STRINGIFY(INJECT_TRACE_HEADER)
+#endif
 
-// prevents from defining min/max macros that conflict with std::min()/std::max() functions
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
+#ifndef DbgLogInfo
+#define DbgLogInfo(...)
 #endif
 
 #include <functional>
 #include <unordered_map>
+#include <string>

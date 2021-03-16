@@ -505,6 +505,7 @@ namespace signalr
             // TODO: log binary data better
             m_logger.log(trace_level::debug,
                 std::string("processing message: ").append(response));
+            DbgLogInfo("processing message: ");
         }
 
         invoke_message_received(std::move(response));
