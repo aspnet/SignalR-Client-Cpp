@@ -334,17 +334,10 @@ namespace signalr
         // worry about object lifetime
         if (!m_callback_manager.invoke_callback(completion->invocation_id, error, completion->result, true))
         {
-            throw signalr_exception("invocationId is not a string");
-        }
-
-        auto& id = invocationId.as_string();
-        if (!m_callback_manager.invoke_callback(id, message, true))
-        {
             if (m_logger.is_enabled(trace_level::info))
             {
-                m_logger.log(trace_level::info, std::string("no callback found for id: ").append(id));
+                m_logger.log(trace_level::info, std::string("no callback found for id: ").append(completion->invocation_id));
             }
-            return false;
         }
 
         return true;
