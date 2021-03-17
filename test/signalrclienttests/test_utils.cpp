@@ -17,6 +17,18 @@ std::string remove_date_from_log_entry(const std::string &log_entry)
     return log_entry.substr(date_end_index + 1);
 }
 
+bool has_log_entry(const std::string& log_entry, const std::vector<std::string>& logs)
+{
+    for (auto& log : logs)
+    {
+        if (remove_date_from_log_entry(log) == log_entry)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::unique_ptr<http_client> create_test_http_client()
 {
     return std::unique_ptr<test_http_client>(new test_http_client([](const std::string & url, http_request request)

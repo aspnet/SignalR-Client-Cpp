@@ -9,6 +9,7 @@
 #include <future>
 
 std::string remove_date_from_log_entry(const std::string &log_entry);
+bool has_log_entry(const std::string& log_entry, const std::vector<std::string>& logs);
 
 std::unique_ptr<signalr::http_client> create_test_http_client();
 std::string create_uri();

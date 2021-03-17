@@ -43,7 +43,7 @@ TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
     ASSERT_FALSE(log_entries.empty());
 
     auto entry = remove_date_from_log_entry(log_entries[0]);
-    ASSERT_EQ("[info        ] [websocket transport] connecting to: ws://fakeuri.org/connect?param=42\n", entry);
+    ASSERT_EQ("[info     ] [websocket transport] connecting to: ws://fakeuri.org/connect?param=42\n", entry);
 }
 
 TEST(websocket_transport_connect, connect_propagates_exceptions)
@@ -81,7 +81,7 @@ TEST(websocket_transport_connect, connect_logs_exceptions)
     });
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
-    auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(writer, trace_level::errors));
+    auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(writer, trace_level::error));
 
     auto mre = manual_reset_event<void>();
     ws_transport->start("ws://fakeuri.org", [&mre](std::exception_ptr exception)
@@ -101,7 +101,7 @@ TEST(websocket_transport_connect, connect_logs_exceptions)
     auto entry = remove_date_from_log_entry(log_entries[0]);
 
     ASSERT_EQ(
-        "[error       ] [websocket transport] exception when connecting to the server: connecting failed\n",
+        "[error    ] [websocket transport] exception when connecting to the server: connecting failed\n",
         entry);
 }
 
@@ -261,7 +261,7 @@ TEST(websocket_transport_disconnect, disconnect_logs_exceptions)
 
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(writer, trace_level::errors));
+    auto ws_transport = websocket_transport::create([&](const signalr_client_config&){ return client; }, signalr_client_config{}, logger(writer, trace_level::error));
 
     auto mre = manual_reset_event<void>();
     ws_transport->start("ws://url", [&mre](std::exception_ptr exception)
@@ -292,7 +292,7 @@ TEST(websocket_transport_disconnect, disconnect_logs_exceptions)
     ASSERT_NE(std::find_if(log_entries.begin(), log_entries.end(), [](const std::string& entry)
         {
             return remove_date_from_log_entry(entry) ==
-                "[error       ] [websocket transport] exception when closing websocket: connection closing failed\n";
+                "[error    ] [websocket transport] exception when closing websocket: connection closing failed\n";
         }),
         log_entries.end());
 }
@@ -370,8 +370,8 @@ TEST(websocket_transport_receive_loop, receive_loop_logs_std_exception)
 {
     receive_loop_logs_exception_runner(
         std::runtime_error("exception"),
-        "[error       ] [websocket transport] error receiving response from websocket: exception\n",
-        trace_level::errors);
+        "[error    ] [websocket transport] error receiving response from websocket: exception\n",
+        trace_level::error);
 }
 
 template<typename T>

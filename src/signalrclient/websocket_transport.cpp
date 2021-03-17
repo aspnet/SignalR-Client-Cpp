@@ -81,15 +81,15 @@ namespace signalr
                     catch (const std::exception & e)
                     {
                         logger.log(
-                            trace_level::errors,
+                            trace_level::error,
                             std::string("[websocket transport] error receiving response from websocket: ")
                             .append(e.what()));
                     }
                     catch (...)
                     {
                         logger.log(
-                            trace_level::errors,
-                            std::string("[websocket transport] unknown error occurred when receiving response from websocket"));
+                            trace_level::error,
+                            "[websocket transport] unknown error occurred when receiving response from websocket");
 
                         exception = std::make_exception_ptr(signalr_exception("unknown error"));
                     }
@@ -194,7 +194,7 @@ namespace signalr
                     catch (const std::exception & e)
                     {
                         transport->m_logger.log(
-                            trace_level::errors,
+                            trace_level::error,
                             std::string("[websocket transport] exception when connecting to the server: ")
                             .append(e.what()));
 
@@ -242,7 +242,7 @@ namespace signalr
                 catch (const std::exception & e)
                 {
                     logger.log(
-                        trace_level::errors,
+                        trace_level::error,
                         std::string("[websocket transport] exception when closing websocket: ")
                         .append(e.what()));
 

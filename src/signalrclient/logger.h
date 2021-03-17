@@ -15,12 +15,27 @@ namespace signalr
     public:
         logger(const std::shared_ptr<log_writer>& log_writer, trace_level trace_level) noexcept;
 
+        void log(trace_level level, const char* entry, size_t entry_count) const;
+
+        // TODO: variadic 'const char*' overload to avoid std::string allocations
         void log(trace_level level, const std::string& entry) const;
+
+        template <size_t N>
+        void log(trace_level level, const char (&entry)[N]) const
+        {
+            // remove '\0'
+            log(level, entry, N - 1);
+        }
+
+        bool is_enabled(trace_level level) const
+        {
+            return level >= m_trace_level;
+        }
 
     private:
         std::shared_ptr<log_writer> m_log_writer;
         trace_level m_trace_level;
 
-        static std::string translate_trace_level(trace_level trace_level);
+        static void write_trace_level(trace_level trace_level, std::ostream& stream);
     };
 }
