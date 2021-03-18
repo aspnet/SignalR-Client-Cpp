@@ -50,7 +50,7 @@ namespace signalr
 
                 // add millisecond part
                 // 5 = 3 digits of millisecond precision + 'Z' + null character ending
-                snprintf(timeString + sizeof(timeString) - 5, 5, "%03dZ", (int)milliseconds.count());
+                snprintf(timeString + sizeof(timeString) - 2, 5, "%03dZ", (int)milliseconds.count());
 
                 std::stringstream os;
                 os << timeString;

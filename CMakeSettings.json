@@ -10,8 +10,7 @@
       "cmakeCommandArgs": "-DBUILD_SAMPLES=true -DUSE_CPPRESTSDK=true",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
-      "cmakeToolchain": "${projectDir}\\submodules\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake",
-      "variables": []
+      "cmakeToolchain": "${projectDir}\\submodules\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake"
     },
     {
       "name": "x64-Release",
@@ -23,8 +22,20 @@
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "cmakeToolchain": "${projectDir}\\submodules\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "variables": []
+      "inheritEnvironments": [ "msvc_x64_x64" ]
+    },
+    {
+      "name": "x64-Release-AddressSanitizer",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DBUILD_SAMPLES=true -DUSE_CPPRESTSDK=false",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "addressSanitizerEnabled": true,
+      "cmakeToolchain": "${projectDir}\\submodules\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake",
+      "inheritEnvironments": [ "msvc_x64_x64" ]
     }
   ]
 }

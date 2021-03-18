@@ -90,7 +90,7 @@ stages:
       agentOs: Windows
       jobName: Windows_Build_Test
       useCppRestSDK: false
-      cMakeRunArgs: '-A x64'
+      cMakeRunArgs: '-A x64 -E env CXXFLAGS="/fsanitize=address"'
 
   - template: .azure/default-build.yml
     parameters:
