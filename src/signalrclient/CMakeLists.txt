@@ -87,10 +87,12 @@ else()
   endif()
 endif() # USE_CPPRESTSDK
 
+configure_file(cmake/microsoft-signalr-config.in.cmake "${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake" @ONLY)
+
 include(GNUInstallDirs)
 
 install(TARGETS microsoft-signalr
-  EXPORT microsoft-signalr-config
+  EXPORT microsoft-signalr-targets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -98,10 +100,10 @@ install(TARGETS microsoft-signalr
 
 export(TARGETS microsoft-signalr
   NAMESPACE microsoft-signalr::
-  FILE ${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake
+  FILE ${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-targets.cmake
 )
 
-install(EXPORT microsoft-signalr-config
+install(EXPORT microsoft-signalr-targets
   NAMESPACE microsoft-signalr::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/microsoft-signalr/cmake
 )
