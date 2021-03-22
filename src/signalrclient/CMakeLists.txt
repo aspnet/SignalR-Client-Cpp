@@ -90,21 +90,23 @@ endif() # USE_CPPRESTSDK
 include(GNUInstallDirs)
 
 install(TARGETS microsoft-signalr
+  # Creates the microsoft-signalr-targets.cmake file which allows find_package() to work
   EXPORT microsoft-signalr-targets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-configure_file(cmake/microsoft-signalr-config.in.cmake "${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake" @ONLY)
+# Create the microsoft-signalr-config.cmake with resolved values for variables used to build
+configure_file(microsoft-signalr-config.in.cmake "${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake")
 
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/microsoft-signalr/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/share/microsoft-signalr
 )
 
 install(EXPORT microsoft-signalr-targets
   FILE microsoft-signalr-targets.cmake
   NAMESPACE microsoft-signalr::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/microsoft-signalr/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/share/microsoft-signalr
 )
