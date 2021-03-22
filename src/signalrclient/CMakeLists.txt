@@ -98,7 +98,7 @@ install(TARGETS microsoft-signalr
 )
 
 # Create the microsoft-signalr-config.cmake with resolved values for variables used to build
-configure_file(microsoft-signalr-config.in.cmake "${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake")
+configure_file(microsoft-signalr-config.in.cmake "${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake" @ONLY)
 
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake
