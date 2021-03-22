@@ -5,7 +5,7 @@ if(@USE_CPPRESTSDK@)
 endif()
 
 if(NOT @INCLUDE_JSONCPP@)
-  find_dependency(@${JSONCPP_LIB}@)
+  find_dependency(@JSONCPP_LIB@)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/microsoft-signalr-targets.cmake")
