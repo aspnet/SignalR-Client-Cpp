@@ -28,16 +28,16 @@ include_directories(
   ../../third_party_code/cpprestsdk
 )
 
-add_library (signalrclient ${SOURCES})
+add_library (microsoft-signalr ${SOURCES})
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     if(WERROR)
-        target_compile_options(signalrclient PRIVATE /WX)
+        target_compile_options(microsoft-signalr PRIVATE /WX)
     endif()
     if(WALL)
-        target_compile_options(signalrclient PRIVATE /Wall)
+        target_compile_options(microsoft-signalr PRIVATE /Wall)
     endif()
-    target_compile_options(signalrclient PRIVATE
+    target_compile_options(microsoft-signalr PRIVATE
         /wd4820 # padding added after data member
         /wd4514 # unreferenced inline function removed
         /wd5045 # compiler will insert Spectre mitigation if /Qspectre switch is added
@@ -51,37 +51,37 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     )
 else()
     if(WERROR)
-        target_compile_options(signalrclient PRIVATE -Werror)
+        target_compile_options(microsoft-signalr PRIVATE -Werror)
     endif()
     if(WALL)
-        target_compile_options(signalrclient PRIVATE -Wall)
+        target_compile_options(microsoft-signalr PRIVATE -Wall)
     endif()
 
-    target_compile_options(signalrclient PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
+    target_compile_options(microsoft-signalr PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
 endif()
 
 if(INCLUDE_JSONCPP)
-  target_sources(signalrclient PRIVATE ../../third_party_code/jsoncpp/jsoncpp.cpp)
-  target_include_directories(signalrclient PRIVATE ../../third_party_code/jsoncpp)
+  target_sources(microsoft-signalr PRIVATE ../../third_party_code/jsoncpp/jsoncpp.cpp)
+  target_include_directories(microsoft-signalr PRIVATE ../../third_party_code/jsoncpp)
 else()
-  target_link_libraries(signalrclient PUBLIC ${JSONCPP_LIB})
+  target_link_libraries(microsoft-signalr PUBLIC ${JSONCPP_LIB})
 endif()
 
 if(NOT USE_CPPRESTSDK)
-  target_link_libraries(signalrclient)
+  target_link_libraries(microsoft-signalr)
 else()
   if(APPLE)
-    target_link_libraries(signalrclient
+    target_link_libraries(microsoft-signalr
       PUBLIC ${CPPREST_LIB}
       PRIVATE OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread
     )
   elseif(NOT WIN32)
-    target_link_libraries(signalrclient
+    target_link_libraries(microsoft-signalr
       PUBLIC ${CPPREST_LIB} Boost::system
       PRIVATE OpenSSL::SSL
     )
   else()
-    target_link_libraries(signalrclient
+    target_link_libraries(microsoft-signalr
       PUBLIC ${CPPREST_LIB}
     )
   endif()
@@ -89,8 +89,19 @@ endif() # USE_CPPRESTSDK
 
 include(GNUInstallDirs)
 
-install(TARGETS signalrclient
+install(TARGETS microsoft-signalr
+  EXPORT microsoft-signalr-config
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+export(TARGETS microsoft-signalr
+  NAMESPACE microsoft-signalr::
+  FILE ${CMAKE_CURRENT_BINARY_DIR}/microsoft-signalr-config.cmake
+)
+
+install(EXPORT microsoft-signalr-config
+  NAMESPACE microsoft-signalr::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/microsoft-signalr/cmake
 )
