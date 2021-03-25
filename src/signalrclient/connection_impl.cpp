@@ -17,6 +17,7 @@
 #include <assert.h>
 #include "signalrclient/websocket_client.h"
 #include "default_websocket_client.h"
+#include "DbgLog.h"
 
 namespace signalr
 {
@@ -505,7 +506,7 @@ namespace signalr
             // TODO: log binary data better
             m_logger.log(trace_level::debug,
                 std::string("processing message: ").append(response));
-            DbgLogInfo("processing message: ");
+            DbgLogVerbose("processing message: ", response.data());
         }
 
         invoke_message_received(std::move(response));

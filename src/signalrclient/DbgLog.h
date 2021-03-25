@@ -4,9 +4,14 @@
 
 #pragma once
 
-#define STRINGIFY_2(s) #s
-#define STRINGIFY(s) STRINGIFY_2(s)
+#ifndef DbgLogInfo
+#define DbgLogInfo(message, ...)
+#endif
 
-#include <functional>
-#include <unordered_map>
-#include <string>
+#ifndef DbgLogErr
+#define DbgLogErr(message, ...)
+#endif
+
+#ifndef DbgLogVerbose
+#define DbgLogVerbose(message, ...)
+#endif
