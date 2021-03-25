@@ -25,5 +25,5 @@ include_directories(
 
 add_executable (signalrclienttests ${SOURCES})
 
-target_link_libraries(signalrclienttests gtest signalrclient)
+target_link_libraries(signalrclienttests gtest microsoft-signalr)
 add_test(NAME signalrclienttests COMMAND signalrclienttests)
