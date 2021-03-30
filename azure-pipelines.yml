@@ -33,11 +33,6 @@ stages:
       jobName: Windows_Build_Test
       useCppRestSDK: false
       cMakeRunArgs: '-A x64'
-      afterBuild:
-      # Create empty build manifest for Build Asset Registry
-      - powershell: "eng/common/sdk-task.ps1 -restore -task GenerateBuildManifest /p:PackagesToPublishPattern=$(Build.ArtifactStagingDirectory)/*.nupkg /p:AssetManifestFilePath=$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/AssetManifest/manifest.xml /p:ManifestBuildData=\"Location=https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json\""
-        displayName: Generate Build Manifest
-        condition: eq(and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')), 'true')
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - stage: post_build
