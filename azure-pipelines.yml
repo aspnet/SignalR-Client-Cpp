@@ -40,23 +40,22 @@ stages:
         condition: eq(and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')), 'true')
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - template: /eng/common/templates/post-build/post-build.yml
-    parameters:
-      enableSigningValidation: false
-      enableNugetValidation: false
-      publishInstallersAndChecksums: false
-      # This is to enable SDL runs as part of Post-Build Validation Stage
-      SDLValidationParameters:
+  - stage: post_build
+    displayName: Post Build Validation
+    jobs:
+    - template: /eng/common/templates/job/execute-sdl.yml
+      parameters:
         enable: true
+        additionalParameters: ' -SourceToolsList @("policheck","credscan")
+          -TsaInstanceURL $(_TsaInstanceURL)
+          -TsaProjectName $(_TsaProjectName)
+          -TsaNotificationEmail $(_TsaNotificationEmail)
+          -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+          -TsaBugAreaPath $(_TsaBugAreaPath)
+          -TsaIterationPath $(_TsaIterationPath)
+          -TsaRepositoryName "AspNetCore"
+          -TsaCodebaseName "AspNetCore"
+          -TsaPublish $True
+          -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
         continueOnError: false
-        params: ' -SourceToolsList @("policheck","credscan")
-        -TsaInstanceURL $(_TsaInstanceURL)
-        -TsaProjectName $(_TsaProjectName)
-        -TsaNotificationEmail $(_TsaNotificationEmail)
-        -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-        -TsaBugAreaPath $(_TsaBugAreaPath)
-        -TsaIterationPath $(_TsaIterationPath)
-        -TsaRepositoryName "AspNetCore"
-        -TsaCodebaseName "AspNetCore"
-        -TsaPublish $True
-        -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
+        downloadArtifacts: false
