@@ -109,7 +109,7 @@ public:
         : m_message(message)
     { }
 
-    char const* what() const override
+    char const* what() const noexcept override
     {
         return m_message.data();
     }
