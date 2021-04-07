@@ -643,13 +643,6 @@ namespace signalr
     // do not use `shared_from_this` as it can be called via the destructor
     void connection_impl::stop_connection(std::exception_ptr error)
     {
-        // if we have a m_stop_error, it takes precedence over the error from the transport
-        if (m_stop_error)
-        {
-            error = m_stop_error;
-            m_stop_error = nullptr;
-        }
-
         {
             // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
             // on a different thread at the same time. In this case we must not null out the transport if we are
@@ -660,6 +653,13 @@ namespace signalr
             {
                 m_logger.log(trace_level::info, "Stopping was ignored because the connection is already in the disconnected state.");
                 return;
+            }
+
+            // if we have a m_stop_error, it takes precedence over the error from the transport
+            if (m_stop_error)
+            {
+                error = m_stop_error;
+                m_stop_error = nullptr;
             }
 
             change_state(connection_state::disconnected);
