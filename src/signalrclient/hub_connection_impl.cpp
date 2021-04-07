@@ -318,7 +318,7 @@ namespace signalr
             }
 
             // TODO: Consider passing "reason" exception to stop
-            m_connection->stop([](std::exception_ptr) {}, std::make_exception_ptr(e));
+            m_connection->stop([](std::exception_ptr) {}, std::current_exception());
         }
     }
 
