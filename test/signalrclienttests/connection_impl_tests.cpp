@@ -826,7 +826,7 @@ TEST(connection_impl_start, negotiate_redirect_does_not_overwrite_url)
     connection->stop([&mre](std::exception_ptr)
         {
             mre.set();
-        });
+        }, nullptr);
     mre.get();
 
     connection->start([&mre](std::exception_ptr)
@@ -1379,7 +1379,7 @@ TEST(connection_impl_stop, stopping_disconnected_connection_is_no_op)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1418,7 +1418,7 @@ TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_ta
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     try
     {
@@ -1426,7 +1426,7 @@ TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_ta
         connection->stop([&mre_stop](std::exception_ptr exception)
             {
                 mre_stop.set(exception);
-            });
+            }, nullptr);
 
         mre_stop.get();
         ASSERT_FALSE(true); // exception expected but not thrown
@@ -1466,7 +1466,7 @@ TEST(connection_impl_stop, can_start_and_stop_connection)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1497,7 +1497,7 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
         connection->stop([&mre](std::exception_ptr exception)
             {
                 mre.set(exception);
-            });
+            }, nullptr);
 
         mre.get();
 
@@ -1619,7 +1619,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     connection->stop([disconnect_completed_event](std::exception_ptr)
         {
             disconnect_completed_event->cancel();
-        });
+        }, nullptr);
 
     try
     {
@@ -1681,7 +1681,7 @@ TEST(connection_impl_stop, DISABLED_ongoing_start_request_canceled_if_connection
     connection->stop([&stop_mre](std::exception_ptr exception)
         {
             stop_mre.set(exception);
-        });
+        }, nullptr);
 
     try
     {
@@ -1720,7 +1720,7 @@ TEST(connection_impl_stop, stop_invokes_disconnected_callback)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1747,7 +1747,7 @@ TEST(connection_impl_stop, std_exception_from_disconnected_callback_caught_and_l
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1776,7 +1776,7 @@ TEST(connection_impl_stop, exception_from_disconnected_callback_caught_and_logge
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1791,7 +1791,7 @@ TEST(connection_impl_stop, transport_error_invokes_disconnected_callback)
     auto connection = create_connection(websocket_client);
 
     auto disconnect_mre = manual_reset_event<void>();
-    connection->set_disconnected([&disconnect_mre](std::exception_ptr) { disconnect_mre.set(); });
+    connection->set_disconnected([&disconnect_mre](std::exception_ptr ex) { disconnect_mre.set(ex); });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
@@ -1802,9 +1802,17 @@ TEST(connection_impl_stop, transport_error_invokes_disconnected_callback)
     mre.get();
 
     ASSERT_FALSE(websocket_client->receive_loop_started.wait(1000));
-    websocket_client->receive_message(std::make_exception_ptr(std::runtime_error("error")));
+    websocket_client->receive_message(std::make_exception_ptr(custom_exception("error")));
 
-    disconnect_mre.get();
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const custom_exception& ex)
+    {
+        ASSERT_STREQ("error", ex.what());
+    }
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 }
@@ -1862,7 +1870,7 @@ TEST(connection_impl_config, custom_headers_set_in_requests)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1952,7 +1960,7 @@ TEST(connection_id, can_get_connection_id_when_connection_in_connected_state)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -1977,7 +1985,7 @@ TEST(connection_id, can_get_connection_id_after_connection_has_stopped)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 
@@ -2029,7 +2037,7 @@ TEST(connection_id, connection_id_reset_when_starting_connection)
     connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
-        });
+        }, nullptr);
 
     mre.get();
 

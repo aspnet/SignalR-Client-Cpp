@@ -40,7 +40,7 @@ namespace signalr
 
         void start(std::function<void(std::exception_ptr)> callback) noexcept;
         void send(const std::string &data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept;
-        void stop(std::function<void(std::exception_ptr)> callback) noexcept;
+        void stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept;
 
         connection_state get_connection_state() const noexcept;
         std::string get_connection_id() const noexcept;
@@ -57,6 +57,7 @@ namespace signalr
         std::shared_ptr<transport> m_transport;
         std::unique_ptr<transport_factory> m_transport_factory;
         bool m_skip_negotiation;
+        std::exception_ptr m_stop_error;
 
         std::function<void(std::string&&)> m_message_received;
         std::function<void(std::exception_ptr)> m_disconnected;

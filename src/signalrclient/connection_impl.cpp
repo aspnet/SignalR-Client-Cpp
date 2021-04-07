@@ -583,8 +583,9 @@ namespace signalr
             });
     }
 
-    void connection_impl::stop(std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept
     {
+        m_stop_error = exception;
         m_logger.log(trace_level::info, "stopping connection");
 
         shutdown(callback);
@@ -601,7 +602,7 @@ namespace signalr
             if (current_state == connection_state::disconnected)
             {
                 m_disconnect_cts->cancel();
-                callback(nullptr);
+                callback(m_stop_error);
                 return;
             }
 
@@ -642,6 +643,13 @@ namespace signalr
     // do not use `shared_from_this` as it can be called via the destructor
     void connection_impl::stop_connection(std::exception_ptr error)
     {
+        // if we have a m_stop_error, it takes precedence over the error from the transport
+        if (m_stop_error)
+        {
+            error = m_stop_error;
+            m_stop_error = nullptr;
+        }
+
         {
             // the lock prevents a race where the user calls `stop` on a disconnected connection and calls `start`
             // on a different thread at the same time. In this case we must not null out the transport if we are

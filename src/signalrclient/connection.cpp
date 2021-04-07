@@ -42,9 +42,9 @@ namespace signalr
         m_pImpl->set_client_config(config);
     }
 
-    void connection::stop(std::function<void(std::exception_ptr)> callback) noexcept
+    void connection::stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept
     {
-        m_pImpl->stop(callback);
+        m_pImpl->stop(callback, exception);
     }
 
     connection_state connection::get_connection_state() const noexcept

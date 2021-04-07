@@ -39,7 +39,7 @@ namespace signalr
 
         SIGNALRCLIENT_API void __cdecl set_client_config(const signalr_client_config& config);
 
-        SIGNALRCLIENT_API void __cdecl stop(std::function<void(std::exception_ptr)> callback) noexcept;
+        SIGNALRCLIENT_API void __cdecl stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept;
 
         SIGNALRCLIENT_API connection_state __cdecl get_connection_state() const noexcept;
         SIGNALRCLIENT_API std::string __cdecl get_connection_id() const;

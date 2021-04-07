@@ -120,7 +120,7 @@ namespace signalr
 
                 if (start_exception)
                 {
-                    connection->m_connection->stop([start_exception, callback, weak_connection](std::exception_ptr)
+                    connection->m_connection->stop([callback, weak_connection](std::exception_ptr ex)
                     {
                         try
                         {
@@ -133,8 +133,8 @@ namespace signalr
                         }
                         catch (...) {}
 
-                        callback(start_exception);
-                    });
+                        callback(ex);
+                    }, start_exception);
                     return;
                 }
 
@@ -167,7 +167,7 @@ namespace signalr
                         connection->m_connection->stop([callback, handshake_exception](std::exception_ptr)
                         {
                             callback(handshake_exception);
-                        });
+                        }, nullptr);
                     }
                 });
             });
@@ -218,7 +218,7 @@ namespace signalr
                     {
                         callback(exception);
                     }
-                });
+                }, nullptr);
         }
     }
 
@@ -318,7 +318,7 @@ namespace signalr
             }
 
             // TODO: Consider passing "reason" exception to stop
-            m_connection->stop([](std::exception_ptr) {});
+            m_connection->stop([](std::exception_ptr) {}, std::make_exception_ptr(e));
         }
     }
 

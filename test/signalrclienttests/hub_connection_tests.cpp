@@ -817,10 +817,10 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::error);
 
-    auto on_closed_event = std::make_shared<cancellation_token>();
-    hub_connection.set_disconnected([on_closed_event](std::exception_ptr)
+    auto close_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&close_mre](std::exception_ptr ex)
         {
-            on_closed_event->cancel();
+            close_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
@@ -836,12 +836,22 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     mre.get();
 
     websocket_client->receive_message("{ \"type\": 1, \"target\": \"broadcast\" }\x1e");
-    ASSERT_FALSE(on_closed_event->wait(5000));
+
+    try
+    {
+        close_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("Field 'arguments' not found for 'invocation' message", ex.what());
+    }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_TRUE(log_entries.size() == 1);
+    ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
     ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] Connection closed with error: Field 'arguments' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_target)
@@ -851,10 +861,10 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::error);
 
-    auto on_closed_event = std::make_shared<cancellation_token>();
-    hub_connection.set_disconnected([on_closed_event](std::exception_ptr)
+    auto close_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&close_mre](std::exception_ptr ex)
         {
-            on_closed_event->cancel();
+            close_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
@@ -870,12 +880,22 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     mre.get();
 
     websocket_client->receive_message("{ \"type\": 1, \"arguments\": [] }\x1e");
-    ASSERT_FALSE(on_closed_event->wait(5000));
+
+    try
+    {
+        close_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("Field 'target' not found for 'invocation' message", ex.what());
+    }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_TRUE(log_entries.size() == 1);
+    ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
     ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] Connection closed with error: Field 'target' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(send, creates_correct_payload)
@@ -1258,9 +1278,9 @@ TEST(receive, closes_if_error_from_parsing)
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::info);
 
     auto disconnect_mre = manual_reset_event<void>();
-    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr)
+    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr ex)
         {
-            disconnect_mre.set();
+            disconnect_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
@@ -1277,7 +1297,15 @@ TEST(receive, closes_if_error_from_parsing)
 
     websocket_client->receive_message("{ \"type\": 3, \"invocationId\": \"0\": \"bad\" }\x1e");
 
-    disconnect_mre.get();
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("* Line 1, Column 33\n  Missing ',' or '}' in object declaration\n", ex.what());
+    }
 
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
