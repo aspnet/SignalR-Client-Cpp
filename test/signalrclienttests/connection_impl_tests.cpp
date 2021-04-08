@@ -285,8 +285,6 @@ TEST(connection_impl_start, start_propagates_exceptions_from_negotiate)
             throw custom_exception();
         }));
 
-    auto websocket_client = std::make_shared<test_websocket_client>();
-
     auto connection =
         connection_impl::create(create_uri(), trace_level::none,
             std::make_shared<memory_log_writer>(), [http_client](const signalr_client_config& config) {
