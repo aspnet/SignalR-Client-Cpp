@@ -103,7 +103,7 @@ namespace signalr
                                     trace_level::error,
                                     std::string("shutdown threw an exception: ")
                                     .append(e.what()));
-                                DbgLogErr("shutdown threw an exception: ", e.what());
+                                DbgLogErr("shutdown threw an exception: %s", e.what());
                             }
                         }
                         catch (...)
@@ -111,7 +111,7 @@ namespace signalr
                             logger.log(
                                 trace_level::error,
                                 "shutdown threw an unknown exception.");
-                            DbgLogErr("shutdown threw an unknown exception.");
+                            DbgLogErr("shutdown threw an unknown exception.", nullptr);
                         }
                     }
 
@@ -185,7 +185,7 @@ namespace signalr
                 {
                     connection->m_logger.log(trace_level::info,
                         "starting the connection has been canceled.");
-                    DbgLogInfo("starting the connection has been canceled.");
+                    DbgLogInfo("starting the connection has been canceled.", nullptr);
                 }
                 else
                 {
@@ -194,7 +194,7 @@ namespace signalr
                         connection->m_logger.log(trace_level::error,
                             std::string("connection could not be started due to: ")
                             .append(e.what()));
-                        DbgLogErr("connection could not be started due to: ", e.what());
+                        DbgLogErr("connection could not be started due to: %s", e.what());
                     }
                 }
 
@@ -214,7 +214,7 @@ namespace signalr
                     connection->m_logger.log(trace_level::error,
                         std::string("internal error - transition from an unexpected state. expected state: connecting, actual state: ")
                         .append(translate_connection_state(connection->get_connection_state())));
-                    DbgLogErr("internal error - transition from an unexpected state. expected state: connecting, actual state: ",
+                    DbgLogErr("internal error - transition from an unexpected state. expected state: connecting, actual state: %s",
                         translate_connection_state(connection->get_connection_state()).data());
                 }
 
@@ -255,7 +255,7 @@ namespace signalr
                             connection->m_logger.log(trace_level::error,
                                 std::string("connection could not be started due to: ")
                                 .append(e.what()));
-                            DbgLogErr("connection could not be started due to: ", e.what());
+                            DbgLogErr("connection could not be started due to: %s", e.what());
                         }
                     }
                     connection->change_state(connection_state::disconnected);
@@ -360,7 +360,7 @@ namespace signalr
                             logger.log(trace_level::info,
                                 std::string{ "ignoring stray message received after connection was restarted. message: " }
                             .append(message));
-                            DbgLogInfo("ignoring stray message received after connection was restarted. message: ", message);
+                            DbgLogInfo("ignoring stray message received after connection was restarted. message: %s", message.data());
                         }
                         return;
                     }
@@ -391,7 +391,7 @@ namespace signalr
                                 logger.log(trace_level::info,
                                     std::string{ "ignoring stray error received after connection was restarted. error: " }
                                 .append(e.what()));
-                                DbgLogInfo("ignoring stray error received after connection was restarted. error: ", e.what());
+                                DbgLogInfo("ignoring stray error received after connection was restarted. error: %s", e.what());
                             }
 
                             return;
@@ -501,7 +501,7 @@ namespace signalr
                             trace_level::error,
                             std::string("transport could not connect due to: ")
                             .append(e.what()));
-                        DbgLogErr("transport could not connect due to: ", e.what());
+                        DbgLogErr("transport could not connect due to: %s", e.what());
                     }
 
                     callback(exception);
@@ -516,7 +516,7 @@ namespace signalr
             // TODO: log binary data better
             m_logger.log(trace_level::debug,
                 std::string("processing message: ").append(response));
-            DbgLogVerbose("processing message: ", response.data());
+            DbgLogVerbose("processing message: %s", response.data());
         }
 
         invoke_message_received(std::move(response));
@@ -536,13 +536,13 @@ namespace signalr
                     trace_level::error,
                     std::string("message_received callback threw an exception: ")
                     .append(e.what()));
-                DbgLogErr("message_received callback threw an exception: ", e.what());
+                DbgLogErr("message_received callback threw an exception: %s", e.what());
             }
         }
         catch (...)
         {
             m_logger.log(trace_level::error, "message_received callback threw an unknown exception");
-            DbgLogErr("message_received callback threw an unknown exception");
+            DbgLogErr("message_received callback threw an unknown exception", nullptr);
         }
     }
 
@@ -567,7 +567,7 @@ namespace signalr
         if (logger.is_enabled(trace_level::info))
         {
             logger.log(trace_level::info, std::string("sending data: ").append(data));
-            DbgLogInfo("sending data: ", data.data());
+            DbgLogInfo("sending data: %s", data.data());
         }
 
         transport->send(data, transfer_format, [logger, callback](std::exception_ptr exception)
@@ -588,7 +588,7 @@ namespace signalr
                             trace_level::error,
                             std::string("error sending data: ")
                             .append(e.what()));
-                        DbgLogErr("error sending data: ", e.what());
+                        DbgLogErr("error sending data: %s", e.what());
                     }
 
                     callback(exception);
@@ -599,7 +599,7 @@ namespace signalr
     void connection_impl::stop(std::function<void(std::exception_ptr)> callback) noexcept
     {
         m_logger.log(trace_level::info, "stopping connection");
-        DbgLogInfo("stopping connection");
+        DbgLogInfo("stopping connection", nullptr);
 
         shutdown(callback);
     }
@@ -610,7 +610,7 @@ namespace signalr
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
             m_logger.log(trace_level::info, "acquired lock in shutdown()");
-            DbgLogInfo("acquired lock in shutdown()");
+            DbgLogInfo("acquired lock in shutdown()", nullptr);
 
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
@@ -635,7 +635,7 @@ namespace signalr
             {
                 m_logger.log(trace_level::error,
                     "internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out");
-                DbgLogErr("internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out");
+                DbgLogErr("internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out", nullptr);
             }
 
             // at this point we are either in the connected or disconnected state. If we are in the disconnected state
@@ -666,7 +666,7 @@ namespace signalr
             if (m_connection_state == connection_state::disconnected)
             {
                 m_logger.log(trace_level::info, "Stopping was ignored because the connection is already in the disconnected state.");
-                DbgLogInfo("Stopping was ignored because the connection is already in the disconnected state.");
+                DbgLogInfo("Stopping was ignored because the connection is already in the disconnected state.", nullptr);
                 return;
             }
 
@@ -685,14 +685,14 @@ namespace signalr
                 if (m_logger.is_enabled(trace_level::error))
                 {
                     m_logger.log(trace_level::error, std::string("Connection closed with error: ").append(ex.what()));
-                    DbgLogErr("Connection closed with error: ", ex.what());
+                    DbgLogErr("Connection closed with error: %s", ex.what());
                 }
             }
         }
         else
         {
             m_logger.log(trace_level::info, "Connection closed.");
-            DbgLogInfo("Connection closed.");
+            DbgLogInfo("Connection closed.", nullptr);
         }
 
         try
@@ -707,7 +707,7 @@ namespace signalr
                     trace_level::error,
                     std::string("disconnected callback threw an exception: ")
                     .append(e.what()));
-                DbgLogErr("disconnected callback threw an exception: ", e.what());
+                DbgLogErr("disconnected callback threw an exception: %s", e.what());
             }
         }
         catch (...)
@@ -715,7 +715,7 @@ namespace signalr
             m_logger.log(
                 trace_level::error,
                 "disconnected callback threw an unknown exception");
-            DbgLogErr("disconnected callback threw an unknown exception");
+            DbgLogErr("disconnected callback threw an unknown exception", nullptr);
         }
     }
 
@@ -793,9 +793,7 @@ namespace signalr
                 translate_connection_state(old_state)
                 .append(" -> ")
                 .append(translate_connection_state(new_state)));
-            DbgLogVerbose(translate_connection_state(old_state)
-                .append(" -> ")
-                .append(translate_connection_state(new_state).data()));
+            DbgLogVerbose("%s -> %s", translate_connection_state(old_state).data(), translate_connection_state(new_state).data());
         }
 
         // Words of wisdom (if we decide to add a state_changed callback and invoke it from here):
