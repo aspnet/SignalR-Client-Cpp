@@ -26,25 +26,25 @@ namespace signalr
     }
 
     std::shared_ptr<connection_impl> connection_impl::create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
         return std::shared_ptr<connection_impl>(new connection_impl(url, trace_level,
-            log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client, websocket_factory, skip_negotiation));
+            log_writer ? log_writer : std::make_shared<trace_log_writer>(), http_client_factory, websocket_factory, skip_negotiation));
     }
 
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-        std::shared_ptr<http_client> http_client, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr), m_skip_negotiation(skip_negotiation),
         m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {}), m_disconnect_cts(std::make_shared<cancellation_token>())
     {
-        if (http_client != nullptr)
+        if (http_client_factory != nullptr)
         {
-            m_http_client = std::move(http_client);
+            m_http_client_factory = std::move(http_client_factory);
         }
         else
         {
 #ifdef USE_CPPRESTSDK
-            m_http_client = std::unique_ptr<class http_client>(new default_http_client());
+            m_http_client_factory = [](const signalr_client_config&) { return std::unique_ptr<class http_client>(new default_http_client()); };
 #endif
         }
 
@@ -55,7 +55,7 @@ namespace signalr
 #endif
         }
 
-        m_transport_factory = std::unique_ptr<transport_factory>(new transport_factory(m_http_client, websocket_factory));
+        m_transport_factory = std::unique_ptr<transport_factory>(new transport_factory(m_http_client_factory, websocket_factory));
     }
 
     connection_impl::~connection_impl()
@@ -215,7 +215,8 @@ namespace signalr
             return start_transport(url, transport_started);
         }
 
-        negotiate::negotiate(*m_http_client, url, m_signalr_client_config,
+        auto http_client = m_http_client_factory(m_signalr_client_config);
+        negotiate::negotiate(http_client, url, m_signalr_client_config,
             [callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();

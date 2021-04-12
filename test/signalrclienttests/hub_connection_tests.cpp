@@ -19,7 +19,7 @@ hub_connection create_hub_connection(std::shared_ptr<test_websocket_client> webs
 {
     return hub_connection_builder::create(create_uri())
         .with_logging(log_writer, trace_level)
-        .with_http_client(create_test_http_client())
+        .with_http_client_factory(create_test_http_client())
         .with_websocket_factory([websocket_client](const signalr_client_config& config)
             {
                 websocket_client->set_config(config);
@@ -114,7 +114,11 @@ TEST(url, negotiate_appended_to_url)
 
         auto hub_connection = hub_connection_builder::create(base_url)
             .with_logging(std::make_shared<memory_log_writer>(), trace_level::none)
-            .with_http_client(http_client)
+            .with_http_client_factory([http_client](const signalr_client_config& config)
+                {
+                    http_client->set_scheduler(config.get_scheduler());
+                    return http_client;
+                })
             .with_websocket_factory([](const signalr_client_config&) { return create_test_websocket_client(); })
             .build();
 
@@ -1469,7 +1473,7 @@ TEST(config, can_replace_scheduler)
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = hub_connection_builder::create(create_uri())
         .with_logging(std::make_shared<memory_log_writer>(), trace_level::verbose)
-        .with_http_client(create_test_http_client())
+        .with_http_client_factory(create_test_http_client())
         .with_websocket_factory([websocket_client](const signalr_client_config& config)
             {
                 websocket_client->set_config(config);
@@ -1520,5 +1524,5 @@ TEST(config, can_replace_scheduler)
 
     mre.get();
 
-    ASSERT_EQ(5, scheduler->schedule_count);
+    ASSERT_EQ(6, scheduler->schedule_count);
 }

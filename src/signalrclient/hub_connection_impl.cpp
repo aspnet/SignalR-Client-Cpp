@@ -23,11 +23,11 @@ namespace signalr
     }
 
     std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url,
-        trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+        trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
         auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url,
-            trace_level, log_writer, http_client, websocket_factory, skip_negotiation));
+            trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation));
 
         connection->initialize();
 
@@ -35,10 +35,10 @@ namespace signalr
     }
 
     hub_connection_impl::hub_connection_impl(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
+        const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_connection(connection_impl::create(url, trace_level, log_writer,
-            http_client, websocket_factory, skip_negotiation)), m_logger(log_writer, trace_level),
+            http_client_factory, websocket_factory, skip_negotiation)), m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
         m_handshakeReceived(false), m_disconnected([]() noexcept {}), m_protocol(std::unique_ptr<json_hub_protocol>(new json_hub_protocol()))
     {}
