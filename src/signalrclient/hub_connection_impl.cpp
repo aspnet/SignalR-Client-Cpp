@@ -22,11 +22,11 @@ namespace signalr
             const std::function<void(const std::exception_ptr e)>& set_exception);
     }
 
-    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, std::shared_ptr<scheduler> scheduler,
+    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url,
         trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
-        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, scheduler,
+        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url,
             trace_level, log_writer, http_client, websocket_factory, skip_negotiation));
 
         connection->initialize();

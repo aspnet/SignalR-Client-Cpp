@@ -1468,7 +1468,7 @@ TEST(config, can_replace_scheduler)
 {
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = hub_connection_builder::create(create_uri())
-        .with_logging(std::make_shared<memory_log_writer>(), trace_level::all)
+        .with_logging(std::make_shared<memory_log_writer>(), trace_level::verbose)
         .with_http_client(create_test_http_client())
         .with_websocket_factory([websocket_client](const signalr_client_config& config)
             {

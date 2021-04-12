@@ -24,7 +24,7 @@ namespace signalr
     class hub_connection_impl : public std::enable_shared_from_this<hub_connection_impl>
     {
     public:
-        static std::shared_ptr<hub_connection_impl> create(const std::string& url, std::shared_ptr<scheduler> scheduler,
+        static std::shared_ptr<hub_connection_impl> create(const std::string& url,
             trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
             std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation = false);
 
