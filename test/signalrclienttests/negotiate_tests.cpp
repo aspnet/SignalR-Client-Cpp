@@ -13,7 +13,7 @@ using namespace signalr;
 TEST(negotiate, request_created_with_correct_url)
 {
     std::string requested_url;
-    auto request_factory = std::make_shared<test_http_client>([&requested_url](const std::string& url, http_request request)
+    auto http_client = std::make_shared<test_http_client>([&requested_url](const std::string& url, http_request request)
     {
         std::string response_body(
             "{ \"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
@@ -23,10 +23,10 @@ TEST(negotiate, request_created_with_correct_url)
         return http_response(200, response_body);
     });
 
-    request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
+    http_client->set_scheduler(std::make_shared<signalr_default_scheduler>());
 
     auto mre = manual_reset_event<void>();
-    negotiate::negotiate((std::shared_ptr<http_client>)request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::negotiate(http_client, "http://fake/signalr", signalr_client_config(),
         [&mre](signalr::negotiation_response&&, std::exception_ptr exception)
         {
             mre.set();
@@ -51,7 +51,7 @@ TEST(negotiate, negotiation_request_sent_and_response_serialized)
     request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
 
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate((std::shared_ptr<http_client>)request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
@@ -83,7 +83,7 @@ TEST(negotiate, negotiation_response_with_redirect)
     request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
 
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate((std::shared_ptr<http_client>)request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
@@ -112,7 +112,7 @@ TEST(negotiate, negotiation_response_with_negotiateVersion)
     request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
 
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate((std::shared_ptr<http_client>)request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
@@ -141,7 +141,7 @@ TEST(negotiate, negotiation_response_with_future_negotiateVersion)
     request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
 
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate((std::shared_ptr<http_client>)request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);

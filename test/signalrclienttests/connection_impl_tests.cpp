@@ -1521,14 +1521,20 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
 
     auto log_entries = memory_writer->get_log_entries();
     ASSERT_EQ(16U, log_entries.size()) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] connecting -> connected\n", remove_date_from_log_entry(log_entries[2])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] connected -> disconnecting\n", remove_date_from_log_entry(log_entries[5])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] disconnecting -> disconnected\n", remove_date_from_log_entry(log_entries[7])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[9])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] connecting -> connected\n", remove_date_from_log_entry(log_entries[11])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] connected -> disconnecting\n", remove_date_from_log_entry(log_entries[13])) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] disconnecting -> disconnected\n", remove_date_from_log_entry(log_entries[15])) << dump_vector(log_entries);
+
+    auto second_half = std::vector<std::string>(log_entries.begin() + 8, log_entries.end());
+
+    log_entries = std::vector<std::string>(log_entries.begin(), log_entries.begin() + 8);
+
+    ASSERT_TRUE(has_log_entry("[verbose  ] disconnected -> connecting\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> connected\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] connected -> disconnecting\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] disconnecting -> disconnected\n", log_entries)) << dump_vector(log_entries);
+
+    ASSERT_TRUE(has_log_entry("[verbose  ] disconnected -> connecting\n", second_half)) << dump_vector(second_half);
+    ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> connected\n", second_half)) << dump_vector(second_half);
+    ASSERT_TRUE(has_log_entry("[verbose  ] connected -> disconnecting\n", second_half)) << dump_vector(second_half);
+    ASSERT_TRUE(has_log_entry("[verbose  ] disconnecting -> disconnected\n", second_half)) << dump_vector(second_half);
 }
 
 TEST(connection_impl_stop, dtor_stops_the_connection)

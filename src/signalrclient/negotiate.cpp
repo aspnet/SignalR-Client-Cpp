@@ -14,7 +14,7 @@ namespace signalr
     {
         const int negotiate_version = 1;
 
-        void negotiate(std::shared_ptr<http_client>& client, const std::string& base_url,
+        void negotiate(std::shared_ptr<http_client> client, const std::string& base_url,
             const signalr_client_config& config,
             std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept
         {
