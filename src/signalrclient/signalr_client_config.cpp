@@ -4,6 +4,7 @@
 
 #include "stdafx.h"
 #include "signalrclient/signalr_client_config.h"
+#include "signalr_default_scheduler.h"
 
 namespace signalr
 {
@@ -41,6 +42,11 @@ namespace signalr
     }
 #endif
 
+    signalr_client_config::signalr_client_config()
+    {
+        m_scheduler = std::make_shared<signalr_default_scheduler>();
+    }
+
     const std::map<std::string, std::string>& signalr_client_config::get_http_headers() const noexcept
     {
         return m_http_headers;
@@ -54,5 +60,20 @@ namespace signalr
     void signalr_client_config::set_http_headers(const std::map<std::string, std::string>& http_headers)
     {
         m_http_headers = http_headers;
+    }
+
+    void signalr_client_config::set_scheduler(std::shared_ptr<scheduler> scheduler)
+    {
+        if (!scheduler)
+        {
+            return;
+        }
+
+        m_scheduler = std::move(scheduler);
+    }
+
+    const std::shared_ptr<scheduler>& signalr_client_config::get_scheduler() const noexcept
+    {
+        return m_scheduler;
     }
 }

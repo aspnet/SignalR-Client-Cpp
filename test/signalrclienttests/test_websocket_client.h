@@ -9,6 +9,7 @@
 #include "test_utils.h"
 #include "cancellation_token.h"
 #include <queue>
+#include "signalrclient/signalr_client_config.h"
 
 using namespace signalr;
 
@@ -17,6 +18,8 @@ class test_websocket_client : public websocket_client
 public:
     test_websocket_client();
     ~test_websocket_client();
+
+    void set_config(const signalr_client_config&);
 
     void start(const std::string& url, std::function<void(std::exception_ptr)> callback);
 
@@ -54,6 +57,7 @@ private:
     bool m_stopped;
     manual_reset_event<void> m_receive_waiting;
     cancellation_token m_receive_loop_not_running;
+    std::shared_ptr<scheduler> m_scheduler;
 };
 
 std::shared_ptr<test_websocket_client> create_test_websocket_client(

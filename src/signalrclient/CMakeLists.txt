@@ -20,6 +20,7 @@ set (SOURCES
   transport_factory.cpp
   url_builder.cpp
   websocket_transport.cpp
+  signalr_default_scheduler.cpp
   ../../third_party_code/cpprestsdk/uri.cpp
   ../../third_party_code/cpprestsdk/uri_builder.cpp
 )

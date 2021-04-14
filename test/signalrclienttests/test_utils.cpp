@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "test_utils.h"
 #include "test_http_client.h"
+#include "signalrclient/signalr_client_config.h"
 
 using namespace signalr;
 
@@ -29,18 +30,24 @@ bool has_log_entry(const std::string& log_entry, const std::vector<std::string>&
     return false;
 }
 
-std::unique_ptr<http_client> create_test_http_client()
+std::function<std::shared_ptr<signalr::http_client>(const signalr::signalr_client_config&)> create_test_http_client()
 {
-    return std::unique_ptr<test_http_client>(new test_http_client([](const std::string & url, http_request request)
+    return [](const signalr_client_config& config)
     {
-        auto response_body =
-            url.find_first_of("/negotiate") != 0
-            ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
-            "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
-            : "";
+        auto client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request request)
+            {
+                auto response_body =
+                    url.find_first_of("/negotiate") != 0
+                    ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                    "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
+                    : "";
 
-        return http_response{ 200, response_body };
-    }));
+                return http_response{ 200, response_body };
+            }));
+
+        client->set_scheduler(config.get_scheduler());
+        return client;
+    };
 }
 
 std::string create_uri()

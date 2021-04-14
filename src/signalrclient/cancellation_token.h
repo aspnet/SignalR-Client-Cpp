@@ -27,17 +27,37 @@ namespace signalr
         cancellation_token(const cancellation_token&) = delete;
         cancellation_token& operator=(const cancellation_token&) = delete;
 
+        ~cancellation_token()
+        {
+            if (m_callback)
+            {
+                m_callback();
+            }
+        }
+
         void cancel()
         {
-            std::lock_guard<std::mutex> lock(m_lock);
-            m_signaled = true;
-            m_condition.notify_all();
+            std::function<void()> callback;
+            {
+                std::lock_guard<std::mutex> lock(m_lock);
+                m_signaled = true;
+                m_condition.notify_all();
+                callback = m_callback;
+                m_callback = nullptr;
+            } // unlock
+
+            if (callback)
+            {
+                callback();
+            }
         }
 
         void reset()
         {
             std::lock_guard<std::mutex> lock(m_lock);
+            assert(m_callback == nullptr);
             m_signaled = false;
+            m_callback = nullptr;
         }
 
         bool is_canceled() const
@@ -75,9 +95,33 @@ namespace signalr
                 throw canceled_exception();
             }
         }
+
+        void register_callback(std::function<void()> callback)
+        {
+            bool run_callback = false;
+            {
+                std::lock_guard<std::mutex> lock(m_lock);
+                assert(m_callback == nullptr);
+                if (m_signaled)
+                {
+                    run_callback = m_signaled;
+                }
+                else
+                {
+                    m_callback = callback;
+                }
+            } // unlock
+
+            if (run_callback)
+            {
+                callback();
+            }
+        }
+
     private:
         std::mutex m_lock;
         std::condition_variable m_condition;
         bool m_signaled;
+        std::function<void()> m_callback;
     };
 }

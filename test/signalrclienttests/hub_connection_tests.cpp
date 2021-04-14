@@ -10,16 +10,21 @@
 #include "signalrclient/hub_exception.h"
 #include "signalrclient/signalr_exception.h"
 #include "test_websocket_client.h"
+#include <atomic>
 
 using namespace signalr;
 
-hub_connection create_hub_connection(std::shared_ptr<websocket_client> websocket_client = create_test_websocket_client(),
+hub_connection create_hub_connection(std::shared_ptr<test_websocket_client> websocket_client = create_test_websocket_client(),
     std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::verbose)
 {
     return hub_connection_builder::create(create_uri())
         .with_logging(log_writer, trace_level)
-        .with_http_client(create_test_http_client())
-        .with_websocket_factory([websocket_client](const signalr_client_config&) { return websocket_client; })
+        .with_http_client_factory(create_test_http_client())
+        .with_websocket_factory([websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            })
         .build();
 }
 
@@ -109,7 +114,11 @@ TEST(url, negotiate_appended_to_url)
 
         auto hub_connection = hub_connection_builder::create(base_url)
             .with_logging(std::make_shared<memory_log_writer>(), trace_level::none)
-            .with_http_client(http_client)
+            .with_http_client_factory([http_client](const signalr_client_config& config)
+                {
+                    http_client->set_scheduler(config.get_scheduler());
+                    return http_client;
+                })
             .with_websocket_factory([](const signalr_client_config&) { return create_test_websocket_client(); })
             .build();
 
@@ -130,7 +139,7 @@ TEST(url, negotiate_appended_to_url)
     }
 }
 
-TEST(start, start_starts_connection)
+TEST(start, starts_connection)
 {
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
@@ -537,7 +546,7 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
     // The underlying connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail. There is nothing we can block on.
-    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 6; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 9; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
@@ -1441,4 +1450,79 @@ TEST(invoke, invoke_handles_zero_value_as_int)
         {
             ASSERT_EQ(result, expected);
         });
+}
+
+class test_scheduler : public scheduler
+{
+public:
+    virtual void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) override
+    {
+        schedule_count++;
+        std::thread([cb, delay]()
+            {
+                std::this_thread::sleep_for(delay);
+                cb();
+            }).detach();
+    }
+
+    std::atomic<int> schedule_count{ 0 };
+};
+
+TEST(config, can_replace_scheduler)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = hub_connection_builder::create(create_uri())
+        .with_logging(std::make_shared<memory_log_writer>(), trace_level::verbose)
+        .with_http_client_factory(create_test_http_client())
+        .with_websocket_factory([websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            })
+        .build();
+
+    signalr_client_config config{};
+    auto scheduler = std::make_shared<test_scheduler>();
+    config.set_scheduler(scheduler);
+    hub_connection.set_client_config(config);
+
+    // do some "work" to verify scheduler is used
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    auto invoke_mre = manual_reset_event<void>();
+    hub_connection.invoke("method", signalr::value(signalr::value_type::array), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
+        {
+            if (exception)
+            {
+                invoke_mre.set(exception);
+            }
+            else
+            {
+                invoke_mre.set();
+            }
+        });
+
+    websocket_client->receive_message("{ \"type\": 3, \"invocationId\": \"0\", \"result\": \"abc\" }\x1e");
+
+    invoke_mre.get();
+
+    hub_connection.stop([&mre](std::exception_ptr ex)
+        {
+            mre.set();
+        });
+
+    mre.get();
+
+    ASSERT_EQ(6, scheduler->schedule_count);
 }

@@ -12,13 +12,14 @@ test_http_client::test_http_client(std::function<http_response(const std::string
 
 void test_http_client::send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback)
 {
-    std::thread([this, url, request, callback]()
+    auto create_reponse = m_http_response;
+    m_scheduler->schedule([create_reponse, url, request, callback]()
         {
             http_response response;
             std::exception_ptr exception;
             try
             {
-                response = m_http_response(url, request);
+                response = create_reponse(url, request);
             }
             catch (...)
             {
@@ -26,5 +27,10 @@ void test_http_client::send(const std::string& url, const http_request& request,
             }
 
             callback(std::move(response), exception);
-        }).detach();
+        });
+}
+
+void test_http_client::set_scheduler(std::shared_ptr<scheduler> scheduler)
+{
+    m_scheduler = scheduler;
 }

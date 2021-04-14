@@ -6,12 +6,13 @@
 
 #include "signalrclient/websocket_client.h"
 #include "signalrclient/http_client.h"
+#include "signalrclient/signalr_client_config.h"
 #include <future>
 
 std::string remove_date_from_log_entry(const std::string &log_entry);
 bool has_log_entry(const std::string& log_entry, const std::vector<std::string>& logs);
 
-std::unique_ptr<signalr::http_client> create_test_http_client();
+std::function<std::shared_ptr<signalr::http_client>(const signalr::signalr_client_config&)> create_test_http_client();
 std::string create_uri();
 std::string create_uri(const std::string& query_string);
 std::vector<std::string> filter_vector(const std::vector<std::string>& source, const std::string& string);
