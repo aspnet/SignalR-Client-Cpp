@@ -19,10 +19,6 @@ else()
   set(EXTRA_FLAGS "-DSIGNALRCLIENT_EXPORTS")
 endif()
 
-if(USE_CPPRESTSDK)
-  string(APPEND EXTRA_FLAGS " -DUSE_CPPRESTSDK")
-endif()
-
 if(INJECT_HEADER_AFTER_STDAFX)
   string(APPEND EXTRA_FLAGS " -DINJECT_HEADER_AFTER_STDAFX=${INJECT_HEADER_AFTER_STDAFX}")
 endif()
@@ -44,10 +40,6 @@ if(NOT INCLUDE_JSONCPP)
 endif()
 
 include_directories (include)
-
-# TODO: We shouldn't use this, it makes the dll/lib export all symbols
-# We need this for testing, but we might just add all the files to the test project manually
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 if(USE_CPPRESTSDK)
   if(NOT WIN32)

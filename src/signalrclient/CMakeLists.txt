@@ -71,6 +71,8 @@ endif()
 if(NOT USE_CPPRESTSDK)
   target_link_libraries(microsoft-signalr)
 else()
+  set_target_properties(microsoft-signalr PROPERTIES COMPILE_FLAGS "-DUSE_CPPRESTSDK" )
+
   if(APPLE)
     target_link_libraries(microsoft-signalr
       PUBLIC ${CPPREST_LIB}
