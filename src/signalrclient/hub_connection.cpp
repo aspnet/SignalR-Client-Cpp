@@ -104,7 +104,7 @@ namespace signalr
         return m_pImpl->get_connection_id();
     }
 
-    void hub_connection::set_disconnected(const std::function<void()>& disconnected_callback)
+    void hub_connection::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected_callback)
     {
         if (!m_pImpl)
         {

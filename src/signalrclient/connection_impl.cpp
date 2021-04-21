@@ -35,7 +35,7 @@ namespace signalr
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
         std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr), m_skip_negotiation(skip_negotiation),
-        m_message_received([](const std::string&) noexcept {}), m_disconnected([]() noexcept {}), m_disconnect_cts(std::make_shared<cancellation_token>())
+        m_message_received([](const std::string&) noexcept {}), m_disconnected([](std::exception_ptr) noexcept {}), m_disconnect_cts(std::make_shared<cancellation_token>())
     {
         if (http_client_factory != nullptr)
         {
@@ -583,8 +583,9 @@ namespace signalr
             });
     }
 
-    void connection_impl::stop(std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept
     {
+        m_stop_error = exception;
         m_logger.log(trace_level::info, "stopping connection");
 
         shutdown(callback);
@@ -601,7 +602,7 @@ namespace signalr
             if (current_state == connection_state::disconnected)
             {
                 m_disconnect_cts->cancel();
-                callback(nullptr);
+                callback(m_stop_error);
                 return;
             }
 
@@ -654,6 +655,13 @@ namespace signalr
                 return;
             }
 
+            // if we have a m_stop_error, it takes precedence over the error from the transport
+            if (m_stop_error)
+            {
+                error = m_stop_error;
+                m_stop_error = nullptr;
+            }
+
             change_state(connection_state::disconnected);
             m_transport = nullptr;
         }
@@ -679,7 +687,7 @@ namespace signalr
 
         try
         {
-            m_disconnected();
+            m_disconnected(error);
         }
         catch (const std::exception & e)
         {
@@ -726,7 +734,7 @@ namespace signalr
         m_signalr_client_config = config;
     }
 
-    void connection_impl::set_disconnected(const std::function<void()>& disconnected)
+    void connection_impl::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected)
     {
         ensure_disconnected("cannot set the disconnected callback when the connection is not in the disconnected state. ");
         m_disconnected = disconnected;

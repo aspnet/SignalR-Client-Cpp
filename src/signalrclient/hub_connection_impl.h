@@ -43,7 +43,7 @@ namespace signalr
         std::string get_connection_id() const;
 
         void set_client_config(const signalr_client_config& config);
-        void set_disconnected(const std::function<void()>& disconnected);
+        void set_disconnected(const std::function<void(std::exception_ptr)>& disconnected);
 
     private:
         hub_connection_impl(const std::string& url, trace_level trace_level,
@@ -57,7 +57,7 @@ namespace signalr
         std::unordered_map<std::string, std::function<void(const signalr::value&)>, case_insensitive_hash, case_insensitive_equals> m_subscriptions;
         bool m_handshakeReceived;
         std::shared_ptr<completion_event> m_handshakeTask;
-        std::function<void()> m_disconnected;
+        std::function<void(std::exception_ptr)> m_disconnected;
         signalr_client_config m_signalr_client_config;
         std::unique_ptr<hub_protocol> m_protocol;
 

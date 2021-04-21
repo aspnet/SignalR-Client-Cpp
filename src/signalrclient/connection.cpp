@@ -32,7 +32,7 @@ namespace signalr
         m_pImpl->set_message_received(message_received_callback);
     }
 
-    void connection::set_disconnected(const std::function<void()>& disconnected_callback)
+    void connection::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected_callback)
     {
         m_pImpl->set_disconnected(disconnected_callback);
     }
@@ -42,9 +42,9 @@ namespace signalr
         m_pImpl->set_client_config(config);
     }
 
-    void connection::stop(std::function<void(std::exception_ptr)> callback) noexcept
+    void connection::stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept
     {
-        m_pImpl->stop(callback);
+        m_pImpl->stop(callback, exception);
     }
 
     connection_state connection::get_connection_state() const noexcept

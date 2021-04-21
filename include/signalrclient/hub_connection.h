@@ -41,7 +41,7 @@ namespace signalr
         SIGNALRCLIENT_API connection_state __cdecl get_connection_state() const;
         SIGNALRCLIENT_API std::string __cdecl get_connection_id() const;
 
-        SIGNALRCLIENT_API void __cdecl set_disconnected(const std::function<void __cdecl()>& disconnected_callback);
+        SIGNALRCLIENT_API void __cdecl set_disconnected(const std::function<void __cdecl(std::exception_ptr)>& disconnected_callback);
 
         SIGNALRCLIENT_API void __cdecl set_client_config(const signalr_client_config& config);
 
