@@ -328,7 +328,11 @@ TEST(start, propogates_exception_from_negotiate)
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = hub_connection_builder::create("http://fakeuri")
         .with_logging(std::make_shared<memory_log_writer>(), trace_level::none)
-        .with_http_client(http_client)
+        .with_http_client_factory([http_client](const signalr_client_config& config)
+            {
+                http_client->set_scheduler(config.get_scheduler());
+                return http_client;
+            })
         .with_websocket_factory([websocket_client](const signalr_client_config&) { return websocket_client; })
         .build();
 
