@@ -40,6 +40,7 @@ list (APPEND SOURCES
   ../../src/signalrclient/negotiate.cpp
   ../../src/signalrclient/signalr_client_config.cpp
   ../../src/signalrclient/signalr_value.cpp
+  ../../src/signalrclient/signalr_default_scheduler.cpp
   ../../src/signalrclient/trace_log_writer.cpp
   ../../src/signalrclient/transport.cpp
   ../../src/signalrclient/transport_factory.cpp
