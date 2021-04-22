@@ -58,18 +58,35 @@ list (APPEND SOURCES
   ../../third_party_code/cpprestsdk/uri_builder.cpp
 )
 
+if(USE_MSGPACK)
+  list (APPEND SOURCES
+    ../../src/signalrclient/binary_message_formatter.cpp
+    ../../src/signalrclient/binary_message_parser.cpp
+    ../../src/signalrclient/messagepack_hub_protocol.cpp
+  )
+endif()
+
 include_directories(
   ../../third_party_code/cpprestsdk
 )
 
 add_executable (signalrclienttests ${SOURCES})
 
+set(libraries)
+
+if(USE_MSGPACK)
+  list (APPEND libraries ${MSGPACK_LIB})
+endif() # USE_MSGPACK
+
 if(INCLUDE_JSONCPP)
   target_sources(signalrclienttests PRIVATE ../../third_party_code/jsoncpp/jsoncpp.cpp)
   target_include_directories(signalrclienttests PRIVATE ../../third_party_code/jsoncpp)
 else()
-  target_link_libraries(microsoft-signalr PUBLIC ${JSONCPP_LIB})
+  list (APPEND libraries ${JSONCPP_LIB})
 endif()
 
-target_link_libraries(signalrclienttests gtest)
+list (APPEND libraries gtest)
+
+target_link_libraries(signalrclienttests ${libraries})
+
 add_test(NAME signalrclienttests COMMAND signalrclienttests)
