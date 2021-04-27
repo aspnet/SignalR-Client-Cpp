@@ -47,7 +47,7 @@ stages:
       jobName: Mac_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
       - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
