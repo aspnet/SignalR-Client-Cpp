@@ -47,8 +47,6 @@ stages:
       jobName: Mac_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
-      - script: brew install gcc
-        displayName: Install gcc
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
