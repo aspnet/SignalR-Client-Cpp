@@ -25,11 +25,31 @@ set (SOURCES
   ../../third_party_code/cpprestsdk/uri_builder.cpp
 )
 
+file( GLOB PUBLICHEADERS LIST_DIRECTORIES FALSE CONFIGURE_DEPENDS
+    "../../include/signalrclient/*.h"
+)
+
+file( GLOB PRIVATEHEADERS LIST_DIRECTORIES FALSE CONFIGURE_DEPENDS
+    "*.h"
+)
+
+source_group( "Headers"
+   FILES
+        ${PUBLICHEADERS}
+)
+
+source_group( "Source"
+   FILES
+        ${PRIVATEHEADERS}
+        ${SOURCES}
+)
+
+
 include_directories(
   ../../third_party_code/cpprestsdk
 )
 
-add_library (microsoft-signalr ${SOURCES})
+add_library (microsoft-signalr ${SOURCES} ${PUBLICHEADERS} ${PRIVATEHEADERS})
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     if(WERROR)

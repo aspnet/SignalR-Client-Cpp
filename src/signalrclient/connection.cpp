@@ -42,6 +42,13 @@ namespace signalr
         m_pImpl->set_client_config(config);
     }
 
+#ifdef USE_CPPRESTSDK
+    void connection::set_client_config(const cpprest_client_config& config)
+    {
+        m_pImpl->set_client_config(config);
+    }
+#endif
+
     void connection::stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept
     {
         m_pImpl->stop(callback, exception);

@@ -16,5 +16,9 @@
 
 #endif
 
+#if _MSC_FULL_VER <= 191627045
+#pragma warning (disable: 4625 4626 5026 5027)
+#endif
+
 #include <functional>
 #include <unordered_map>

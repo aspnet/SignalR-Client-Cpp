@@ -12,9 +12,9 @@ namespace signalr
 {
     namespace
     {
-        static web::websockets::client::websocket_client_config create_client_config(const signalr_client_config& signalr_client_config) noexcept
+        static web::websockets::client::websocket_client_config create_client_config(const signalr_client_config& signalr_client_config, const cpprest_client_config& cpprest_client_config) noexcept
         {
-            auto websocket_client_config = signalr_client_config.get_websocket_client_config();
+            auto websocket_client_config = cpprest_client_config.get_websocket_client_config();
             auto& websocket_headers = websocket_client_config.headers();
             for (auto& header : signalr_client_config.get_http_headers())
             {
@@ -25,8 +25,8 @@ namespace signalr
         }
     }
 
-    default_websocket_client::default_websocket_client(const signalr_client_config& signalr_client_config) noexcept
-        : m_underlying_client(create_client_config(signalr_client_config))
+    default_websocket_client::default_websocket_client(const signalr_client_config& signalr_client_config, const cpprest_client_config& cpprest_client_config) noexcept
+        : m_underlying_client(create_client_config(signalr_client_config, cpprest_client_config))
     { }
 
     void default_websocket_client::start(const std::string& url, std::function<void(std::exception_ptr)> callback)

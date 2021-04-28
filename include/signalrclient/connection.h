@@ -38,6 +38,9 @@ namespace signalr
         SIGNALRCLIENT_API void __cdecl set_disconnected(const std::function<void __cdecl(std::exception_ptr)>& disconnected_callback);
 
         SIGNALRCLIENT_API void __cdecl set_client_config(const signalr_client_config& config);
+#ifdef USE_CPPRESTSDK
+        SIGNALRCLIENT_API void __cdecl set_client_config(const cpprest_client_config& config);
+#endif
 
         SIGNALRCLIENT_API void __cdecl stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept;
 
