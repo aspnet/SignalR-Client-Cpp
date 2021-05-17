@@ -45,6 +45,8 @@ namespace signalr
         SIGNALRCLIENT_API void __cdecl set_http_headers(const std::map<std::string, std::string>& http_headers);
         SIGNALRCLIENT_API void __cdecl set_scheduler(std::shared_ptr<scheduler> scheduler);
         SIGNALRCLIENT_API const std::shared_ptr<scheduler>& __cdecl get_scheduler() const noexcept;
+        SIGNALRCLIENT_API void set_handshake_timeout(std::chrono::seconds);
+        SIGNALRCLIENT_API std::chrono::seconds get_handshake_timeout(std::chrono::seconds) const noexcept;
 
     private:
 #ifdef USE_CPPRESTSDK
@@ -53,5 +55,6 @@ namespace signalr
 #endif
         std::map<std::string, std::string> m_http_headers;
         std::shared_ptr<scheduler> m_scheduler;
+        std::chrono::seconds m_handshake_timeout;
     };
 }

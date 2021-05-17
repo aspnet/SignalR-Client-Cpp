@@ -12,6 +12,7 @@
 #include "handshake_protocol.h"
 #include "signalrclient/websocket_client.h"
 #include "messagepack_hub_protocol.h"
+#include "signalr_default_scheduler.h"
 
 namespace signalr
 {
@@ -96,6 +97,16 @@ namespace signalr
         m_subscriptions.insert({event_name, handler});
     }
 
+    void timeout_handshake()
+    {
+
+    }
+
+    void complete_handshake()
+    {
+
+    }
+
     void hub_connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
     {
         if (m_connection->get_connection_state() != connection_state::disconnected)
@@ -139,9 +150,10 @@ namespace signalr
                     return;
                 }
 
-                auto handshake_request = handshake::write_handshake(connection->m_protocol);
+                std::shared_ptr<bool> handshake_callback_done = std::make_shared<bool>();
+                std::shared_ptr<std::mutex> handshake_request_lock = std::make_shared<std::mutex>();
 
-                connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(), [weak_connection, callback](std::exception_ptr exception)
+                auto callback_2 = [weak_connection, handshake_callback_done, handshake_request_lock, callback](std::exception_ptr exception)
                 {
                     auto connection = weak_connection.lock();
                     if (!connection)
@@ -151,25 +163,94 @@ namespace signalr
                         return;
                     }
 
-                    if (exception)
-                    {
-                        callback(exception);
-                        return;
-                    }
-
                     try
                     {
-                        connection->m_handshakeTask->get();
-                        callback(nullptr);
+                        if (exception == nullptr)
+                        {
+                            connection->m_handshakeTask->get();
+                            {
+                                std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                                *handshake_callback_done = true;
+                            }
+                            callback(nullptr);
+                        }
                     }
                     catch (...)
                     {
-                        auto handshake_exception = std::current_exception();
-                        connection->m_connection->stop([callback, handshake_exception](std::exception_ptr)
-                        {
-                            callback(handshake_exception);
-                        }, nullptr);
+                        exception = std::current_exception();
                     }
+
+                    if (exception != nullptr)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                            *handshake_callback_done = true;
+                        }
+
+                        connection->m_connection->stop([callback, exception](std::exception_ptr)
+                            {
+                                callback(exception);
+                            }, nullptr);
+                    }
+                };
+
+                std::shared_ptr<bool> handshake_request_done = std::make_shared<bool>();
+                auto handshake_request = handshake::write_handshake(connection->m_protocol);
+                auto handshake_task = connection->m_handshakeTask;
+                auto handshake_timeout = std::chrono::seconds(15);
+
+                timer(connection->m_signalr_client_config.get_scheduler(),
+                    [callback_2, handshake_task, handshake_timeout, handshake_request_done, handshake_callback_done, handshake_request_lock](std::chrono::milliseconds duration)
+                    {
+                        bool run_callback = false;
+                        {
+                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                            // no op after connection started successfully
+                            if (*handshake_callback_done == true)
+                            {
+                                return true;
+                            }
+
+                            if (duration < handshake_timeout)
+                            {
+                                return false;
+                            }
+
+                            // if the request isn't completed then no one is waiting on the handshake task
+                            // so we need to run the callback here instead of relying on connection.send completing
+                            if (*handshake_request_done == false)
+                            {
+                                *handshake_callback_done = true;
+                                run_callback = true;
+                            }
+                        }
+
+                        auto exception = std::make_exception_ptr(signalr_exception("timed out waiting for the server to respond to the handshake message"));
+                        // unblock connection.send
+                        handshake_task->set(exception);
+
+                        if (run_callback)
+                        {
+                            callback_2(exception);
+                        }
+                        return true;
+                    });
+
+                connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
+                    [callback_2, handshake_callback_done, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                        if (*handshake_callback_done == true)
+                        {
+                            // callback ran from timer or cancellation token, nothing to do here
+                            return;
+                        }
+
+                        *handshake_request_done = true;
+                    }
+
+                    callback_2(exception);
                 });
             });
     }
@@ -184,6 +265,8 @@ namespace signalr
         }
         else
         {
+            // TODO: cancel in-progress handshake
+
             {
                 std::lock_guard<std::mutex> lock(m_stop_callback_lock);
                 m_stop_callbacks.push_back(callback);
@@ -204,6 +287,8 @@ namespace signalr
                     {
                         return;
                     }
+
+                    assert(connection->get_connection_state() == connection_state::disconnected);
 
                     std::vector<std::function<void(std::exception_ptr)>> callbacks;
 

@@ -418,31 +418,34 @@ namespace signalr
                 }
             });
 
-        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration)
+        // auto negotiate_timeout = m_signalr_client_config.get_negotiate_timeout();
+        auto negotiate_timeout = std::chrono::seconds(5);
+
+        timer(m_scheduler, [connect_request_done, connect_request_lock, negotiate_timeout, callback](std::chrono::milliseconds duration) {
+            bool run_callback = false;
             {
-                bool run_callback = false;
-                {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+                std::lock_guard<std::mutex> lock(*connect_request_lock);
 
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
+                // no op after connection started successfully
+                if (*connect_request_done == false)
+                {
+                    if (duration < negotiate_timeout)
                     {
-                        if (duration < std::chrono::seconds(5))
-                        {
-                            return false;
-                        }
-                        *connect_request_done = true;
-                        run_callback = true;
+                        return false;
                     }
-                } // unlock
-
-                if (run_callback)
-                {
-                    callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
+                    *connect_request_done = true;
+                    run_callback = true;
                 }
+            } // unlock
 
-                return true;
-            });
+
+            if (run_callback)
+            {
+                callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
+            }
+
+            return true;
+        });
 
         connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {
@@ -619,11 +622,14 @@ namespace signalr
             // we request a cancellation of the ongoing start (if any) and wait until it is canceled
             m_disconnect_cts->cancel();
 
-            while (m_start_completed_event.wait(60000) != 0)
+            assert(m_start_completed_event.is_canceled());
+            m_start_completed_event.wait(5000);
+
+            /*while (m_start_completed_event.wait(60000) != 0)
             {
                 m_logger.log(trace_level::error,
                     "internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out");
-            }
+            }*/
 
             // at this point we are either in the connected or disconnected state. If we are in the disconnected state
             // we must break because the transport has already been nulled out.
