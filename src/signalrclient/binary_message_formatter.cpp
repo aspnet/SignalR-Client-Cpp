@@ -32,7 +32,6 @@ namespace signalr
                 length_num_bytes++;
             } while (length > 0 && length_num_bytes < 5);
 
-
             if (length_num_bytes == 5 && buffer[4] != 0x07)
             {
                 throw signalr_exception("messages over 2GB are not supported.");

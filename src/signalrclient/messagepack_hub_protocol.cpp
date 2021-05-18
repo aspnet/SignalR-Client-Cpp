@@ -61,9 +61,11 @@ namespace signalr
             }
             return signalr::value(std::move(map));
         }
-        case msgpack::type::object_type::NIL:
         case msgpack::type::object_type::BIN:
+            throw signalr_exception("messagepack type 'BIN' not supported");
         case msgpack::type::object_type::EXT:
+            throw signalr_exception("messagepack type 'EXT' not supported");
+        case msgpack::type::object_type::NIL:
         default:
             return signalr::value();
         }
@@ -212,8 +214,7 @@ namespace signalr
         {
             auto completion = static_cast<completion_message const*>(hub_message);
 
-            // TODO: "null" result is still a result, so need to fix this
-            size_t result_kind = completion->error.empty() ? (completion->result.is_null() ? 2U : 3U) : 1U;
+            size_t result_kind = completion->error.empty() ? (completion->has_result ? 3U : 2U) : 1U;
             packer.pack_array(4U + (result_kind != 2U ? 1U : 0U));
 
             packer.pack_int((int)message_type::completion);
@@ -227,10 +228,12 @@ namespace signalr
             packer.pack_int((int)result_kind);
             switch (result_kind)
             {
+            // error result
             case 1:
                 packer.pack_str((uint32_t)completion->error.length());
                 packer.pack_str_body(completion->error.data(), (uint32_t)completion->error.length());
                 break;
+            // non-void result
             case 3:
                 pack_messagepack(completion->result, packer);
                 break;
@@ -240,7 +243,8 @@ namespace signalr
         }
         case message_type::ping:
         {
-            //auto ping = static_cast<ping_message const*>(hub_message);
+            // If we need the ping this is how you get it
+            // auto ping = static_cast<ping_message const*>(hub_message);
 
             packer.pack_array(1);
             packer.pack_int((int)message_type::ping);
@@ -256,7 +260,6 @@ namespace signalr
         return str.str;
     }
 
-    // Can we avoid allocating? :(
     std::vector<std::unique_ptr<hub_message>> messagepack_hub_protocol::parse_messages(const std::string& message) const
     {
         std::vector<std::unique_ptr<hub_message>> vec;
@@ -346,8 +349,11 @@ namespace signalr
                 vec.emplace_back(std::unique_ptr<hub_message>(
                     new invocation_message(std::move(invocation_id), std::move(target), createValue(*msgpack_obj_index))));
 
-                // TODO: StreamIds
-                ++msgpack_obj_index;
+                if (num_elements_of_message > 5)
+                {
+                    // This is for the StreamIds when they are supported
+                    ++msgpack_obj_index;
+                }
 
                 break;
             }
@@ -410,7 +416,6 @@ namespace signalr
             // TODO: other message types
             default:
                 // Future protocol changes can add message types, old clients can ignore them
-                // TODO: null
                 break;
             }
 #pragma warning (pop)

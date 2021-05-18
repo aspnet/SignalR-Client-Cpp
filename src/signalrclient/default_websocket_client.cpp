@@ -99,22 +99,21 @@ namespace signalr
             {
                 try
                 {
-                    std::string msg;
                     auto response = task.get();
                     if (response.message_type() == web::websockets::client::websocket_message_type::binary_message)
                     {
                         concurrency::streams::producer_consumer_buffer<uint8_t> b;
                         response.body().read_to_end(b).get();
                         auto t = b.create_ostream().streambuf().in_avail();
-                        msg.resize(t, ' ');
+                        std::string msg(t, ' ');
                         b.create_istream().streambuf().getn(reinterpret_cast<uint8_t*>(&msg[0]), t);
+
+                        callback(msg, nullptr);
                     }
                     else
                     {
-                        msg = response.extract_string().get();
+                        callback(response.extract_string().get(), nullptr);
                     }
-
-                    callback(msg, nullptr);
                 }
                 catch (...)
                 {

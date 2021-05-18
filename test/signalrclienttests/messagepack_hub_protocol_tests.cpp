@@ -66,6 +66,10 @@ namespace
         // completion message with no result or error
         { string_from_bytes({0x06, 0x94, 0x03, 0x80, 0xA1, 0x31, 0x02}),
         std::shared_ptr<hub_message>(new completion_message("1", "", value(), false)) },
+
+        // completion message with null result
+        { string_from_bytes({0x07, 0x95, 0x03, 0x80, 0xA1, 0x31, 0x03, 0xC0}),
+        std::shared_ptr<hub_message>(new completion_message("1", "", value(), true)) },
     };
 }
 

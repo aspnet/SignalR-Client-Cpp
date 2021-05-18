@@ -10,6 +10,7 @@
 #include "signalrclient/hub_exception.h"
 #include "signalrclient/signalr_exception.h"
 #include "test_websocket_client.h"
+#include "hub_connection_impl.h"
 #include <atomic>
 
 using namespace signalr;
@@ -1624,4 +1625,76 @@ TEST(config, can_replace_scheduler)
     mre.get();
 
     ASSERT_EQ(6, scheduler->schedule_count);
+}
+
+class throw_hub_protocol : public hub_protocol
+{
+    virtual std::string write_message(const hub_message*) const override
+    {
+        throw signalr_exception("throw from write_message");
+    }
+    virtual std::vector<std::unique_ptr<hub_message>> parse_messages(const std::string&) const override
+    {
+        return std::vector<std::unique_ptr<hub_message>>();
+    }
+
+    virtual const std::string& name() const override
+    {
+        return m_protocol_name;
+    }
+
+    virtual int version() const override
+    {
+        return 1;
+    }
+
+    virtual signalr::transfer_format transfer_format() const override
+    {
+        return signalr::transfer_format::text;
+    }
+
+private:
+    std::string m_protocol_name = "json";
+};
+
+TEST(send, throws_if_protocol_fails)
+{
+    auto websocket_client = create_test_websocket_client();
+
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    auto hub_connection = hub_connection_impl::create("", std::move(std::unique_ptr<hub_protocol>(new throw_hub_protocol())), signalr::trace_level::info, writer, nullptr, [websocket_client](const signalr_client_config& config)
+        {
+            websocket_client->set_config(config);
+            return websocket_client;
+        }, true);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    auto invoke_mre = manual_reset_event<void>();
+    hub_connection->invoke("test", signalr::value(std::vector<signalr::value>()), [&invoke_mre](const signalr::value& value, std::exception_ptr exception)
+        {
+            invoke_mre.set(exception);
+        });
+
+    try
+    {
+        invoke_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("throw from write_message", ex.what());
+    }
+
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 }

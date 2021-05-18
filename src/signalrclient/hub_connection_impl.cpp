@@ -407,7 +407,6 @@ namespace signalr
         }
         catch (const std::exception& e)
         {
-            // TODO: Add test
             m_callback_manager.remove_callback(callback_id);
             if (m_logger.is_enabled(trace_level::warning))
             {

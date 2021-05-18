@@ -110,6 +110,7 @@ namespace signalr
         std::unique_ptr<hub_message> hub_message;
 
 #pragma warning (push)
+        // not all cases handled (we have a default so it's fine)
 #pragma warning (disable: 4061)
         switch ((message_type)found->second.as_double())
         {

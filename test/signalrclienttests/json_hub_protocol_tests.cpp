@@ -57,6 +57,10 @@ std::vector<std::pair<std::string, std::shared_ptr<hub_message>>> protocol_test_
     // completion message with no result or error
     { "{\"invocationId\":\"1\",\"type\":3}\x1e",
     std::shared_ptr<hub_message>(new completion_message("1", "", value(), false)) },
+
+    // completion message with null result
+    { "{\"invocationId\":\"1\",\"result\":null,\"type\":3}\x1e",
+    std::shared_ptr<hub_message>(new completion_message("1", "", value(), true)) },
 };
 
 TEST(json_hub_protocol, write_message)
