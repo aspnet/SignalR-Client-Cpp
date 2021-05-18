@@ -66,7 +66,7 @@ stages:
       - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
-      - bash: "sudo apt install valgrind"
+      - bash: "sudo apt-get update && sudo apt install valgrind"
         displayName: install valgrind
 
   - template: .azure/default-build.yml
@@ -75,7 +75,7 @@ stages:
       jobName: Linux_Build_Test
       useCppRestSDK: false
       beforeBuild:
-      - bash: "sudo apt install valgrind"
+      - bash: "sudo apt-get update && sudo apt install valgrind"
         displayName: install valgrind
 
   - template: .azure/default-build.yml
