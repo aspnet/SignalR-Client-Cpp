@@ -412,7 +412,7 @@ namespace signalr
             {
                 m_logger.log(trace_level::warning, std::string("failed to send invocation: ").append(e.what()));
             }
-            set_exception(std::make_exception_ptr(e));
+            set_exception(std::current_exception());
         }
     }
 
