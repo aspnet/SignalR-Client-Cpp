@@ -8,7 +8,10 @@
 #include "default_http_client.h"
 #include <thread>
 #pragma warning (push)
-#pragma warning (disable : 5204 4355 4625 4626 4868)
+#if _MSC_FULL_VER > 191627045
+#pragma warning (disable : 5204)
+#endif
+#pragma warning (disable : 4355 4625 4626 4868)
 #include <cpprest/http_client.h>
 #pragma warning (pop)
 

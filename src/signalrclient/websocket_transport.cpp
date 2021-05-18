@@ -9,7 +9,10 @@
 #include "base_uri.h"
 
 #pragma warning (push)
-#pragma warning (disable : 5204 4355)
+#if _MSC_FULL_VER > 191627045
+#pragma warning (disable : 5204)
+#endif
+#pragma warning (disable : 4355)
 #include <future>
 #pragma warning (pop)
 

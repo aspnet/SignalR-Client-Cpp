@@ -15,7 +15,10 @@ namespace signalr
         const int negotiate_version = 1;
 
         void negotiate(std::shared_ptr<http_client> client, const std::string& base_url,
-            const signalr_client_config& config,
+            const signalr_client_config& signalr_client_config, 
+#ifdef USE_CPPRESTSDK
+            const cpprest_client_config& cpprest_client_config,
+#endif
             std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept
         {
             std::string negotiate_url;
@@ -33,9 +36,9 @@ namespace signalr
             // TODO: signalr_client_config
             http_request request;
             request.method = http_method::POST;
-            request.headers = config.get_http_headers();
+            request.headers = signalr_client_config.get_http_headers();
 #ifdef USE_CPPRESTSDK
-            request.timeout = config.get_http_client_config().timeout();
+            request.timeout = cpprest_client_config.get_http_client_config().timeout();
 #endif
 
             client->send(negotiate_url, request, [callback](const http_response& http_response, std::exception_ptr exception)

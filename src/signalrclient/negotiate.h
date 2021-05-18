@@ -13,7 +13,10 @@ namespace signalr
     namespace negotiate
     {
         void negotiate(std::shared_ptr<http_client> client, const std::string& base_url,
-            const signalr_client_config& signalr_client_config,
+            const signalr_client_config& signalr_client_config, 
+#ifdef USE_CPPRESTSDK
+            const cpprest_client_config& cpprest_client_config,
+#endif
             std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept;
     }
 }

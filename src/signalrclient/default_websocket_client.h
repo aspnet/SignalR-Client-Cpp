@@ -7,7 +7,10 @@
 #ifdef USE_CPPRESTSDK
 
 #pragma warning (push)
-#pragma warning (disable : 5204 4355 4625 4626 4868)
+#if _MSC_FULL_VER > 191627045
+#pragma warning (disable : 5204)
+#endif
+#pragma warning (disable : 4355 4625 4626 4868)
 #include <cpprest/ws_client.h>
 #pragma warning (pop)
 #include "signalrclient/signalr_client_config.h"
@@ -18,7 +21,7 @@ namespace signalr
     class default_websocket_client : public websocket_client
     {
     public:
-        explicit default_websocket_client(const signalr_client_config& signalr_client_config = {}) noexcept;
+        explicit default_websocket_client(const signalr_client_config& signalr_client_config = {}, const cpprest_client_config& cpprest_client_config = {}) noexcept;
 
         void start(const std::string& url, std::function<void(std::exception_ptr)> callback);
         void stop(std::function<void(std::exception_ptr)> callback);

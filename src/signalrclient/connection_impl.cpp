@@ -216,7 +216,13 @@ namespace signalr
         }
 
         auto http_client = m_http_client_factory(m_signalr_client_config);
-        negotiate::negotiate(http_client, url, m_signalr_client_config,
+        negotiate::negotiate(
+            http_client, 
+            url, 
+            m_signalr_client_config,
+#ifdef USE_CPPRESTSDK
+            m_cpprest_client_config,
+#endif
             [callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
@@ -733,6 +739,14 @@ namespace signalr
         ensure_disconnected("cannot set client config when the connection is not in the disconnected state. ");
         m_signalr_client_config = config;
     }
+
+#ifdef USE_CPPRESTSDK
+    void connection_impl::set_client_config(const cpprest_client_config& config)
+    {
+        ensure_disconnected("cannot set client config when the connection is not in the disconnected state. ");
+        m_cpprest_client_config = config;
+    }
+#endif
 
     void connection_impl::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected)
     {

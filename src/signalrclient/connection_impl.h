@@ -48,6 +48,9 @@ namespace signalr
         void set_message_received(const std::function<void(std::string&&)>& message_received);
         void set_disconnected(const std::function<void(std::exception_ptr)>& disconnected);
         void set_client_config(const signalr_client_config& config);
+#ifdef USE_CPPRESTSDK
+        void set_client_config(const cpprest_client_config& config);
+#endif
 
     private:
         std::shared_ptr<scheduler> m_scheduler;
@@ -62,6 +65,9 @@ namespace signalr
         std::function<void(std::string&&)> m_message_received;
         std::function<void(std::exception_ptr)> m_disconnected;
         signalr_client_config m_signalr_client_config;
+#ifdef USE_CPPRESTSDK
+        cpprest_client_config m_cpprest_client_config;
+#endif
 
         std::shared_ptr<cancellation_token> m_disconnect_cts;
         std::mutex m_stop_lock;
