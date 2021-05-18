@@ -11,6 +11,7 @@
 #include "message_type.h"
 #include "handshake_protocol.h"
 #include "signalrclient/websocket_client.h"
+#include "messagepack_hub_protocol.h"
 
 namespace signalr
 {
@@ -22,11 +23,11 @@ namespace signalr
             const std::function<void(const std::exception_ptr e)>& set_exception);
     }
 
-    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url,
+    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol,
         trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
-        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url,
+        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, std::move(hub_protocol),
             trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation));
 
         connection->initialize();
@@ -34,13 +35,13 @@ namespace signalr
         return connection;
     }
 
-    hub_connection_impl::hub_connection_impl(const std::string& url, trace_level trace_level,
+    hub_connection_impl::hub_connection_impl(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, trace_level trace_level,
         const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_connection(connection_impl::create(url, trace_level, log_writer,
             http_client_factory, websocket_factory, skip_negotiation)), m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
-        m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::unique_ptr<json_hub_protocol>(new json_hub_protocol()))
+        m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
     {}
 
     void hub_connection_impl::initialize()
@@ -375,32 +376,44 @@ namespace signalr
     void hub_connection_impl::invoke_hub_method(const std::string& method_name, const signalr::value& arguments,
         const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept
     {
-        invocation_message invocation(callback_id, method_name, arguments);
-        auto message = m_protocol->write_message(&invocation);
-
-        // weak_ptr prevents a circular dependency leading to memory leak and other problems
-        auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
-
-        m_connection->send(message, m_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+        try
         {
-            if (exception)
-            {
-                auto hub_connection = weak_hub_connection.lock();
-                if (hub_connection)
+            invocation_message invocation(callback_id, method_name, arguments);
+            auto message = m_protocol->write_message(&invocation);
+
+            // weak_ptr prevents a circular dependency leading to memory leak and other problems
+            auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
+
+            m_connection->send(message, m_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
                 {
-                    hub_connection->m_callback_manager.remove_callback(callback_id);
-                }
-                set_exception(exception);
-            }
-            else
+                    if (exception)
+                    {
+                        auto hub_connection = weak_hub_connection.lock();
+                        if (hub_connection)
+                        {
+                            hub_connection->m_callback_manager.remove_callback(callback_id);
+                        }
+                        set_exception(exception);
+                    }
+                    else
+                    {
+                        if (callback_id.empty())
+                        {
+                            // complete nonBlocking call
+                            set_completion();
+                        }
+                    }
+                });
+        }
+        catch (const std::exception& e)
+        {
+            m_callback_manager.remove_callback(callback_id);
+            if (m_logger.is_enabled(trace_level::warning))
             {
-                if (callback_id.empty())
-                {
-                    // complete nonBlocking call
-                    set_completion();
-                }
+                m_logger.log(trace_level::warning, std::string("failed to send invocation: ").append(e.what()));
             }
-        });
+            set_exception(std::current_exception());
+        }
     }
 
     connection_state hub_connection_impl::get_connection_state() const noexcept

@@ -19,6 +19,7 @@ namespace signalr
     class websocket_client;
     class hub_connection_impl;
     class hub_connection_builder;
+    class hub_protocol;
 
     class hub_connection
     {
@@ -54,9 +55,11 @@ namespace signalr
     private:
         friend class hub_connection_builder;
 
-        explicit hub_connection(const std::string& url, trace_level trace_level = trace_level::info,
-            std::shared_ptr<log_writer> log_writer = nullptr, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory = nullptr,
-            std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory = nullptr, bool skip_negotiation = false);
+        explicit hub_connection(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol,
+            trace_level trace_level = trace_level::info, std::shared_ptr<log_writer> log_writer = nullptr,
+            std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory = nullptr,
+            std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory = nullptr,
+            bool skip_negotiation = false);
 
         std::shared_ptr<hub_connection_impl> m_pImpl;
     };

@@ -418,30 +418,31 @@ namespace signalr
                 }
             });
 
-        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration) {
-            bool run_callback = false;
+        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration)
             {
-                std::lock_guard<std::mutex> lock(*connect_request_lock);
-
-                // no op after connection started successfully
-                if (*connect_request_done == false)
+                bool run_callback = false;
                 {
-                    if (duration < std::chrono::seconds(5))
+                    std::lock_guard<std::mutex> lock(*connect_request_lock);
+
+                    // no op after connection started successfully
+                    if (*connect_request_done == false)
                     {
-                        return false;
+                        if (duration < std::chrono::seconds(5))
+                        {
+                            return false;
+                        }
+                        *connect_request_done = true;
+                        run_callback = true;
                     }
-                    *connect_request_done = true;
-                    run_callback = true;
+                } // unlock
+
+                if (run_callback)
+                {
+                    callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
                 }
-            } // unlock
 
-            if (run_callback)
-            {
-                callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
-            }
-
-            return true;
-        });
+                return true;
+            });
 
         connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
             {

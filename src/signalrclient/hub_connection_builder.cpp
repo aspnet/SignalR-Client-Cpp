@@ -5,6 +5,8 @@
 #include "stdafx.h"
 #include "signalrclient/hub_connection_builder.h"
 #include <stdexcept>
+#include "json_hub_protocol.h"
+#include "messagepack_hub_protocol.h"
 
 namespace signalr
 {
@@ -78,6 +80,14 @@ namespace signalr
         return *this;
     }
 
+#ifdef USE_MSGPACK
+    hub_connection_builder& hub_connection_builder::with_messagepack_hub_protocol()
+    {
+        m_use_messagepack = true;
+        return *this;
+    }
+#endif
+
     hub_connection hub_connection_builder::build()
     {
 #ifndef USE_CPPRESTSDK
@@ -92,6 +102,19 @@ namespace signalr
         }
 #endif
 
-        return hub_connection(m_url, m_log_level, m_logger, m_http_client_factory, m_websocket_factory, m_skip_negotiation);
+        std::unique_ptr<hub_protocol> hub_protocol;
+
+#ifdef USE_MSGPACK
+        if (m_use_messagepack)
+        {
+            hub_protocol = std::unique_ptr<messagepack_hub_protocol>(new messagepack_hub_protocol());
+        }
+        else
+#endif
+        {
+            hub_protocol = std::unique_ptr<json_hub_protocol>(new json_hub_protocol());
+        }
+
+        return hub_connection(m_url, std::move(hub_protocol), m_log_level, m_logger, m_http_client_factory, m_websocket_factory, m_skip_negotiation);
     }
 }

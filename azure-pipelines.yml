@@ -37,7 +37,7 @@ stages:
       - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows msgpack:x64-windows --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -50,7 +50,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk msgpack"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -63,7 +63,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread msgpack --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
@@ -75,6 +75,12 @@ stages:
       jobName: Linux_Build_Test
       useCppRestSDK: false
       beforeBuild:
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - bash: "./submodules/vcpkg/vcpkg install msgpack --vcpkg-root ./submodules/vcpkg"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
         displayName: install valgrind
 
@@ -84,6 +90,13 @@ stages:
       jobName: Windows_Build_Test
       useCppRestSDK: false
       cMakeRunArgs: '-A x64'
+      beforeBuild:
+      - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install msgpack:x64-windows --vcpkg-root ./submodules/vcpkg"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: vcpkg install dependencies
 
   - template: .azure/default-build.yml
     parameters:
@@ -93,6 +106,12 @@ stages:
       beforeBuild:
       - script: brew install gcc
         displayName: Install gcc
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - bash: "./submodules/vcpkg/vcpkg install msgpack"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: vcpkg install dependencies
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - stage: post_build

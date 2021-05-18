@@ -14,5 +14,9 @@ namespace signalr
         explicit signalr_exception(const std::string &what)
             : runtime_error(what)
         {}
+
+        explicit signalr_exception(const char* what)
+            : runtime_error(what)
+        {}
     };
 }
