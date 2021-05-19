@@ -438,7 +438,6 @@ namespace signalr
                 }
             } // unlock
 
-
             if (run_callback)
             {
                 callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
@@ -623,13 +622,12 @@ namespace signalr
             m_disconnect_cts->cancel();
 
             assert(m_start_completed_event.is_canceled());
-            m_start_completed_event.wait(5000);
-
-            /*while (m_start_completed_event.wait(60000) != 0)
+            if (m_start_completed_event.wait(5000) != 0)
             {
+                // this shouldn't happen, but in case it does we should log an error for reporting an issue
                 m_logger.log(trace_level::error,
-                    "internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out");
-            }*/
+                    "stopping the connection timed out waiting for the start operation to finish which should have already finished or timed out");
+            }
 
             // at this point we are either in the connected or disconnected state. If we are in the disconnected state
             // we must break because the transport has already been nulled out.

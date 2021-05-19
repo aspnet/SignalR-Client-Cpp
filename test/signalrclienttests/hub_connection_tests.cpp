@@ -234,6 +234,34 @@ TEST(start, start_fails_for_handshake_response_with_error)
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
+TEST(start, start_fails_if_non_handshake_message_received)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{\"arguments\":[1,\"Foo\"],\"target\":\"Target\",\"type\":1}\x1e");
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("Received unexpected message while waiting for the handshake response.", ex.what());
+    }
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+}
+
 TEST(start, start_fails_for_incomplete_handshake_response)
 {
     auto websocket_client = create_test_websocket_client();
@@ -314,6 +342,36 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
     catch (const std::exception& ex)
     {
         ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
+    }
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+}
+
+TEST(start, start_fails_if_handshake_times_out)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+    auto config = signalr_client_config();
+    config.set_handshake_timeout(std::chrono::seconds(1));
+    hub_connection.set_client_config(config);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("timed out waiting for the server to respond to the handshake message.", ex.what());
     }
 
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());

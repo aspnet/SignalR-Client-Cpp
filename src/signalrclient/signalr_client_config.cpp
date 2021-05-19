@@ -88,7 +88,7 @@ namespace signalr
         m_handshake_timeout = timeout;
     }
 
-    std::chrono::seconds signalr_client_config::get_handshake_timeout(std::chrono::seconds) const noexcept
+    std::chrono::seconds signalr_client_config::get_handshake_timeout() const noexcept
     {
         return m_handshake_timeout;
     }
