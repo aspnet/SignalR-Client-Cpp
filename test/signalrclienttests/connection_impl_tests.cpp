@@ -1000,7 +1000,7 @@ TEST(connection_impl_start, correct_connection_id_returned_with_negotiateVersion
     ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", connection->get_connection_id());
 }
 
-TEST(connection_impl_start, start_fails_if_negotiate_request_times_out)
+TEST(connection_impl_start, start_fails_if_connect_request_times_out)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
