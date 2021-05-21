@@ -141,11 +141,13 @@ namespace signalr
                     return;
                 }
 
-                std::shared_ptr<bool> handshake_callback_done = std::make_shared<bool>();
                 std::shared_ptr<std::mutex> handshake_request_lock = std::make_shared<std::mutex>();
+                std::shared_ptr<bool> handshake_request_done = std::make_shared<bool>();
 
-                auto handle_handshake = [weak_connection, handshake_callback_done, handshake_request_lock, callback](std::exception_ptr exception)
+                auto handle_handshake = [weak_connection, handshake_request_done, handshake_request_lock, callback](std::exception_ptr exception, bool fromSend)
                 {
+                    assert(fromSend ? *handshake_request_done : true);
+
                     auto connection = weak_connection.lock();
                     if (!connection)
                     {
@@ -154,16 +156,21 @@ namespace signalr
                         return;
                     }
 
+                    {
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                        // connection.send will be waiting on the handshake task which has been set by the caller already
+                        if (!fromSend && *handshake_request_done == true)
+                        {
+                            return;
+                        }
+                        *handshake_request_done = true;
+                    }
+
                     try
                     {
                         if (exception == nullptr)
                         {
                             connection->m_handshakeTask->get();
-                            {
-                                std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                                assert(*handshake_callback_done == false);
-                                *handshake_callback_done = true;
-                            }
                             callback(nullptr);
                         }
                     }
@@ -174,11 +181,6 @@ namespace signalr
 
                     if (exception != nullptr)
                     {
-                        {
-                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                            *handshake_callback_done = true;
-                        }
-
                         connection->m_connection->stop([callback, exception](std::exception_ptr)
                             {
                                 callback(exception);
@@ -186,46 +188,36 @@ namespace signalr
                     }
                 };
 
-                std::shared_ptr<bool> handshake_request_done = std::make_shared<bool>();
                 auto handshake_request = handshake::write_handshake(connection->m_protocol);
                 auto handshake_task = connection->m_handshakeTask;
                 auto handshake_timeout = connection->m_signalr_client_config.get_handshake_timeout();
 
-                connection->m_disconnect_cts->register_callback([handle_handshake, handshake_request_lock, handshake_callback_done, handshake_request_done]()
+                connection->m_disconnect_cts->register_callback([handle_handshake, handshake_request_lock, handshake_request_done]()
                     {
-                        bool run_callback = false;
                         {
                             std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                            // no op after connection started successfully
-                            if (*handshake_callback_done == true)
+                            // no op after connection.send returned, m_handshakeTask should be set before m_disconnect_cts is canceled
+                            if (*handshake_request_done == true)
                             {
                                 return;
                             }
-
-                            // if the request isn't completed then no one is waiting on the handshake task
-                            // so we need to run the callback here instead of relying on connection.send completing
-                            if (*handshake_request_done == false)
-                            {
-                                *handshake_callback_done = true;
-                                run_callback = true;
-                            }
                         }
 
-                        if (run_callback)
-                        {
-                            // m_handshakeTask should be set before m_disconnect_cts is canceled
-                            handle_handshake(nullptr);
-                        }
+                        // if the request isn't completed then no one is waiting on the handshake task
+                        // so we need to run the callback here instead of relying on connection.send completing
+                        // handshake_request_done is set in handle_handshake, don't set it here
+                        handle_handshake(nullptr, false);
                     });
 
                 timer(connection->m_signalr_client_config.get_scheduler(),
-                    [handle_handshake, handshake_task, handshake_timeout, handshake_request_done, handshake_callback_done, handshake_request_lock](std::chrono::milliseconds duration)
+                    [handle_handshake, handshake_task, handshake_timeout, handshake_request_lock](std::chrono::milliseconds duration)
                     {
-                        bool run_callback = false;
                         {
                             std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                            // no op after connection started successfully
-                            if (*handshake_callback_done == true)
+
+                            // if the task is set then connection.send is either already waiting on the handshake or has completed,
+                            // or stop has been called and will be handling the callback
+                            if (handshake_task->is_set())
                             {
                                 return true;
                             }
@@ -234,45 +226,33 @@ namespace signalr
                             {
                                 return false;
                             }
-
-                            // if the request isn't completed then no one is waiting on the handshake task
-                            // so we need to run the callback here instead of relying on connection.send completing
-                            if (*handshake_request_done == false)
-                            {
-                                *handshake_callback_done = true;
-                                run_callback = true;
-                            }
                         }
 
                         auto exception = std::make_exception_ptr(signalr_exception("timed out waiting for the server to respond to the handshake message."));
-                        // unblock connection.send
+                        // unblocks connection.send if it's waiting on the task
                         handshake_task->set(exception);
 
-                        if (run_callback)
-                        {
-                            handle_handshake(exception);
-                        }
+                        handle_handshake(exception, false);
                         return true;
                     });
 
                 connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
-                    [handle_handshake, handshake_callback_done, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
+                    [handle_handshake, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
                 {
                     {
                         std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                        if (*handshake_callback_done == true)
+                        if (*handshake_request_done == true)
                         {
                             // callback ran from timer or cancellation token, nothing to do here
                             return;
                         }
 
-                        assert(*handshake_request_done == false);
                         // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
                         // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
                         *handshake_request_done = true;
                     }
 
-                    handle_handshake(exception);
+                    handle_handshake(exception, true);
                 });
             });
     }
