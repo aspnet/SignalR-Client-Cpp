@@ -418,7 +418,10 @@ namespace signalr
                 }
             });
 
-        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration)
+        auto negotiate_timeout = std::chrono::seconds(5);
+
+        timer(m_scheduler,
+            [connect_request_done, connect_request_lock, negotiate_timeout, callback](std::chrono::milliseconds duration)
             {
                 bool run_callback = false;
                 {
@@ -427,7 +430,7 @@ namespace signalr
                     // no op after connection started successfully
                     if (*connect_request_done == false)
                     {
-                        if (duration < std::chrono::seconds(5))
+                        if (duration < negotiate_timeout)
                         {
                             return false;
                         }
@@ -619,10 +622,12 @@ namespace signalr
             // we request a cancellation of the ongoing start (if any) and wait until it is canceled
             m_disconnect_cts->cancel();
 
-            while (m_start_completed_event.wait(60000) != 0)
+            assert(m_start_completed_event.is_canceled());
+            if (m_start_completed_event.wait(5000) != 0)
             {
+                // this shouldn't happen, but in case it does we should log an error for reporting an issue
                 m_logger.log(trace_level::error,
-                    "internal error - stopping the connection is still waiting for the start operation to finish which should have already finished or timed out");
+                    "stopping the connection timed out waiting for the start operation to finish which should have already finished or timed out");
             }
 
             // at this point we are either in the connected or disconnected state. If we are in the disconnected state

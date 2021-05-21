@@ -43,6 +43,7 @@ namespace signalr
 #endif
 
     signalr_client_config::signalr_client_config()
+        : m_handshake_timeout(std::chrono::seconds(15))
     {
         m_scheduler = std::make_shared<signalr_default_scheduler>();
     }
@@ -75,5 +76,20 @@ namespace signalr
     const std::shared_ptr<scheduler>& signalr_client_config::get_scheduler() const noexcept
     {
         return m_scheduler;
+    }
+
+    void signalr_client_config::set_handshake_timeout(std::chrono::milliseconds timeout)
+    {
+        if (timeout <= std::chrono::seconds(0))
+        {
+            throw std::runtime_error("timeout must be greater than 0.");
+        }
+
+        m_handshake_timeout = timeout;
+    }
+
+    std::chrono::milliseconds signalr_client_config::get_handshake_timeout() const noexcept
+    {
+        return m_handshake_timeout;
     }
 }

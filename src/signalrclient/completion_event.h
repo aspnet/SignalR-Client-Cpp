@@ -50,6 +50,11 @@ namespace signalr
             m_future.get();
         }
 
+        bool is_set() const
+        {
+            return m_isSet;
+        }
+
     private:
         completion_event_impl() : m_isSet(false)
         {
@@ -90,6 +95,11 @@ namespace signalr
         void get() const
         {
             m_impl->get();
+        }
+
+        bool is_set() const
+        {
+            return m_impl->is_set();
         }
     private:
         std::shared_ptr<completion_event_impl> m_impl;
