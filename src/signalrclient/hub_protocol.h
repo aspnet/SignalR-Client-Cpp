@@ -48,16 +48,17 @@ namespace signalr
 
     struct completion_message : hub_invocation_message
     {
-        completion_message(const std::string& invocation_id, const std::string& error, const signalr::value& result)
-            : hub_invocation_message(invocation_id, signalr::message_type::completion), error(error), result(result)
+        completion_message(const std::string& invocation_id, const std::string& error, const signalr::value& result, bool has_result)
+            : hub_invocation_message(invocation_id, signalr::message_type::completion), error(error), result(result), has_result(has_result)
         { }
 
-        completion_message(std::string&& invocation_id, std::string&& error, signalr::value&& result)
-            : hub_invocation_message(invocation_id, signalr::message_type::completion), error(error), result(result)
+        completion_message(std::string&& invocation_id, std::string&& error, signalr::value&& result, bool has_result)
+            : hub_invocation_message(invocation_id, signalr::message_type::completion), error(error), result(result), has_result(has_result)
         { }
 
         std::string error;
         signalr::value result;
+        bool has_result;
     };
 
     struct ping_message : hub_message

@@ -4,16 +4,14 @@
 
 #pragma once
 
+#ifdef USE_MSGPACK
+
 namespace signalr
 {
-    enum class message_type
+    namespace binary_message_parser
     {
-        invocation = 1,
-        stream_item,
-        completion,
-        stream_invocation,
-        cancel_invocation,
-        ping,
-        close,
-    };
+        bool try_parse_message(const unsigned char* message, size_t length, size_t* length_prefix_length, size_t* length_of_message);
+    }
 }
+
+#endif

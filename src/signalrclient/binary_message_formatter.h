@@ -4,16 +4,16 @@
 
 #pragma once
 
+#ifdef USE_MSGPACK
+
+#include <string>
+
 namespace signalr
 {
-    enum class message_type
+    namespace binary_message_formatter
     {
-        invocation = 1,
-        stream_item,
-        completion,
-        stream_invocation,
-        cancel_invocation,
-        ping,
-        close,
-    };
+        void write_length_prefix(std::string &);
+    }
 }
+
+#endif

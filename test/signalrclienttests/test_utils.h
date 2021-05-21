@@ -8,6 +8,8 @@
 #include "signalrclient/http_client.h"
 #include "signalrclient/signalr_client_config.h"
 #include <future>
+#include <signalrclient/signalr_value.h>
+#include <hub_protocol.h>
 
 std::string remove_date_from_log_entry(const std::string &log_entry);
 bool has_log_entry(const std::string& log_entry, const std::vector<std::string>& logs);
@@ -116,3 +118,6 @@ public:
 private:
     std::string m_message;
 };
+
+void assert_hub_message_equality(signalr::hub_message* expected, signalr::hub_message* actual);
+void assert_signalr_value_equality(const signalr::value& expected, const signalr::value& actual);

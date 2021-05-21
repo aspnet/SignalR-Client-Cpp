@@ -20,7 +20,8 @@ Below are instructions to build on different OS's. You can also use the followin
 | --- | --- | --- |
 | -DBUILD_SAMPLES | Build the included sample project | false |
 | -DBUILD_TESTING | Builds the test project | true |
-| -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) | false |
+| -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) (requires cpprestsdk to be installed) | false |
+| -DUSE_MSGPACK | Adds an option to use the MessagePack Hub Protocol (requires msgpack-c to be installed) | false |
 | -DINCLUDE_JSONCPP | Builds jsoncpp source code as part of the output binary | true |
 | -DWERROR | Enables warnings as errors | true |
 | -DWALL | Enables all warnings | true |

@@ -19,6 +19,10 @@ else()
   set(EXTRA_FLAGS "-DSIGNALRCLIENT_EXPORTS")
 endif()
 
+if(USE_MSGPACK)
+  string(APPEND EXTRA_FLAGS " -DUSE_MSGPACK")
+endif()
+
 if(INJECT_HEADER_AFTER_STDAFX)
   string(APPEND EXTRA_FLAGS " -DINJECT_HEADER_AFTER_STDAFX=${INJECT_HEADER_AFTER_STDAFX}")
 endif()
@@ -37,6 +41,11 @@ if(NOT INCLUDE_JSONCPP)
   # was built as a shared or static library. We make this override-able
   # so we can be resilient to the changes between versions.
   set(JSONCPP_LIB "jsoncpp_lib" CACHE STRING "jsoncpp target name")
+endif()
+
+if(USE_MSGPACK)
+  find_package(msgpack CONFIG REQUIRED)
+  set(MSGPACK_LIB "msgpackc-cxx")
 endif()
 
 include_directories (include)

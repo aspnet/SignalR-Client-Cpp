@@ -44,6 +44,13 @@ source_group( "Source"
         ${SOURCES}
 )
 
+if(USE_MSGPACK)
+  list (APPEND SOURCES
+    binary_message_formatter.cpp
+    binary_message_parser.cpp
+    messagepack_hub_protocol.cpp
+  )
+endif()
 
 include_directories(
   ../../third_party_code/cpprestsdk
@@ -109,6 +116,12 @@ else()
     )
   endif()
 endif() # USE_CPPRESTSDK
+
+if(USE_MSGPACK)
+  target_link_libraries(microsoft-signalr
+    PRIVATE ${MSGPACK_LIB}
+  )
+endif() # USE_MSGPACK
 
 include(GNUInstallDirs)
 
