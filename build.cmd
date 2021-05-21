@@ -21,7 +21,7 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
 call :build_all x64 Debug
 if %errorlevel% neq 0 exit /b %errorlevel%
-call :build_all x64 Release
+call :build_all x64 RelWithDebInfo Release
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 exit /b 0
@@ -31,11 +31,15 @@ REM ============================================================================
 :build_all
 echo Building %1\%2:
 
-call :build_project %build%\microsoft-signalr.sln microsoft-signalr %1 %2
+set build_cfg=%2
+set target_cfg=%2
+if [%3] NEQ [] set target_cfg=%3
+
+call :build_project %build%\microsoft-signalr.sln microsoft-signalr %1 %build_cfg%
 if %errorlevel% neq 0 exit /b %errorlevel%
-robocopy /njh /njs %build%\bin\%2 %output_lib%\%1\%2 *.lib
+robocopy /njh /njs %build%\bin\%build_cfg% %output_lib%\%1\%target_cfg% *.lib
 if %errorlevel% geq 8 exit /b %errorlevel%
-robocopy /njh /njs %build%\bin\%2 %output_dll%\%1\%2 *.dll *.pdb
+robocopy /njh /njs %build%\bin\%build_cfg% %output_dll%\%1\%target_cfg% *.dll *.pdb
 if %errorlevel% geq 8 exit /b %errorlevel%
 
 exit /b 0
