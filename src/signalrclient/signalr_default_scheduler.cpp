@@ -79,6 +79,10 @@ namespace signalr
             m_internals->m_callback = cb;
             m_internals->m_busy = true;
         } // unlock
+    }
+
+    void thread::start()
+    {
         m_internals->m_callback_cv.notify_one();
     }
 
@@ -157,7 +161,12 @@ namespace signalr
                             {
                                 if (thread.is_free())
                                 {
-                                    thread.add((*it).first);
+                                    {
+                                        thread.add((*it).first);
+                                        (*it).first = nullptr;
+                                        // destruct callback in case the destructor can schedule a job which would throw on recursive lock acquisition
+                                    }
+                                    thread.start();
                                     found = true;
                                     break;
                                 }

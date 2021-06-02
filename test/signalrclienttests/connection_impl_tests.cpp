@@ -1000,50 +1000,6 @@ TEST(connection_impl_start, correct_connection_id_returned_with_negotiateVersion
     ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", connection->get_connection_id());
 }
 
-TEST(connection_impl_start, start_fails_if_connect_request_times_out)
-{
-    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
-
-    auto http_client = create_test_http_client();
-
-    auto connect_mre = manual_reset_event<void>();
-    auto wait_connect_mre = manual_reset_event<void>();
-    auto websocket_client = std::make_shared<test_websocket_client>();
-    websocket_client->set_connect_function([&connect_mre, &wait_connect_mre](const std::string&, std::function<void(std::exception_ptr)> callback)
-        {
-            connect_mre.get();
-            callback(nullptr);
-            wait_connect_mre.set();
-        });
-
-    auto connection =
-        connection_impl::create(create_uri(), trace_level::info, writer,
-            std::move(http_client), [websocket_client](const signalr_client_config& config)
-            {
-                websocket_client->set_config(config);
-                return websocket_client;
-            });
-
-    auto mre = manual_reset_event<void>();
-    connection->start([&mre](std::exception_ptr exception)
-        {
-            mre.set(exception);
-        });
-
-    try
-    {
-        mre.get();
-        ASSERT_TRUE(false); // exception not thrown
-    }
-    catch (const signalr_exception & e)
-    {
-        ASSERT_STREQ("transport timed out when trying to connect", e.what());
-    }
-
-    connect_mre.set();
-    wait_connect_mre.get();
-}
-
 TEST(connection_impl_start, negotiate_can_be_skipped)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
@@ -1516,7 +1472,7 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
     // The connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail
-    for (int wait_time_ms = 5; wait_time_ms < 100 && memory_writer->get_log_entries().size() < 16; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 1000 && memory_writer->get_log_entries().size() < 16; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
@@ -1644,11 +1600,11 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> disconnected\n", log_entries)) << dump_vector(log_entries);
 }
 
-// Test races with start and stop
-TEST(connection_impl_stop, DISABLED_ongoing_start_request_canceled_if_connection_stopped_before_init_message_received)
+TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_before_init_message_received)
 {
     auto stop_mre = manual_reset_event<void>();
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&stop_mre](const std::string& url, http_request)
+    auto done_mre = manual_reset_event<void>();
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&stop_mre, &done_mre](const std::string& url, http_request)
         {
             stop_mre.get();
 
@@ -1657,6 +1613,8 @@ TEST(connection_impl_stop, DISABLED_ongoing_start_request_canceled_if_connection
                 ? "{ \"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
                 "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
                 : "";
+
+            done_mre.set();
 
             return http_response{ 200, response_body };
         }));
@@ -1696,11 +1654,14 @@ TEST(connection_impl_stop, DISABLED_ongoing_start_request_canceled_if_connection
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_EQ(5U, log_entries.size()) << dump_vector(log_entries);
-    ASSERT_EQ("[state change] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
-    ASSERT_EQ("[info        ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
-    ASSERT_EQ("[info        ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
-    ASSERT_EQ("[info        ] starting the connection has been canceled.\n", remove_date_from_log_entry(log_entries[3]));
-    ASSERT_EQ("[state change] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[4]));
+    ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
+    ASSERT_EQ("[info     ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
+    ASSERT_EQ("[info     ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
+    ASSERT_EQ("[info     ] starting the connection has been canceled.\n", remove_date_from_log_entry(log_entries[3]));
+    ASSERT_EQ("[verbose  ] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[4]));
+
+    // avoid AV from accessing stop_mre in callback
+    done_mre.get();
 }
 
 TEST(connection_impl_stop, stop_invokes_disconnected_callback)

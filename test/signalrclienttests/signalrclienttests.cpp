@@ -4,6 +4,16 @@
 
 #include "stdafx.h"
 #include <iostream>
+#include <csignal>
+#include <signal.h>
+
+// helps with debugging an abort() during tests
+void signal_handler(int signal)
+{
+#if defined(_WIN32)
+    __debugbreak();
+#endif
+}
 
 #if defined(_WIN32)
 int wmain(int argc, wchar_t* argv[])
@@ -11,6 +21,8 @@ int wmain(int argc, wchar_t* argv[])
 int main(int argc, char* argv[])
 #endif
 {
+    std::signal(SIGABRT, signal_handler);
+
 #if defined(_WIN32)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
