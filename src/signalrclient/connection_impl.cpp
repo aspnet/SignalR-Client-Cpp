@@ -327,7 +327,7 @@ namespace signalr
                     return;
                 }
 
-                connection->start_transport(url, transport_started);
+                connection->start_transport(url, callback);
             });
     }
 
