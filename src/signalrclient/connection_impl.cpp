@@ -334,9 +334,6 @@ namespace signalr
     {
         auto connection = shared_from_this();
 
-        std::shared_ptr<bool> connect_request_done = std::make_shared<bool>();
-        std::shared_ptr<std::mutex> connect_request_lock = std::make_shared<std::mutex>();
-
         auto weak_connection = std::weak_ptr<connection_impl>(connection);
         const auto disconnect_cts = m_disconnect_cts;
         const auto& logger = m_logger;
@@ -359,7 +356,7 @@ namespace signalr
                 connection->stop_connection(exception);
             });
 
-        transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
+        transport->on_receive([disconnect_cts, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
             {
                 if (exception == nullptr)
                 {
@@ -405,48 +402,20 @@ namespace signalr
                             return;
                         }
 
-                        bool run_callback = false;
-                        {
-                            std::lock_guard<std::mutex> lock(*connect_request_lock);
-                            // no op after connection started successfully
-                            if (*connect_request_done == false)
-                            {
-                                *connect_request_done = true;
-                                run_callback = true;
-                            }
-                        }
-
-                        if (run_callback)
-                        {
-                            callback({}, exception);
-                        }
+                        callback({}, exception);
                     }
                 }
             });
 
-        connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
+        connection->send_connect_request(transport, url, [callback, transport](std::exception_ptr exception)
             {
-                bool run_callback = false;
+                if (exception == nullptr)
                 {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
-                    {
-                        *connect_request_done = true;
-                        run_callback = true;
-                    }
+                    callback(transport, nullptr);
                 }
-
-                if (run_callback)
+                else
                 {
-                    if (exception == nullptr)
-                    {
-                        callback(transport, nullptr);
-                    }
-                    else
-                    {
-                        callback({}, exception);
-                    }
+                    callback({}, exception);
                 }
             });
     }
