@@ -8,6 +8,7 @@
 #include <functional>
 #include <map>
 #include <chrono>
+#include <exception>
 
 namespace signalr
 {
