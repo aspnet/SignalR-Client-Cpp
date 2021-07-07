@@ -11,6 +11,7 @@
 #include <msgpack.hpp>
 #include "binary_message_parser.h"
 #include "binary_message_formatter.h"
+#include <cmath>
 
 namespace signalr
 {
