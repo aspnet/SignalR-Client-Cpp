@@ -24,7 +24,7 @@ namespace signalr
     class hub_connection
     {
     public:
-        typedef std::function<void __cdecl (const signalr::value&)> method_invoked_handler;
+        typedef std::function<void __cdecl (const std::vector<signalr::value>&)> method_invoked_handler;
 
         SIGNALRCLIENT_API ~hub_connection();
 
@@ -48,9 +48,9 @@ namespace signalr
 
         SIGNALRCLIENT_API void __cdecl on(const std::string& event_name, const method_invoked_handler& handler);
 
-        SIGNALRCLIENT_API void invoke(const std::string& method_name, const signalr::value& arguments = signalr::value(), std::function<void(const signalr::value&, std::exception_ptr)> callback = [](const signalr::value&, std::exception_ptr) {}) noexcept;
+        SIGNALRCLIENT_API void invoke(const std::string& method_name, const std::vector<signalr::value>& arguments = std::vector<signalr::value>(), std::function<void(const signalr::value&, std::exception_ptr)> callback = [](const signalr::value&, std::exception_ptr) {}) noexcept;
 
-        SIGNALRCLIENT_API void send(const std::string& method_name, const signalr::value& arguments = signalr::value(), std::function<void(std::exception_ptr)> callback = [](std::exception_ptr) {}) noexcept;
+        SIGNALRCLIENT_API void send(const std::string& method_name, const std::vector<signalr::value>& arguments = std::vector<signalr::value>(), std::function<void(std::exception_ptr)> callback = [](std::exception_ptr) {}) noexcept;
 
     private:
         friend class hub_connection_builder;
