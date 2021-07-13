@@ -34,7 +34,7 @@ std::function<std::shared_ptr<signalr::http_client>(const signalr::signalr_clien
 {
     return [](const signalr_client_config& config)
     {
-        auto client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request request)
+        auto client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request request, cancellation_token)
             {
                 auto response_body =
                     url.find_first_of("/negotiate") != 0

@@ -1,5 +1,6 @@
 set (SOURCES
   callback_manager.cpp
+  cancellation_token.cpp
   connection.cpp
   connection_impl.cpp
   default_http_client.cpp

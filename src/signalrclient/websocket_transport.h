@@ -45,9 +45,9 @@ namespace signalr
         std::function<void(std::exception_ptr)> m_close_callback;
         signalr_client_config m_signalr_client_config;
 
-        std::shared_ptr<cancellation_token> m_receive_loop_cts;
+        std::shared_ptr<cancellation_token_source> m_receive_loop_cts;
 
-        void receive_loop(std::shared_ptr<cancellation_token> cts);
+        void receive_loop(std::shared_ptr<cancellation_token_source> cts);
 
         std::shared_ptr<websocket_client> safe_get_websocket_client();
     };
