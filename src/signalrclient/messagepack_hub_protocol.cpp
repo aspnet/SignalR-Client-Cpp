@@ -210,8 +210,8 @@ namespace signalr
             packer.pack_str((uint32_t)invocation->target.length());
             packer.pack_str_body(invocation->target.data(), (uint32_t)invocation->target.length());
 
-            packer.pack_array((uint32_t)invocation->arguments.as_array().size());
-            for (auto& val : invocation->arguments.as_array())
+            packer.pack_array((uint32_t)invocation->arguments.size());
+            for (auto& val : invocation->arguments)
             {
                 pack_messagepack(val, packer);
             }
@@ -357,8 +357,17 @@ namespace signalr
                     throw signalr_exception("reading 'arguments' as array failed");
                 }
 
+                std::vector<signalr::value> args;
+                auto size = msgpack_obj_index->via.array.size;
+                auto arg_array_index = msgpack_obj_index->via.array.ptr;
+                for (uint32_t i = 0; i < size; ++i)
+                {
+                    args.emplace_back(createValue(*arg_array_index));
+                    ++arg_array_index;
+                }
+
                 vec.emplace_back(std::unique_ptr<hub_message>(
-                    new invocation_message(std::move(invocation_id), std::move(target), createValue(*msgpack_obj_index))));
+                    new invocation_message(std::move(invocation_id), std::move(target), std::move(args))));
 
                 if (num_elements_of_message > 5)
                 {
