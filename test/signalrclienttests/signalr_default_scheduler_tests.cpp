@@ -36,7 +36,7 @@ TEST(scheduler, callback_can_be_called_when_delayed_callback_called_first)
         {
             first_callback = true;
             timer_mre.set();
-        }, std::chrono::milliseconds(100));
+        }, std::chrono::milliseconds(1000));
 
     scheduler.schedule([&mre]()
         {

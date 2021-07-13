@@ -1624,7 +1624,7 @@ TEST(config, can_replace_scheduler)
 
     mre.get();
 
-    ASSERT_EQ(6, scheduler->schedule_count);
+    ASSERT_EQ(5, scheduler->schedule_count);
 }
 
 class throw_hub_protocol : public hub_protocol

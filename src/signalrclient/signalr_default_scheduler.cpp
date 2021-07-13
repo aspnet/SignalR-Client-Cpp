@@ -79,6 +79,10 @@ namespace signalr
             m_internals->m_callback = cb;
             m_internals->m_busy = true;
         } // unlock
+    }
+
+    void thread::start()
+    {
         m_internals->m_callback_cv.notify_one();
     }
 
@@ -148,16 +152,21 @@ namespace signalr
                     // find the first callback that is ready to run, find a thread to run it and remove it from the list
                     auto curr_time = std::chrono::steady_clock::now();
                     auto it = callbacks.begin();
-                    auto found = false;
                     while (it != callbacks.end())
                     {
+                        auto found = false;
                         if (it->second <= curr_time)
                         {
                             for (auto& thread : threads)
                             {
                                 if (thread.is_free())
                                 {
-                                    thread.add((*it).first);
+                                    {
+                                        thread.add((*it).first);
+                                        (*it).first = nullptr;
+                                        // destruct callback in case the destructor can schedule a job which would throw on recursive lock acquisition
+                                    }
+                                    thread.start();
                                     found = true;
                                     break;
                                 }
