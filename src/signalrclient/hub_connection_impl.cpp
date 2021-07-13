@@ -108,7 +108,7 @@ namespace signalr
 
         m_connection->set_client_config(m_signalr_client_config);
         m_handshakeTask = std::make_shared<completion_event>();
-        m_disconnect_cts = std::make_shared<cancellation_token>();
+        m_disconnect_cts = std::make_shared<cancellation_token_source>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
         m_connection->start([weak_connection, callback](std::exception_ptr start_exception)

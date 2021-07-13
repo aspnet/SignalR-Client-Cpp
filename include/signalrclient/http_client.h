@@ -8,6 +8,7 @@
 #include <functional>
 #include <map>
 #include <chrono>
+#include "cancellation_token.h"
 #include <exception>
 
 namespace signalr
@@ -62,7 +63,8 @@ namespace signalr
     class http_client
     {
     public:
-        virtual void send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback) = 0;
+        virtual void send(const std::string& url, http_request& request,
+            std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token) = 0;
 
         virtual ~http_client() {}
     };

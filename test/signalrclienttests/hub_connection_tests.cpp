@@ -107,7 +107,7 @@ TEST(url, negotiate_appended_to_url)
     for (const auto& base_url : base_urls)
     {
         std::string requested_url;
-        auto http_client = std::make_shared<test_http_client>([&requested_url](const std::string& url, http_request)
+        auto http_client = std::make_shared<test_http_client>([&requested_url](const std::string& url, http_request, cancellation_token)
         {
             requested_url = url;
             return http_response{ 404, "" };
@@ -430,7 +430,7 @@ TEST(start, start_fails_if_handshake_times_out)
 
 TEST(start, propogates_exception_from_negotiate)
 {
-    auto http_client = std::make_shared<test_http_client>([](const std::string& url, http_request) -> http_response
+    auto http_client = std::make_shared<test_http_client>([](const std::string& url, http_request, cancellation_token) -> http_response
         {
             throw custom_exception();
         });
@@ -825,7 +825,7 @@ TEST(hub_invocation, hub_connection_invokes_users_code_on_hub_invocations)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto payload = std::make_shared<signalr::value>();
-    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    auto on_broadcast_event = std::make_shared<cancellation_token_source>();
     hub_connection.on("broadCAST", [on_broadcast_event, payload](const signalr::value& message)
     {
         *payload = message;
@@ -859,7 +859,7 @@ TEST(hub_invocation, hub_connection_can_receive_handshake_and_message_in_same_pa
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto payload = std::make_shared<signalr::value>();
-    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    auto on_broadcast_event = std::make_shared<cancellation_token_source>();
     hub_connection.on("broadCAST", [on_broadcast_event, payload](const signalr::value& message)
         {
             *payload = message;
@@ -893,7 +893,7 @@ TEST(hub_invocation, hub_connection_can_receive_multiple_messages_in_same_payloa
 
     auto payload = std::make_shared<signalr::value>();
     int count = 0;
-    auto on_broadcast_event = std::make_shared<cancellation_token>();
+    auto on_broadcast_event = std::make_shared<cancellation_token_source>();
     hub_connection.on("broadCAST", [&count, on_broadcast_event, payload](const signalr::value& message)
         {
             ++count;
@@ -1733,7 +1733,7 @@ TEST(config, can_replace_scheduler)
 
     mre.get();
 
-    ASSERT_EQ(5, scheduler->schedule_count);
+    ASSERT_EQ(6, scheduler->schedule_count);
 }
 
 class throw_hub_protocol : public hub_protocol

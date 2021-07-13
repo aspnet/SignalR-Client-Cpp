@@ -468,7 +468,7 @@ TEST(websocket_transport_receive_loop, process_response_callback_called_when_mes
 {
     auto client = std::make_shared<test_websocket_client>();
 
-    auto process_response_event = std::make_shared<cancellation_token>();
+    auto process_response_event = std::make_shared<cancellation_token_source>();
     auto msg = std::make_shared<std::string>();
 
     auto process_response = [msg, process_response_event](const std::string& message, std::exception_ptr exception)
@@ -510,7 +510,7 @@ TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thro
         callback(nullptr);
     });
 
-    auto error_event = std::make_shared<cancellation_token>();
+    auto error_event = std::make_shared<cancellation_token_source>();
     auto exception_msg = std::make_shared<std::string>();
 
     auto error_callback = [exception_msg, error_event](std::exception_ptr exception)

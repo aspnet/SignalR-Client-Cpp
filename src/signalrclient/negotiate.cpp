@@ -16,7 +16,7 @@ namespace signalr
 
         void negotiate(std::shared_ptr<http_client> client, const std::string& base_url,
             const signalr_client_config& config,
-            std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept
+            std::function<void(negotiation_response&&, std::exception_ptr)> callback, cancellation_token token) noexcept
         {
             std::string negotiate_url;
             try
@@ -133,7 +133,7 @@ namespace signalr
                 {
                     callback({}, std::current_exception());
                 }
-            });
+            }, token);
         }
     }
 }
