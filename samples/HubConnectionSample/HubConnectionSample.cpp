@@ -20,8 +20,7 @@ class logger : public signalr::log_writer
 
 void send_message(signalr::hub_connection& connection, const std::string& message)
 {
-    std::vector<signalr::value> arr { std::string("c++"), message };
-    signalr::value args(arr);
+    std::vector<signalr::value> args { std::string("c++"), message };
 
     // if you get an internal compiler error uncomment the lambda below or install VS Update 4
     connection.invoke("Send", args, [](const signalr::value& value, std::exception_ptr exception)
@@ -55,9 +54,9 @@ void chat()
         .with_logging(std::make_shared <logger>(), signalr::trace_level::verbose)
         .build();
 
-    connection.on("Send", [](const signalr::value & m)
+    connection.on("Send", [](const std::vector<signalr::value>& m)
     {
-        std::cout << std::endl << m.as_array()[0].as_string() << std::endl << "Enter your message: ";
+        std::cout << std::endl << m[0].as_string() << std::endl << "Enter your message: ";
     });
 
     std::promise<void> task;
