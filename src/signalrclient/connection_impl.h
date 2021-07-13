@@ -13,7 +13,7 @@
 #include "transport_factory.h"
 #include "logger.h"
 #include "negotiation_response.h"
-#include "cancellation_token.h"
+#include "cancellation_token_source.h"
 
 namespace signalr
 {
@@ -63,9 +63,9 @@ namespace signalr
         std::function<void(std::exception_ptr)> m_disconnected;
         signalr_client_config m_signalr_client_config;
 
-        std::shared_ptr<cancellation_token> m_disconnect_cts;
+        std::shared_ptr<cancellation_token_source> m_disconnect_cts;
         std::mutex m_stop_lock;
-        cancellation_token m_start_completed_event;
+        cancellation_token_source m_start_completed_event;
         std::string m_connection_id;
         std::string m_connection_token;
         std::function<std::shared_ptr<http_client>(const signalr_client_config&)> m_http_client_factory;

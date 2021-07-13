@@ -26,7 +26,7 @@ namespace signalr
         const signalr_client_config& signalr_client_config, const logger& logger)
         : transport(logger), m_websocket_client_factory(websocket_client_factory), m_process_response_callback([](std::string, std::exception_ptr) {}),
         m_close_callback([](std::exception_ptr) {}), m_signalr_client_config(signalr_client_config),
-        m_receive_loop_cts(std::make_shared<cancellation_token>())
+        m_receive_loop_cts(std::make_shared<cancellation_token_source>())
     {
         // we use this cts to check if the receive loop is running so it should be
         // initially canceled to indicate that the receive loop is not running
@@ -53,7 +53,7 @@ namespace signalr
     // Note that the connection assumes that the error callback won't be fired when the result is being processed. This
     // may no longer be true when we replace the `receive_loop` with "on_message_received" and "on_close" events if they
     // can be fired on different threads in which case we will have to lock before setting groups token and message id.
-    void websocket_transport::receive_loop(std::shared_ptr<cancellation_token> cts)
+    void websocket_transport::receive_loop(std::shared_ptr<cancellation_token_source> cts)
     {
         auto this_transport = shared_from_this();
         auto logger = this_transport->m_logger;
@@ -66,7 +66,7 @@ namespace signalr
 
         auto websocket_client = this_transport->safe_get_websocket_client();
 
-        // There are two cases when we exit the loop. The first case is implicit - we pass the cancellation_token
+        // There are two cases when we exit the loop. The first case is implicit - we pass the cancellation_token_source
         // to `then` (note this is after the lambda body) and if the token is cancelled the continuation will not
         // run at all. The second - explicit - case happens if the token gets cancelled after the continuation has
         // been started in which case we just stop the loop by not scheduling another receive task.
@@ -174,7 +174,7 @@ namespace signalr
                 m_websocket_client = websocket_client;
             }
 
-            auto receive_loop_cts = std::make_shared<cancellation_token>();
+            auto receive_loop_cts = std::make_shared<cancellation_token_source>();
 
             auto transport = shared_from_this();
 

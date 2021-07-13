@@ -7,7 +7,7 @@
 #include <functional>
 #include "signalrclient/websocket_client.h"
 #include "test_utils.h"
-#include "cancellation_token.h"
+#include "cancellation_token_source.h"
 #include <queue>
 #include "signalrclient/signalr_client_config.h"
 
@@ -38,8 +38,8 @@ public:
     void receive_message(const std::string& message);
     void receive_message(std::exception_ptr ex);
 
-    cancellation_token receive_loop_started;
-    cancellation_token handshake_sent;
+    cancellation_token_source receive_loop_started;
+    cancellation_token_source handshake_sent;
     int receive_count;
 
 private:
@@ -56,7 +56,7 @@ private:
     std::mutex m_receive_lock;
     bool m_stopped;
     manual_reset_event<void> m_receive_waiting;
-    cancellation_token m_receive_loop_not_running;
+    cancellation_token_source m_receive_loop_not_running;
     std::shared_ptr<scheduler> m_scheduler;
 };
 

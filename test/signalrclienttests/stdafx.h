@@ -13,5 +13,5 @@
 #endif
 
 #include "gtest/gtest.h"
-#include "../../src/signalrclient/cancellation_token.h"
+#include "../../src/signalrclient/cancellation_token_source.h"
 #include <thread>
