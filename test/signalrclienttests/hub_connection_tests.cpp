@@ -210,6 +210,11 @@ TEST(start, start_fails_for_handshake_response_with_error)
 {
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
+    std::exception_ptr exception;
+    hub_connection.set_disconnected([&exception](std::exception_ptr ex)
+        {
+            exception = ex;
+        });
 
     auto mre = manual_reset_event<void>();
     hub_connection.start([&mre](std::exception_ptr exception)
@@ -232,6 +237,16 @@ TEST(start, start_fails_for_handshake_response_with_error)
     }
 
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+
+    try
+    {
+        ASSERT_NE(nullptr, exception);
+        std::rethrow_exception(exception);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("Received an error during handshake: bad things", ex.what());
+    }
 }
 
 TEST(start, start_fails_if_non_handshake_message_received)
@@ -260,6 +275,42 @@ TEST(start, start_fails_if_non_handshake_message_received)
     }
 
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+}
+
+TEST(start, on_not_called_if_multiple_messages_received_before_handshake)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    bool on_called = false;
+    hub_connection.on("Target", [&on_called](signalr::value)
+        {
+            on_called = true;
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{\"arguments\":[1,\"Foo\"],\"target\":\"Target\",\"type\":1}\x1e{\"arguments\":[1,\"Foo\"],\"target\":\"Target\",\"type\":1}\x1e");
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("Received unexpected message while waiting for the handshake response.", ex.what());
+    }
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+
+    ASSERT_FALSE(on_called);
 }
 
 TEST(start, start_fails_for_incomplete_handshake_response)

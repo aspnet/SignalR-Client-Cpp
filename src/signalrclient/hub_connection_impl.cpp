@@ -181,10 +181,10 @@ namespace signalr
 
                     if (exception != nullptr)
                     {
-                        connection->m_connection->stop([callback, exception](std::exception_ptr)
+                        connection->m_connection->stop([callback, exception](std::exception_ptr e)
                             {
                                 callback(exception);
-                            }, nullptr);
+                            }, exception);
                     }
                 };
 
