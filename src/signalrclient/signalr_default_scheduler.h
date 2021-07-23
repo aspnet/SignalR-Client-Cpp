@@ -20,6 +20,7 @@ namespace signalr
         thread& operator=(const thread&) = delete;
 
         void add(signalr_base_cb);
+        void start();
         bool is_free() const;
         void shutdown();
         ~thread();

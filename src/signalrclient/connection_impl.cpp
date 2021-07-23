@@ -133,24 +133,33 @@ namespace signalr
             m_signalr_client_config.set_scheduler(m_scheduler);
         }
 
-        start_negotiate(m_base_url, 0, callback);
+        start_negotiate(m_base_url, callback);
     }
 
-    void connection_impl::start_negotiate(const std::string& url, int redirect_count, std::function<void(std::exception_ptr)> callback)
+    void connection_impl::start_negotiate(const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
-        if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
-        {
-            change_state(connection_state::disconnected);
-            m_start_completed_event.cancel();
-            callback(std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
-            return;
-        }
-
         std::weak_ptr<connection_impl> weak_connection = shared_from_this();
         const auto token = m_disconnect_cts;
 
-        const auto transport_started = [weak_connection, callback, token](std::shared_ptr<transport> transport, std::exception_ptr exception)
+        std::shared_ptr<bool> connect_request_done = std::make_shared<bool>();
+        std::shared_ptr<std::mutex> connect_request_lock = std::make_shared<std::mutex>();
+
+        const auto transport_started = [weak_connection, connect_request_done, connect_request_lock, callback, token]
+        (std::shared_ptr<transport> transport, std::exception_ptr exception)
         {
+            {
+                std::lock_guard<std::mutex> lock(*connect_request_lock);
+                // no op after connection started/stopped successfully
+                if (*connect_request_done == false)
+                {
+                    *connect_request_done = true;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
             auto connection = weak_connection.lock();
             if (!connection)
             {
@@ -171,7 +180,7 @@ namespace signalr
                 if (token->is_canceled())
                 {
                     connection->m_logger.log(trace_level::info,
-                        "starting the connection has been canceled.");
+                        "starting the connection has been canceled by stop().");
                 }
                 else
                 {
@@ -208,6 +217,13 @@ namespace signalr
             callback(nullptr);
         };
 
+        m_disconnect_cts->register_callback([transport_started]()
+            {
+                // The callback checks the disconnect_cts token or if callback already called and will handle it appropriately
+                // Not passing an error since the callback will create a canceled_exception since it knows the token was canceled.
+                transport_started(nullptr, nullptr);
+            });
+
         if (m_skip_negotiation)
         {
             // TODO: check that the websockets transport is explicitly selected
@@ -215,14 +231,33 @@ namespace signalr
             return start_transport(url, transport_started);
         }
 
+        start_negotiate_internal(url, 0, transport_started);
+    }
+
+    void connection_impl::start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> transport_started)
+    {
+        if (m_disconnect_cts->is_canceled())
+        {
+            return;
+        }
+
+        if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
+        {
+            transport_started(nullptr, std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
+            return;
+        }
+
+        std::weak_ptr<connection_impl> weak_connection = shared_from_this();
+        const auto token = m_disconnect_cts;
+
         auto http_client = m_http_client_factory(m_signalr_client_config);
         negotiate::negotiate(http_client, url, m_signalr_client_config,
-            [callback, weak_connection, redirect_count, token, url, transport_started](negotiation_response&& response, std::exception_ptr exception)
+            [transport_started, weak_connection, redirect_count, token, url](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
                 {
-                    callback(std::make_exception_ptr(signalr_exception("connection no longer exists")));
+                    transport_started(nullptr, std::make_exception_ptr(signalr_exception("connection no longer exists")));
                     return;
                 }
 
@@ -241,17 +276,13 @@ namespace signalr
                                 .append(e.what()));
                         }
                     }
-                    connection->change_state(connection_state::disconnected);
-                    connection->m_start_completed_event.cancel();
-                    callback(exception);
+                    transport_started(nullptr, exception);
                     return;
                 }
 
                 if (!response.error.empty())
                 {
-                    connection->change_state(connection_state::disconnected);
-                    connection->m_start_completed_event.cancel();
-                    callback(std::make_exception_ptr(signalr_exception(response.error)));
+                    transport_started(nullptr, std::make_exception_ptr(signalr_exception(response.error)));
                     return;
                 }
 
@@ -262,7 +293,7 @@ namespace signalr
                         auto& headers = connection->m_signalr_client_config.get_http_headers();
                         headers["Authorization"] = "Bearer " + response.accessToken;
                     }
-                    connection->start_negotiate(response.url, redirect_count + 1, callback);
+                    connection->start_negotiate_internal(response.url, redirect_count + 1, transport_started);
                     return;
                 }
 
@@ -284,9 +315,7 @@ namespace signalr
 
                 if (!foundWebsockets)
                 {
-                    connection->change_state(connection_state::disconnected);
-                    connection->m_start_completed_event.cancel();
-                    callback(std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
+                    transport_started(nullptr, std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
                     return;
                 }
 
@@ -294,8 +323,7 @@ namespace signalr
 
                 if (token->is_canceled())
                 {
-                    connection->change_state(connection_state::disconnected);
-                    callback(std::make_exception_ptr(canceled_exception()));
+                    transport_started(nullptr, std::make_exception_ptr(canceled_exception()));
                     return;
                 }
 
@@ -303,12 +331,9 @@ namespace signalr
             });
     }
 
-    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
+    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> transport_started)
     {
         auto connection = shared_from_this();
-
-        std::shared_ptr<bool> connect_request_done = std::make_shared<bool>();
-        std::shared_ptr<std::mutex> connect_request_lock = std::make_shared<std::mutex>();
 
         auto weak_connection = std::weak_ptr<connection_impl>(connection);
         const auto disconnect_cts = m_disconnect_cts;
@@ -332,7 +357,7 @@ namespace signalr
                 connection->stop_connection(exception);
             });
 
-        transport->on_receive([disconnect_cts, connect_request_done, connect_request_lock, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
+        transport->on_receive([disconnect_cts, logger, weak_connection, transport_started](std::string&& message, std::exception_ptr exception)
             {
                 if (exception == nullptr)
                 {
@@ -378,95 +403,20 @@ namespace signalr
                             return;
                         }
 
-                        bool run_callback = false;
-                        {
-                            std::lock_guard<std::mutex> lock(*connect_request_lock);
-                            // no op after connection started successfully
-                            if (*connect_request_done == false)
-                            {
-                                *connect_request_done = true;
-                                run_callback = true;
-                            }
-                        }
-
-                        if (run_callback)
-                        {
-                            callback({}, exception);
-                        }
+                        transport_started(nullptr, exception);
                     }
                 }
             });
 
-        disconnect_cts->register_callback([connect_request_done, connect_request_lock, callback]()
+        connection->send_connect_request(transport, url, [transport_started, transport](std::exception_ptr exception)
             {
-                bool run_callback = false;
+                if (exception == nullptr)
                 {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
-
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
-                    {
-                        *connect_request_done = true;
-                        run_callback = true;
-                    }
-                } // unlock
-
-                if (run_callback)
-                {
-                    // The callback checks the disconnect_cts token and will handle it appropriately
-                    callback({}, nullptr);
+                    transport_started(transport, nullptr);
                 }
-            });
-
-        timer(m_scheduler, [connect_request_done, connect_request_lock, callback](std::chrono::milliseconds duration)
-            {
-                bool run_callback = false;
+                else
                 {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
-
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
-                    {
-                        if (duration < std::chrono::seconds(5))
-                        {
-                            return false;
-                        }
-                        *connect_request_done = true;
-                        run_callback = true;
-                    }
-                } // unlock
-
-                if (run_callback)
-                {
-                    callback({}, std::make_exception_ptr(signalr_exception("transport timed out when trying to connect")));
-                }
-
-                return true;
-            });
-
-        connection->send_connect_request(transport, url, [callback, connect_request_done, connect_request_lock, transport](std::exception_ptr exception)
-            {
-                bool run_callback = false;
-                {
-                    std::lock_guard<std::mutex> lock(*connect_request_lock);
-                    // no op after connection started successfully
-                    if (*connect_request_done == false)
-                    {
-                        *connect_request_done = true;
-                        run_callback = true;
-                    }
-                }
-
-                if (run_callback)
-                {
-                    if (exception == nullptr)
-                    {
-                        callback(transport, nullptr);
-                    }
-                    else
-                    {
-                        callback({}, exception);
-                    }
+                    transport_started(nullptr, exception);
                 }
             });
     }
