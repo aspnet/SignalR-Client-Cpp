@@ -180,7 +180,7 @@ namespace signalr
                 if (token->is_canceled())
                 {
                     connection->m_logger.log(trace_level::info,
-                        "starting the connection has been canceled.");
+                        "starting the connection has been canceled by stop().");
                 }
                 else
                 {
@@ -220,7 +220,8 @@ namespace signalr
         m_disconnect_cts->register_callback([transport_started]()
             {
                 // The callback checks the disconnect_cts token or if callback already called and will handle it appropriately
-                transport_started({}, nullptr);
+                // Not passing an error since the callback will create a canceled_exception since it knows the token was canceled.
+                transport_started(nullptr, nullptr);
             });
 
         if (m_skip_negotiation)
@@ -233,7 +234,7 @@ namespace signalr
         start_negotiate_internal(url, 0, transport_started);
     }
 
-    void connection_impl::start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> callback)
+    void connection_impl::start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> transport_started)
     {
         if (m_disconnect_cts->is_canceled())
         {
@@ -242,7 +243,7 @@ namespace signalr
 
         if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
         {
-            callback({}, std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
+            transport_started(nullptr, std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
             return;
         }
 
@@ -251,12 +252,12 @@ namespace signalr
 
         auto http_client = m_http_client_factory(m_signalr_client_config);
         negotiate::negotiate(http_client, url, m_signalr_client_config,
-            [callback, weak_connection, redirect_count, token, url](negotiation_response&& response, std::exception_ptr exception)
+            [transport_started, weak_connection, redirect_count, token, url](negotiation_response&& response, std::exception_ptr exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
                 {
-                    callback({}, std::make_exception_ptr(signalr_exception("connection no longer exists")));
+                    transport_started(nullptr, std::make_exception_ptr(signalr_exception("connection no longer exists")));
                     return;
                 }
 
@@ -275,13 +276,13 @@ namespace signalr
                                 .append(e.what()));
                         }
                     }
-                    callback({}, exception);
+                    transport_started(nullptr, exception);
                     return;
                 }
 
                 if (!response.error.empty())
                 {
-                    callback({}, std::make_exception_ptr(signalr_exception(response.error)));
+                    transport_started(nullptr, std::make_exception_ptr(signalr_exception(response.error)));
                     return;
                 }
 
@@ -292,7 +293,7 @@ namespace signalr
                         auto& headers = connection->m_signalr_client_config.get_http_headers();
                         headers["Authorization"] = "Bearer " + response.accessToken;
                     }
-                    connection->start_negotiate_internal(response.url, redirect_count + 1, callback);
+                    connection->start_negotiate_internal(response.url, redirect_count + 1, transport_started);
                     return;
                 }
 
@@ -314,7 +315,7 @@ namespace signalr
 
                 if (!foundWebsockets)
                 {
-                    callback({}, std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
+                    transport_started(nullptr, std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
                     return;
                 }
 
@@ -322,15 +323,15 @@ namespace signalr
 
                 if (token->is_canceled())
                 {
-                    callback({}, std::make_exception_ptr(canceled_exception()));
+                    transport_started(nullptr, std::make_exception_ptr(canceled_exception()));
                     return;
                 }
 
-                connection->start_transport(url, callback);
+                connection->start_transport(url, transport_started);
             });
     }
 
-    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback)
+    void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> transport_started)
     {
         auto connection = shared_from_this();
 
@@ -356,7 +357,7 @@ namespace signalr
                 connection->stop_connection(exception);
             });
 
-        transport->on_receive([disconnect_cts, logger, weak_connection, callback](std::string&& message, std::exception_ptr exception)
+        transport->on_receive([disconnect_cts, logger, weak_connection, transport_started](std::string&& message, std::exception_ptr exception)
             {
                 if (exception == nullptr)
                 {
@@ -402,20 +403,20 @@ namespace signalr
                             return;
                         }
 
-                        callback({}, exception);
+                        transport_started(nullptr, exception);
                     }
                 }
             });
 
-        connection->send_connect_request(transport, url, [callback, transport](std::exception_ptr exception)
+        connection->send_connect_request(transport, url, [transport_started, transport](std::exception_ptr exception)
             {
                 if (exception == nullptr)
                 {
-                    callback(transport, nullptr);
+                    transport_started(transport, nullptr);
                 }
                 else
                 {
-                    callback({}, exception);
+                    transport_started(nullptr, exception);
                 }
             });
     }

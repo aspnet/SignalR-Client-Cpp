@@ -1596,7 +1596,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     ASSERT_TRUE(has_log_entry("[info     ] [websocket transport] connecting to: ws://stop_cancels_ongoing_start_request/?id=f7707523-307d-4cba-9abf-3eef701241e8\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[info     ] stopping connection\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[info     ] acquired lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[info     ] starting the connection has been canceled.\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[info     ] starting the connection has been canceled by stop().\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> disconnected\n", log_entries)) << dump_vector(log_entries);
 }
 
@@ -1657,7 +1657,7 @@ TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_
     ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
     ASSERT_EQ("[info     ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
     ASSERT_EQ("[info     ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
-    ASSERT_EQ("[info     ] starting the connection has been canceled.\n", remove_date_from_log_entry(log_entries[3]));
+    ASSERT_EQ("[info     ] starting the connection has been canceled by stop().\n", remove_date_from_log_entry(log_entries[3]));
     ASSERT_EQ("[verbose  ] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[4]));
 
     // avoid AV from accessing stop_mre in callback
