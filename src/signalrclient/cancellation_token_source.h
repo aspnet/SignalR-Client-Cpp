@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <vector>
+#include "signalrclient/cancellation_token.h"
 
 namespace signalr
 {
@@ -144,4 +145,6 @@ namespace signalr
         bool m_signaled;
         std::vector<std::function<void()>> m_callbacks;
     };
+
+    cancellation_token get_cancellation_token(std::weak_ptr<cancellation_token_source> s);
 }
