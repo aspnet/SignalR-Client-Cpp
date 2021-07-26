@@ -19,7 +19,7 @@ namespace signalr
     class cancellation_token_source
     {
     public:
-        static const unsigned int timeout_infinite = 0xFFFFFFFF;
+        static const unsigned int timeout_infinite;
 
         cancellation_token_source() noexcept
             : m_signaled(false)

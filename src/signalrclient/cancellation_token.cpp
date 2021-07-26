@@ -30,9 +30,4 @@ namespace signalr
         }
         return true;
     }
-
-    cancellation_token get_cancellation_token(std::weak_ptr<cancellation_token_source> s)
-    {
-        return cancellation_token(s);
-    }
 }
