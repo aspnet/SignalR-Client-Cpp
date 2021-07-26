@@ -17,6 +17,7 @@
 #include "signalrclient/websocket_client.h"
 #include "default_websocket_client.h"
 #include "signalr_default_scheduler.h"
+#include "signalrclient/cancellation_token.h"
 
 namespace signalr
 {
