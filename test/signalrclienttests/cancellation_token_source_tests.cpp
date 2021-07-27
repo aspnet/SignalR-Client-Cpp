@@ -56,7 +56,7 @@ TEST(cancellation_token_source, callback_called_on_cancel)
     ASSERT_TRUE(cts.is_canceled());
 }
 
-TEST(cancellation_token_source, callback_called_on_destruct)
+TEST(cancellation_token_source, callback_not_called_on_destruct)
 {
     bool called = false;
     {
@@ -66,7 +66,7 @@ TEST(cancellation_token_source, callback_called_on_destruct)
                 called = true;
             });
     }
-    ASSERT_TRUE(called);
+    ASSERT_FALSE(called);
 }
 
 TEST(cancellation_token_source, callback_called_if_already_canceled)
@@ -155,6 +155,31 @@ TEST(cancellation_token_source, throw_method_throws_if_canceled)
     }
     catch (canceled_exception)
     {
+    }
+}
+
+TEST(cancellation_token_source, throws_if_callbacks_throw)
+{
+    cancellation_token_source cts;
+
+    cts.register_callback([]()
+        {
+            throw std::runtime_error("error from callback");
+        });
+
+    cts.register_callback([]()
+        {
+            throw std::runtime_error("error from second callback");
+        });
+
+    try
+    {
+        cts.cancel();
+        ASSERT_TRUE(false);
+    }
+    catch (const aggregate_exception& ex)
+    {
+        ASSERT_STREQ("error from callback\nerror from second callback\n", ex.what());
     }
 }
 

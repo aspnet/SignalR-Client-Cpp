@@ -16,6 +16,23 @@ namespace signalr
     {
     };
 
+    class aggregate_exception : public std::exception
+    {
+    public:
+        void add_exception(const std::exception& ex)
+        {
+            m_message += ex.what();
+            m_message += '\n';
+        }
+
+        virtual char const* what() const
+        {
+            return m_message.c_str();
+        }
+    private:
+        std::string m_message;
+    };
+
     class cancellation_token_source
     {
     public:
@@ -29,23 +46,7 @@ namespace signalr
         cancellation_token_source(const cancellation_token_source&) = delete;
         cancellation_token_source& operator=(const cancellation_token_source&) = delete;
 
-        ~cancellation_token_source()
-        {
-            if (!m_callbacks.empty())
-            {
-                for (auto& func : m_callbacks)
-                {
-                    try
-                    {
-                        func();
-                    }
-                    catch (...)
-                    {
-                        assert(false);
-                    }
-                }
-            }
-        }
+        ~cancellation_token_source() {}
 
         void cancel()
         {
@@ -60,16 +61,22 @@ namespace signalr
 
             if (!callbacks.empty())
             {
+                aggregate_exception errors;
                 for (auto& func : callbacks)
                 {
                     try
                     {
                         func();
                     }
-                    catch (...)
+                    catch (const std::exception& ex)
                     {
-                        assert(false);
+                        errors.add_exception(ex);
                     }
+                }
+
+                if (errors.what()[0] != 0)
+                {
+                    throw errors;
                 }
             }
         }

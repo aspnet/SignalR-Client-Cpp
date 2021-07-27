@@ -65,7 +65,18 @@ namespace signalr
             // Signaling the event is safe here. We are in the dtor so noone is using this instance. There might be some
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
-            m_start_completed_event.cancel();
+            try
+            {
+                m_start_completed_event.cancel();
+            }
+            catch (const std::exception& ex)
+            {
+                if (m_logger.is_enabled(trace_level::warning))
+                {
+                    m_logger.log(trace_level::warning, std::string("start completed event threw an exception in the destructor: ")
+                        .append(ex.what()));
+                }
+            }
             completion_event completion;
             auto logger = m_logger;
             shutdown([completion, logger](std::exception_ptr exception) mutable
@@ -194,7 +205,18 @@ namespace signalr
 
                 connection->m_transport = nullptr;
                 connection->change_state(connection_state::disconnected);
-                connection->m_start_completed_event.cancel();
+                try
+                {
+                    connection->m_start_completed_event.cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    {
+                        connection->m_logger.log(trace_level::warning, std::string("start completed event threw an exception in start negotiate: ")
+                            .append(ex.what()));
+                    }
+                }
                 callback(std::current_exception());
                 return;
             }
@@ -213,7 +235,18 @@ namespace signalr
                 assert(false);
             }
 
-            connection->m_start_completed_event.cancel();
+            try
+            {
+                connection->m_start_completed_event.cancel();
+            }
+            catch (const std::exception& ex)
+            {
+                if (connection->m_logger.is_enabled(trace_level::warning))
+                {
+                    connection->m_logger.log(trace_level::warning, std::string("start completed event threw an exception in start negotiate: ")
+                        .append(ex.what()));
+                }
+            }
             callback(nullptr);
         };
 
@@ -552,7 +585,18 @@ namespace signalr
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
             {
-                m_disconnect_cts->cancel();
+                try
+                {
+                    m_disconnect_cts->cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (m_logger.is_enabled(trace_level::warning))
+                    {
+                        m_logger.log(trace_level::warning, std::string("disconnect event threw an exception in shutdown: ")
+                            .append(ex.what()));
+                    }
+                }
                 callback(m_stop_error);
                 return;
             }
@@ -567,7 +611,18 @@ namespace signalr
             }
 
             // we request a cancellation of the ongoing start (if any) and wait until it is canceled
-            m_disconnect_cts->cancel();
+            try
+            {
+                m_disconnect_cts->cancel();
+            }
+            catch (const std::exception& ex)
+            {
+                if (m_logger.is_enabled(trace_level::warning))
+                {
+                    m_logger.log(trace_level::warning, std::string("disconnect event threw an exception in shutdown: ")
+                        .append(ex.what()));
+                }
+            }
 
             while (m_start_completed_event.wait(60000) != 0)
             {
