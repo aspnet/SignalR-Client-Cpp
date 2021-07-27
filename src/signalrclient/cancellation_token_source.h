@@ -25,7 +25,7 @@ namespace signalr
             m_message += '\n';
         }
 
-        virtual char const* what() const
+        virtual char const* what() const noexcept
         {
             return m_message.c_str();
         }
