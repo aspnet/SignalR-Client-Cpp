@@ -14,6 +14,10 @@ namespace signalr
 {
     class canceled_exception : public std::exception
     {
+        virtual char const* what() const noexcept
+        {
+            return "an operation was canceled";
+        }
     };
 
     class aggregate_exception : public std::exception
@@ -21,8 +25,11 @@ namespace signalr
     public:
         void add_exception(const std::exception& ex)
         {
+            if (!m_message.empty())
+            {
+                m_message += '\n';
+            }
             m_message += ex.what();
-            m_message += '\n';
         }
 
         virtual char const* what() const noexcept
@@ -45,8 +52,6 @@ namespace signalr
 
         cancellation_token_source(const cancellation_token_source&) = delete;
         cancellation_token_source& operator=(const cancellation_token_source&) = delete;
-
-        ~cancellation_token_source() {}
 
         void cancel()
         {

@@ -2042,7 +2042,7 @@ TEST(connection_impl_stop, triggers_http_send_token)
             return http_response{ 200, response_body };
         }));
     auto connection =
-        connection_impl::create(create_uri(), trace_level::verbose, std::make_shared<memory_log_writer>(),
+        connection_impl::create(create_uri(), trace_level::verbose, writer,
             [http_client](const signalr_client_config& config) {
                 http_client->set_scheduler(config.get_scheduler());
                 return http_client;
@@ -2078,4 +2078,71 @@ TEST(connection_impl_stop, triggers_http_send_token)
     stop_mre.get();
 
     ASSERT_EQ("", connection->get_connection_id());
+}
+
+TEST(connection_impl_stop, http_client_throws_from_registered_token)
+{
+    auto writer = std::shared_ptr<memory_log_writer>{ std::make_shared<memory_log_writer>() };
+
+    auto send_started = manual_reset_event<void>();
+    auto websocket_client = create_test_websocket_client();
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&send_started](const std::string& url, http_request, cancellation_token token)
+        {
+            send_started.set();
+            auto mre = manual_reset_event<void>();
+            token.register_callback([&mre]()
+                {
+                    mre.set();
+                    throw custom_exception("test: from http client");
+                });
+            mre.get();
+            auto response_body =
+                url.find("/negotiate") != std::string::npos
+                ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
+                : "";
+
+            return http_response{ 200, response_body };
+        }));
+    auto connection =
+        connection_impl::create(create_uri(), trace_level::verbose, writer,
+            [http_client](const signalr_client_config& config) {
+                http_client->set_scheduler(config.get_scheduler());
+                return http_client;
+            }, [websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            });
+
+    auto start_mre = manual_reset_event<void>();
+    connection->start([&start_mre](std::exception_ptr exception)
+        {
+            start_mre.set(exception);
+        });
+
+    send_started.get();
+
+    auto stop_mre = manual_reset_event<void>();
+    connection->stop([&stop_mre](std::exception_ptr exception)
+        {
+            stop_mre.set(exception);
+        }, nullptr);
+
+    try
+    {
+        start_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const signalr::canceled_exception&)
+    {
+    }
+
+    stop_mre.get();
+
+    ASSERT_EQ("", connection->get_connection_id());
+
+    auto log_entries = writer->get_log_entries();
+
+    ASSERT_TRUE(has_log_entry("[warning  ] disconnect event threw an exception in shutdown: test: from http client\n", log_entries)) << dump_vector(log_entries);
 }

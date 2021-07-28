@@ -179,7 +179,7 @@ TEST(cancellation_token_source, throws_if_callbacks_throw)
     }
     catch (const aggregate_exception& ex)
     {
-        ASSERT_STREQ("error from callback\nerror from second callback\n", ex.what());
+        ASSERT_STREQ("error from callback\nerror from second callback", ex.what());
     }
 }
 
