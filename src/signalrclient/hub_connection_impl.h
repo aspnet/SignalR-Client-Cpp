@@ -58,7 +58,7 @@ namespace signalr
         bool m_handshakeReceived;
         std::shared_ptr<completion_event> m_handshakeTask;
         std::function<void(std::exception_ptr)> m_disconnected;
-        std::shared_ptr<cancellation_token> m_disconnect_cts;
+        std::shared_ptr<cancellation_token_source> m_disconnect_cts;
         signalr_client_config m_signalr_client_config;
         std::unique_ptr<hub_protocol> m_protocol;
 

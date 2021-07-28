@@ -7,6 +7,7 @@
 #include "url_builder.h"
 #include "signalrclient/signalr_exception.h"
 #include "json_helpers.h"
+#include "cancellation_token_source.h"
 
 namespace signalr
 {
@@ -16,7 +17,7 @@ namespace signalr
 
         void negotiate(std::shared_ptr<http_client> client, const std::string& base_url,
             const signalr_client_config& config,
-            std::function<void(negotiation_response&&, std::exception_ptr)> callback) noexcept
+            std::function<void(negotiation_response&&, std::exception_ptr)> callback, cancellation_token token) noexcept
         {
             std::string negotiate_url;
             try
@@ -38,11 +39,17 @@ namespace signalr
             request.timeout = config.get_http_client_config().timeout();
 #endif
 
-            client->send(negotiate_url, request, [callback](const http_response& http_response, std::exception_ptr exception)
+            client->send(negotiate_url, request, [callback, token](const http_response& http_response, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
                     callback({}, exception);
+                    return;
+                }
+
+                if (token.is_canceled())
+                {
+                    callback({}, std::make_exception_ptr(canceled_exception()));
                     return;
                 }
 
@@ -133,7 +140,7 @@ namespace signalr
                 {
                     callback({}, std::current_exception());
                 }
-            });
+            }, token);
         }
     }
 }

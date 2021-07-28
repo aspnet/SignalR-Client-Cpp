@@ -35,7 +35,7 @@ namespace signalr
     connection_impl::connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
         std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_base_url(url), m_connection_state(connection_state::disconnected), m_logger(log_writer, trace_level), m_transport(nullptr), m_skip_negotiation(skip_negotiation),
-        m_message_received([](const std::string&) noexcept {}), m_disconnected([](std::exception_ptr) noexcept {}), m_disconnect_cts(std::make_shared<cancellation_token>())
+        m_message_received([](const std::string&) noexcept {}), m_disconnected([](std::exception_ptr) noexcept {}), m_disconnect_cts(std::make_shared<cancellation_token_source>())
     {
         if (http_client_factory != nullptr)
         {
@@ -65,7 +65,18 @@ namespace signalr
             // Signaling the event is safe here. We are in the dtor so noone is using this instance. There might be some
             // outstanding threads that hold on to the connection via a weak pointer but they won't be able to acquire
             // the instance since it is being destroyed. Note that the event may actually be in non-signaled state here.
-            m_start_completed_event.cancel();
+            try
+            {
+                m_start_completed_event.cancel();
+            }
+            catch (const std::exception& ex)
+            {
+                if (m_logger.is_enabled(trace_level::warning))
+                {
+                    m_logger.log(trace_level::warning, std::string("start completed event threw an exception in the destructor: ")
+                        .append(ex.what()));
+                }
+            }
             completion_event completion;
             auto logger = m_logger;
             shutdown([completion, logger](std::exception_ptr exception) mutable
@@ -194,7 +205,18 @@ namespace signalr
 
                 connection->m_transport = nullptr;
                 connection->change_state(connection_state::disconnected);
-                connection->m_start_completed_event.cancel();
+                try
+                {
+                    connection->m_start_completed_event.cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    {
+                        connection->m_logger.log(trace_level::warning, std::string("start completed event threw an exception in start negotiate: ")
+                            .append(ex.what()));
+                    }
+                }
                 callback(std::current_exception());
                 return;
             }
@@ -213,7 +235,18 @@ namespace signalr
                 assert(false);
             }
 
-            connection->m_start_completed_event.cancel();
+            try
+            {
+                connection->m_start_completed_event.cancel();
+            }
+            catch (const std::exception& ex)
+            {
+                if (connection->m_logger.is_enabled(trace_level::warning))
+                {
+                    connection->m_logger.log(trace_level::warning, std::string("start completed event threw an exception in start negotiate: ")
+                        .append(ex.what()));
+                }
+            }
             callback(nullptr);
         };
 
@@ -328,7 +361,7 @@ namespace signalr
                 }
 
                 connection->start_transport(url, transport_started);
-            });
+            }, get_cancellation_token(m_disconnect_cts));
     }
 
     void connection_impl::start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> transport_started)
@@ -552,7 +585,18 @@ namespace signalr
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
             {
-                m_disconnect_cts->cancel();
+                try
+                {
+                    m_disconnect_cts->cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (m_logger.is_enabled(trace_level::warning))
+                    {
+                        m_logger.log(trace_level::warning, std::string("disconnect event threw an exception in shutdown: ")
+                            .append(ex.what()));
+                    }
+                }
                 callback(m_stop_error);
                 return;
             }
@@ -567,7 +611,18 @@ namespace signalr
             }
 
             // we request a cancellation of the ongoing start (if any) and wait until it is canceled
-            m_disconnect_cts->cancel();
+            try
+            {
+                m_disconnect_cts->cancel();
+            }
+            catch (const std::exception& ex)
+            {
+                if (m_logger.is_enabled(trace_level::warning))
+                {
+                    m_logger.log(trace_level::warning, std::string("disconnect event threw an exception in shutdown: ")
+                        .append(ex.what()));
+                }
+            }
 
             while (m_start_completed_event.wait(60000) != 0)
             {

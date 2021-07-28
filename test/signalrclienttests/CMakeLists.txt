@@ -1,5 +1,6 @@
 set (SOURCES
   callback_manager_tests.cpp
+  cancellation_token_source_tests.cpp
   case_insensitive_comparison_utils_tests.cpp
   connection_impl_tests.cpp
   handshake_tests.cpp
@@ -34,6 +35,8 @@ include_directories(
 # include main library sources for "internals visible to"
 list (APPEND SOURCES
   ../../src/signalrclient/callback_manager.cpp
+  ../../src/signalrclient/cancellation_token.cpp
+  ../../src/signalrclient/cancellation_token_source.cpp
   ../../src/signalrclient/connection.cpp
   ../../src/signalrclient/connection_impl.cpp
   ../../src/signalrclient/default_http_client.cpp

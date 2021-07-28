@@ -65,7 +65,18 @@ namespace signalr
             {
                 // start may be waiting on the handshake response so we complete it here, this no-ops if already set
                 connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
-                connection->m_disconnect_cts->cancel();
+                try
+                {
+                    connection->m_disconnect_cts->cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    {
+                        connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
+                            .append(ex.what()));
+                    }
+                }
 
                 connection->m_callback_manager.clear("connection was stopped before invocation result was received");
 
@@ -108,7 +119,7 @@ namespace signalr
 
         m_connection->set_client_config(m_signalr_client_config);
         m_handshakeTask = std::make_shared<completion_event>();
-        m_disconnect_cts = std::make_shared<cancellation_token>();
+        m_disconnect_cts = std::make_shared<cancellation_token_source>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
         m_connection->start([weak_connection, callback](std::exception_ptr start_exception)

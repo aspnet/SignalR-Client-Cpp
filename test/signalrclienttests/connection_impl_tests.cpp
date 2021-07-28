@@ -109,7 +109,7 @@ TEST(connection_impl_start, connection_state_is_connected_when_connection_establ
 
 TEST(connection_impl_start, connection_state_is_disconnected_when_connection_cannot_be_established)
 {
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request, cancellation_token)
         {
             return http_response{ 404, "" };
         }));
@@ -247,7 +247,7 @@ TEST(connection_impl_start, start_logs_exceptions)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request, cancellation_token)
         {
             return http_response{ 404, "" };
         }));
@@ -280,7 +280,7 @@ TEST(connection_impl_start, start_logs_exceptions)
 
 TEST(connection_impl_start, start_propagates_exceptions_from_negotiate)
 {
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request) -> http_response
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request, cancellation_token) -> http_response
         {
             throw custom_exception();
         }));
@@ -390,7 +390,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_request_fails)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string&, http_request, cancellation_token)
         {
             return http_response{ 400, "" };
         }));
@@ -425,7 +425,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_has_error)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             auto response_body =
                 url.find("/negotiate") != std::string::npos
@@ -473,7 +473,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_does_not_have_webs
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             auto response_body =
                 url.find("/negotiate") != std::string::npos
@@ -513,7 +513,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_does_not_have_tran
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             auto response_body =
                 url.find("/negotiate") != std::string::npos
@@ -553,7 +553,7 @@ TEST(connection_impl_start, start_fails_if_negotiate_response_is_invalid)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             auto response_body =
                 url.find("/negotiate") != std::string::npos
@@ -590,7 +590,7 @@ TEST(connection_impl_start, negotiate_follows_redirect)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -645,7 +645,7 @@ TEST(connection_impl_start, negotiate_redirect_uses_accessToken)
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     std::string accessToken;
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&accessToken](const std::string& url, http_request request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&accessToken](const std::string& url, http_request request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -701,7 +701,7 @@ TEST(connection_impl_start, negotiate_fails_after_too_many_redirects)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -743,7 +743,7 @@ TEST(connection_impl_start, negotiate_fails_if_ProtocolVersion_in_response)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -784,7 +784,7 @@ TEST(connection_impl_start, negotiate_redirect_does_not_overwrite_url)
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     int redirectCount = 0;
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&redirectCount](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&redirectCount](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -852,7 +852,7 @@ TEST(connection_impl_start, negotiate_redirect_uses_own_query_string)
             callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
         });
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -913,7 +913,7 @@ TEST(connection_impl_start, negotiate_with_negotiateVersion_uses_connectionToken
             callback(std::make_exception_ptr(std::runtime_error("connecting failed")));
         });
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -966,7 +966,7 @@ TEST(connection_impl_start, correct_connection_id_returned_with_negotiateVersion
             callback(nullptr);
         });
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             std::string response_body = "";
             if (url.find("/negotiate") != std::string::npos)
@@ -1006,7 +1006,7 @@ TEST(connection_impl_start, negotiate_can_be_skipped)
 
     bool negotiate_called = false;
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&negotiate_called](const std::string& url, http_request request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&negotiate_called](const std::string& url, http_request request, cancellation_token)
         {
             negotiate_called = true;
 
@@ -1048,7 +1048,7 @@ TEST(connection_impl_start, negotiate_can_be_skipped)
 TEST(connection_impl_process_response, process_response_logs_messages)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
-    auto wait_receive = std::make_shared<cancellation_token>();
+    auto wait_receive = std::make_shared<cancellation_token_source>();
     auto websocket_client = create_test_websocket_client();
     auto connection = create_connection(websocket_client, writer, trace_level::debug);
 
@@ -1181,7 +1181,7 @@ TEST(connection_impl_set_message_received, callback_invoked_when_message_receive
 
     auto message = std::make_shared<std::string>();
 
-    auto message_received_event = std::make_shared<cancellation_token>();
+    auto message_received_event = std::make_shared<cancellation_token_source>();
     connection->set_message_received([message, message_received_event](const std::string& m)
         {
             if (m == "Test")
@@ -1218,7 +1218,7 @@ TEST(connection_impl_set_message_received, exception_from_callback_caught_and_lo
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     auto connection = create_connection(websocket_client, writer, trace_level::error);
 
-    auto message_received_event = std::make_shared<cancellation_token>();
+    auto message_received_event = std::make_shared<cancellation_token_source>();
     connection->set_message_received([message_received_event](const std::string& m)
         {
             if (m == "throw")
@@ -1258,7 +1258,7 @@ TEST(connection_impl_set_message_received, non_std_exception_from_callback_caugh
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
     auto connection = create_connection(websocket_client, writer, trace_level::error);
 
-    auto message_received_event = std::make_shared<cancellation_token>();
+    auto message_received_event = std::make_shared<cancellation_token_source>();
     connection->set_message_received([message_received_event](const std::string& m)
         {
             if (m == "throw")
@@ -1351,7 +1351,7 @@ TEST(connection_impl_stop, stopping_disconnected_connection_is_no_op)
 
 TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_task)
 {
-    cancellation_token close_event;
+    cancellation_token_source close_event;
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
 
     auto websocket_client = create_test_websocket_client(
@@ -1532,9 +1532,9 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
 
 TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
 {
-    auto disconnect_completed_event = std::make_shared<cancellation_token>();
+    auto disconnect_completed_event = std::make_shared<cancellation_token_source>();
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             auto response_body =
                 url.find("/negotiate") != std::string::npos
@@ -1604,7 +1604,7 @@ TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_
 {
     auto stop_mre = manual_reset_event<void>();
     auto done_mre = manual_reset_event<void>();
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&stop_mre, &done_mre](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&stop_mre, &done_mre](const std::string& url, http_request, cancellation_token)
         {
             stop_mre.get();
 
@@ -1784,7 +1784,7 @@ TEST(connection_impl_config, custom_headers_set_in_requests)
 {
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request, cancellation_token)
         {
             auto response_body =
                 url.find("/negotiate") != std::string::npos
@@ -1963,7 +1963,7 @@ TEST(connection_id, connection_id_reset_when_starting_connection)
 
     auto websocket_client = create_test_websocket_client();
 
-    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&fail_http_requests](const std::string& url, http_request)
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&fail_http_requests](const std::string& url, http_request, cancellation_token)
         {
             if (!fail_http_requests) {
                 auto response_body =
@@ -2016,4 +2016,133 @@ TEST(connection_id, connection_id_reset_when_starting_connection)
     mre.get();
 
     ASSERT_EQ("", connection->get_connection_id());
+}
+
+TEST(connection_impl_stop, triggers_http_send_token)
+{
+    auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
+
+    auto send_started = manual_reset_event<void>();
+    auto websocket_client = create_test_websocket_client();
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&send_started](const std::string& url, http_request, cancellation_token token)
+        {
+            send_started.set();
+            auto mre = manual_reset_event<void>();
+            token.register_callback([&mre]()
+                {
+                    mre.set();
+                });
+            mre.get();
+            auto response_body =
+                url.find("/negotiate") != std::string::npos
+                ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
+                : "";
+
+            return http_response{ 200, response_body };
+        }));
+    auto connection =
+        connection_impl::create(create_uri(), trace_level::verbose, writer,
+            [http_client](const signalr_client_config& config) {
+                http_client->set_scheduler(config.get_scheduler());
+                return http_client;
+            }, [websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            });
+
+    auto start_mre = manual_reset_event<void>();
+    connection->start([&start_mre](std::exception_ptr exception)
+        {
+            start_mre.set(exception);
+        });
+
+    send_started.get();
+
+    auto stop_mre = manual_reset_event<void>();
+    connection->stop([&stop_mre](std::exception_ptr exception)
+        {
+            stop_mre.set(exception);
+        }, nullptr);
+
+    try
+    {
+        start_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const signalr::canceled_exception&)
+    {
+    }
+
+    stop_mre.get();
+
+    ASSERT_EQ("", connection->get_connection_id());
+}
+
+TEST(connection_impl_stop, http_client_throws_from_registered_token)
+{
+    auto writer = std::shared_ptr<memory_log_writer>{ std::make_shared<memory_log_writer>() };
+
+    auto send_started = manual_reset_event<void>();
+    auto websocket_client = create_test_websocket_client();
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&send_started](const std::string& url, http_request, cancellation_token token)
+        {
+            send_started.set();
+            auto mre = manual_reset_event<void>();
+            token.register_callback([&mre]()
+                {
+                    mre.set();
+                    throw custom_exception("test: from http client");
+                });
+            mre.get();
+            auto response_body =
+                url.find("/negotiate") != std::string::npos
+                ? "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
+                : "";
+
+            return http_response{ 200, response_body };
+        }));
+    auto connection =
+        connection_impl::create(create_uri(), trace_level::verbose, writer,
+            [http_client](const signalr_client_config& config) {
+                http_client->set_scheduler(config.get_scheduler());
+                return http_client;
+            }, [websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            });
+
+    auto start_mre = manual_reset_event<void>();
+    connection->start([&start_mre](std::exception_ptr exception)
+        {
+            start_mre.set(exception);
+        });
+
+    send_started.get();
+
+    auto stop_mre = manual_reset_event<void>();
+    connection->stop([&stop_mre](std::exception_ptr exception)
+        {
+            stop_mre.set(exception);
+        }, nullptr);
+
+    try
+    {
+        start_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const signalr::canceled_exception&)
+    {
+    }
+
+    stop_mre.get();
+
+    ASSERT_EQ("", connection->get_connection_id());
+
+    auto log_entries = writer->get_log_entries();
+
+    ASSERT_TRUE(has_log_entry("[warning  ] disconnect event threw an exception in shutdown: test: from http client\n", log_entries)) << dump_vector(log_entries);
 }

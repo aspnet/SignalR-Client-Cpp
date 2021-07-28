@@ -14,7 +14,8 @@
 
 namespace signalr
 {
-    void default_http_client::send(const std::string& url, const http_request& request, std::function<void(const http_response&, std::exception_ptr)> callback)
+    void default_http_client::send(const std::string& url, http_request& request,
+        std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token)
     {
         web::http::method method;
         if (request.method == http_method::GET)
@@ -75,6 +76,11 @@ namespace signalr
                 }
             });
         }
+
+        token.register_callback([cts]()
+            {
+                cts.cancel();
+            });
 
         web::http::client::http_client client(utility::conversions::to_string_t(url));
         client.request(http_request, cts.get_token())
