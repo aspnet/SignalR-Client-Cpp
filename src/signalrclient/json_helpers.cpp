@@ -45,30 +45,31 @@ namespace signalr
         }
     }
 
-    char getBase64Value(uint8_t i)
+    char getBase64Value(uint32_t i)
     {
-        if (i < 26)
+        char index = (char)i;
+        if (index < 26)
         {
-            return 'A' + i;
+            return 'A' + index;
         }
-        if (i < 52)
+        if (index < 52)
         {
-            return 'a' + (i - 26);
+            return 'a' + (index - 26);
         }
-        if (i < 62)
+        if (index < 62)
         {
-            return '0' + (i - 52);
+            return '0' + (index - 52);
         }
-        if (i == 62)
+        if (index == 62)
         {
             return '+';
         }
-        if (i == 63)
+        if (index == 63)
         {
             return '/';
         }
 
-        throw std::out_of_range("base64 table index out of range: " + std::to_string(i));
+        throw std::out_of_range("base64 table index out of range: " + std::to_string(index));
     }
 
     std::string base64Encode(const std::vector<uint8_t>& data)
@@ -78,7 +79,7 @@ namespace signalr
         size_t i = 0;
         while (i <= data.size() - 3)
         {
-            uint32_t b = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+            uint32_t b = ((uint32_t)data[i] << 16) | ((uint32_t)data[i + 1] << 8) | (uint32_t)data[i + 2];
             base64result.push_back(getBase64Value(b >> 18));
             base64result.push_back(getBase64Value((b >> 12) & 0x3F));
             base64result.push_back(getBase64Value((b >> 6) & 0x3F));
@@ -88,7 +89,7 @@ namespace signalr
         }
         if (data.size() - i == 2)
         {
-            uint32_t b = (data[i] << 8) | data[i + 1];
+            uint32_t b = ((uint32_t)data[i] << 8) | (uint32_t)data[i + 1];
             base64result.push_back(getBase64Value(b >> 10 & 0x3F));
             base64result.push_back(getBase64Value(b >> 4 & 0x3F));
             base64result.push_back(getBase64Value(b << 2 & 0x3F));
@@ -96,7 +97,7 @@ namespace signalr
         }
         else if (data.size() - i == 1)
         {
-            uint32_t b = data[i];
+            uint32_t b = (uint32_t)data[i];
             base64result.push_back(getBase64Value(b >> 2 & 0x3F));
             base64result.push_back(getBase64Value(b << 4 & 0x3F));
             base64result.push_back('=');
