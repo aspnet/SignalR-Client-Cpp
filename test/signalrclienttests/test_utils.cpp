@@ -137,6 +137,17 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
         }
         break;
     }
+    case value_type::binary:
+    {
+        auto& expected_binary = expected.as_binary();
+        auto& actual_binary = actual.as_binary();
+        ASSERT_EQ(expected_binary.size(), actual_binary.size());
+        for (auto i = 0; i < expected_binary.size(); ++i)
+        {
+            ASSERT_EQ(expected_binary[i], actual_binary[i]);
+        }
+        break;
+    }
     case value_type::null:
         break;
     default:

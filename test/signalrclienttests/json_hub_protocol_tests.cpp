@@ -98,6 +98,15 @@ TEST(json_hub_protocol, parsing_field_order_does_not_matter)
     assert_hub_message_equality(&message, output[0].get());
 }
 
+TEST(json_hub_protocol, can_serialize_binary)
+{
+    auto output = json_hub_protocol().write_message(
+        new invocation_message("", "Target", std::vector<value>{ value(std::vector<uint8_t>{ 0x67, 0x6F, 0x6F, 0x64, 0x20, 0x64, 0x61, 0x79 }) }));
+
+    auto expected = "{\"arguments\":[\"Z29vZCBkYXk=\"],\"target\":\"Target\",\"type\":1}\x1e";
+    ASSERT_STREQ(expected, output.data());
+}
+
 TEST(json_hub_protocol, can_parse_multiple_messages)
 {
     auto output = json_hub_protocol().parse_messages(std::string("{\"arguments\":[],\"target\":\"Target\",\"type\":1}\x1e") +
