@@ -67,6 +67,8 @@ namespace signalr
         {
             return '/';
         }
+
+        throw std::out_of_range("base64 table index out of range: " + std::to_string(i));
     }
 
     std::string base64Encode(const std::vector<uint8_t>& data)
