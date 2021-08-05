@@ -80,7 +80,7 @@ namespace signalr
         while (i <= data.size() - 3)
         {
             uint32_t b = ((uint32_t)data[i] << 16) | ((uint32_t)data[i + 1] << 8) | (uint32_t)data[i + 2];
-            base64result.push_back(getBase64Value(b >> 18));
+            base64result.push_back(getBase64Value((b >> 18) & 0x3F));
             base64result.push_back(getBase64Value((b >> 12) & 0x3F));
             base64result.push_back(getBase64Value((b >> 6) & 0x3F));
             base64result.push_back(getBase64Value(b & 0x3F));
@@ -90,16 +90,16 @@ namespace signalr
         if (data.size() - i == 2)
         {
             uint32_t b = ((uint32_t)data[i] << 8) | (uint32_t)data[i + 1];
-            base64result.push_back(getBase64Value(b >> 10 & 0x3F));
-            base64result.push_back(getBase64Value(b >> 4 & 0x3F));
-            base64result.push_back(getBase64Value(b << 2 & 0x3F));
+            base64result.push_back(getBase64Value((b >> 10) & 0x3F));
+            base64result.push_back(getBase64Value((b >> 4) & 0x3F));
+            base64result.push_back(getBase64Value((b << 2) & 0x3F));
             base64result.push_back('=');
         }
         else if (data.size() - i == 1)
         {
             uint32_t b = (uint32_t)data[i];
-            base64result.push_back(getBase64Value(b >> 2 & 0x3F));
-            base64result.push_back(getBase64Value(b << 4 & 0x3F));
+            base64result.push_back(getBase64Value((b >> 2) & 0x3F));
+            base64result.push_back(getBase64Value((b << 4) & 0x3F));
             base64result.push_back('=');
             base64result.push_back('=');
         }
