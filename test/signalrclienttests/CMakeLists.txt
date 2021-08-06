@@ -1,4 +1,5 @@
 set (SOURCES
+  base64_tests.cpp
   callback_manager_tests.cpp
   cancellation_token_source_tests.cpp
   case_insensitive_comparison_utils_tests.cpp

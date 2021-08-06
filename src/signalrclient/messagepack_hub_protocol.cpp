@@ -63,7 +63,10 @@ namespace signalr
             return signalr::value(std::move(map));
         }
         case msgpack::type::object_type::BIN:
-            throw signalr_exception("messagepack type 'BIN' not supported");
+        {
+            std::vector<uint8_t> vec = std::vector<uint8_t>(v.via.bin.ptr, v.via.bin.ptr + v.via.bin.size);
+            return signalr::value(std::move(vec));
+        }
         case msgpack::type::object_type::EXT:
             throw signalr_exception("messagepack type 'EXT' not supported");
         case msgpack::type::object_type::NIL:
@@ -157,6 +160,13 @@ namespace signalr
                 packer.pack_str_body(val.first.data(), (uint32_t)val.first.size());
                 pack_messagepack(val.second, packer);
             }
+            return;
+        }
+        case signalr::value_type::binary:
+        {
+            const auto& bin = v.as_binary();
+            packer.pack_bin((uint32_t)bin.size());
+            packer.pack_bin_body((char*)bin.data(), (uint32_t)bin.size());
             return;
         }
         case signalr::value_type::null:

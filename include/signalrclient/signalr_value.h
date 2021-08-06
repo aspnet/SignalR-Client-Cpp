@@ -22,7 +22,8 @@ namespace signalr
         string,
         float64,
         null,
-        boolean
+        boolean,
+        binary
     };
 
     /**
@@ -97,6 +98,16 @@ namespace signalr
         SIGNALRCLIENT_API value(std::map<std::string, value>&& map);
 
         /**
+         * Create an object representing a value_type::binary with the given array of byte's.
+         */
+        SIGNALRCLIENT_API value(const std::vector<uint8_t>& bin);
+
+        /**
+         * Create an object representing a value_type::binary with the given array of byte's.
+         */
+        SIGNALRCLIENT_API value(std::vector<uint8_t>&& bin);
+
+        /**
          * Copies an existing value.
          */
         SIGNALRCLIENT_API value(const value& rhs);
@@ -152,6 +163,11 @@ namespace signalr
         SIGNALRCLIENT_API bool is_bool() const;
 
         /**
+         * True if the object stored is a binary blob.
+         */
+        SIGNALRCLIENT_API bool is_binary() const;
+
+        /**
          * Returns the stored object as a double. This will throw if the underlying object is not a signalr::type::float64.
          */
         SIGNALRCLIENT_API double as_double() const;
@@ -177,6 +193,11 @@ namespace signalr
         SIGNALRCLIENT_API const std::map<std::string, value>& as_map() const;
 
         /**
+         * Returns the stored object as an array of bytes. This will throw if the underlying object is not a signalr::type::binary.
+         */
+        SIGNALRCLIENT_API const std::vector<uint8_t>& as_binary() const;
+
+        /**
          * Returns the signalr::type that represents the stored object.
          */
         SIGNALRCLIENT_API value_type type() const;
@@ -191,6 +212,7 @@ namespace signalr
             std::vector<value> array;
             double number;
             std::map<std::string, value> map;
+            std::vector<uint8_t> binary;
 
             // constructor of types in union are not implicitly called
             // this is expected as we only construct a single type in the union once we know

@@ -45,6 +45,68 @@ namespace signalr
         }
     }
 
+    char getBase64Value(uint32_t i)
+    {
+        char index = (char)i;
+        if (index < 26)
+        {
+            return 'A' + index;
+        }
+        if (index < 52)
+        {
+            return 'a' + (index - 26);
+        }
+        if (index < 62)
+        {
+            return '0' + (index - 52);
+        }
+        if (index == 62)
+        {
+            return '+';
+        }
+        if (index == 63)
+        {
+            return '/';
+        }
+
+        throw std::out_of_range("base64 table index out of range: " + std::to_string(index));
+    }
+
+    std::string base64Encode(const std::vector<uint8_t>& data)
+    {
+        std::string base64result;
+
+        size_t i = 0;
+        while (i <= data.size() - 3)
+        {
+            uint32_t b = ((uint32_t)data[i] << 16) | ((uint32_t)data[i + 1] << 8) | (uint32_t)data[i + 2];
+            base64result.push_back(getBase64Value((b >> 18) & 0x3F));
+            base64result.push_back(getBase64Value((b >> 12) & 0x3F));
+            base64result.push_back(getBase64Value((b >> 6) & 0x3F));
+            base64result.push_back(getBase64Value(b & 0x3F));
+
+            i += 3;
+        }
+        if (data.size() - i == 2)
+        {
+            uint32_t b = ((uint32_t)data[i] << 8) | (uint32_t)data[i + 1];
+            base64result.push_back(getBase64Value((b >> 10) & 0x3F));
+            base64result.push_back(getBase64Value((b >> 4) & 0x3F));
+            base64result.push_back(getBase64Value((b << 2) & 0x3F));
+            base64result.push_back('=');
+        }
+        else if (data.size() - i == 1)
+        {
+            uint32_t b = (uint32_t)data[i];
+            base64result.push_back(getBase64Value((b >> 2) & 0x3F));
+            base64result.push_back(getBase64Value((b << 4) & 0x3F));
+            base64result.push_back('=');
+            base64result.push_back('=');
+        }
+
+        return base64result;
+    }
+
     Json::Value createJson(const signalr::value& v)
     {
         switch (v.type())
@@ -109,6 +171,11 @@ namespace signalr
                 object[val.first] = createJson(val.second);
             }
             return object;
+        }
+        case signalr::value_type::binary:
+        {
+            const auto& binary = v.as_binary();
+            return Json::Value(base64Encode(binary));
         }
         case signalr::value_type::null:
         default:
