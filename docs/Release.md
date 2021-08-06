@@ -6,7 +6,7 @@
 * `git push origin <tag-name>`
 
 ## Fork
-* For the repo at https://github.com/microsoft/vcpkg
+* Fork the repo at https://github.com/microsoft/vcpkg
   - If you already have a fork, make sure it is updated to the master branch
 
   ![image](https://user-images.githubusercontent.com/7574801/128568379-deb14ed7-1ba3-4cb7-83d2-faecf8300f21.png)
