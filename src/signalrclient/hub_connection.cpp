@@ -63,7 +63,7 @@ namespace signalr
         return m_pImpl->on(event_name, handler);
     }
 
-    void hub_connection::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
+    void hub_connection::invoke(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
         if (!m_pImpl)
         {
@@ -74,7 +74,7 @@ namespace signalr
         return m_pImpl->invoke(method_name, arguments, callback);
     }
 
-    void hub_connection::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection::send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
         if (!m_pImpl)
         {

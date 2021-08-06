@@ -32,17 +32,17 @@ namespace signalr
     struct invocation_message : hub_invocation_message
     {
         invocation_message(const std::string& invocation_id, const std::string& target,
-            const signalr::value& args, const std::vector<std::string>& stream_ids = std::vector<std::string>())
+            const std::vector<signalr::value>& args, const std::vector<std::string>& stream_ids = std::vector<std::string>())
             : hub_invocation_message(invocation_id, signalr::message_type::invocation), target(target), arguments(args), stream_ids(stream_ids)
         { }
 
         invocation_message(std::string&& invocation_id, std::string&& target,
-            signalr::value&& args, std::vector<std::string>&& stream_ids = std::vector<std::string>())
+            std::vector<signalr::value>&& args, std::vector<std::string>&& stream_ids = std::vector<std::string>())
             : hub_invocation_message(invocation_id, signalr::message_type::invocation), target(target), arguments(args), stream_ids(stream_ids)
         { }
 
         std::string target;
-        signalr::value arguments;
+        std::vector<signalr::value> arguments;
         std::vector<std::string> stream_ids;
     };
 

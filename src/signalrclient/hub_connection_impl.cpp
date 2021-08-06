@@ -85,7 +85,7 @@ namespace signalr
         });
     }
 
-    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const signalr::value &)>& handler)
+    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
     {
         if (event_name.length() == 0)
         {
@@ -441,14 +441,8 @@ namespace signalr
         return true;
     }
 
-    void hub_connection_impl::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::invoke(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
-        if (!arguments.is_array())
-        {
-            callback(signalr::value(), std::make_exception_ptr(signalr_exception("arguments should be an array")));
-            return;
-        }
-
         const auto& callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
                 [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
@@ -457,20 +451,14 @@ namespace signalr
             [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
     }
 
-    void hub_connection_impl::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        if (!arguments.is_array())
-        {
-            callback(std::make_exception_ptr(signalr_exception("arguments should be an array")));
-            return;
-        }
-
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },
             [callback](const std::exception_ptr e){ callback(e); });
     }
 
-    void hub_connection_impl::invoke_hub_method(const std::string& method_name, const signalr::value& arguments,
+    void hub_connection_impl::invoke_hub_method(const std::string& method_name, const std::vector<signalr::value>& arguments,
         const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept
     {
         try
