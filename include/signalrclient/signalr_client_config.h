@@ -38,7 +38,7 @@ namespace signalr
         SIGNALRCLIENT_API void __cdecl set_websocket_client_config(const web::websockets::client::websocket_client_config& websocket_client_config);
 #endif
 
-        SIGNALRCLIENT_API __cdecl signalr_client_config();
+        SIGNALRCLIENT_API signalr_client_config();
 
         SIGNALRCLIENT_API const std::map<std::string, std::string>& __cdecl get_http_headers() const noexcept;
         SIGNALRCLIENT_API std::map<std::string, std::string>& __cdecl get_http_headers() noexcept;
