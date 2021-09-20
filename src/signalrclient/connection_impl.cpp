@@ -441,6 +441,7 @@ namespace signalr
                 }
             });
 
+        // pass transport as shared_ptr because the capture will be the only thing keeping the object alive until it's set on the connection in transport_started
         connection->send_connect_request(transport, url, [transport_started, transport](std::exception_ptr exception)
             {
                 if (exception == nullptr)

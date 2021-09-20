@@ -561,3 +561,53 @@ TEST(websocket_transport_get_transport_type, get_transport_type_returns_websocke
 
     ASSERT_EQ(transport_type::websockets, ws_transport->get_transport_type());
 }
+
+class caching_websocket_client : public websocket_client
+{
+public:
+    virtual void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept
+    {
+        m_start_callback = callback;
+        callback(nullptr);
+    }
+
+    virtual void stop(std::function<void(std::exception_ptr)> callback) noexcept
+    {
+        m_stop_callback = callback;
+        callback(nullptr);
+    }
+
+    virtual void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
+    {
+        callback(nullptr);
+    }
+
+    virtual void receive(std::function<void(const std::string&, std::exception_ptr)> callback)
+    {
+        m_receive_callback = callback;
+        std::thread([callback]()
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                callback("", nullptr);
+            }).detach();
+    }
+private:
+    std::function<void(std::exception_ptr)> m_start_callback;
+    std::function<void(std::exception_ptr)> m_stop_callback;
+    std::function<void(const std::string&, std::exception_ptr)> m_receive_callback;
+};
+
+// validates that a 3rd party websocket client implementation wont cause a memory leak if it caches the callbacks passed from the websocket_transport
+TEST(websocket_client_custom_impl, caching_callbacks_does_not_leak)
+{
+    auto ws_transport = websocket_transport::create(
+        [](const signalr_client_config& config)
+        {
+            auto client = std::make_shared<caching_websocket_client>();
+            return client;
+        }, signalr_client_config{},
+        logger(std::make_shared<trace_log_writer>(), trace_level::none));
+
+    ws_transport->start("ws://fakeuri.org", [](std::exception_ptr) {});
+    ws_transport->stop([](std::exception_ptr) {});
+}

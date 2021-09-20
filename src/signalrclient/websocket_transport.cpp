@@ -65,12 +65,13 @@ namespace signalr
         auto weak_transport = std::weak_ptr<websocket_transport>(this_transport);
 
         auto websocket_client = this_transport->safe_get_websocket_client();
+        auto weak_websocket_client = std::weak_ptr<signalr::websocket_client>(websocket_client);
 
         // There are two cases when we exit the loop. The first case is implicit - we pass the cancellation_token_source
         // to `then` (note this is after the lambda body) and if the token is cancelled the continuation will not
         // run at all. The second - explicit - case happens if the token gets cancelled after the continuation has
         // been started in which case we just stop the loop by not scheduling another receive task.
-        websocket_client->receive([weak_transport, cts, logger, websocket_client](std::string message, std::exception_ptr exception)
+        websocket_client->receive([weak_transport, cts, logger, weak_websocket_client](std::string message, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
@@ -97,7 +98,13 @@ namespace signalr
                     cts->cancel();
 
                     std::promise<void> promise;
-                    websocket_client->stop([&promise](std::exception_ptr exception)
+                    auto client = weak_websocket_client.lock();
+                    if (!client)
+                    {
+                        // everything is cleaned up, nothing to do here
+                        return;
+                    }
+                    client->stop([&promise](std::exception_ptr exception)
                     {
                         if (exception != nullptr)
                         {
@@ -176,10 +183,17 @@ namespace signalr
 
             auto receive_loop_cts = std::make_shared<cancellation_token_source>();
 
-            auto transport = shared_from_this();
+            auto weak_transport = std::weak_ptr<websocket_transport>(shared_from_this());
 
-            websocket_client->start(url, [transport, receive_loop_cts, callback](std::exception_ptr exception)
+            websocket_client->start(url, [weak_transport, receive_loop_cts, callback](std::exception_ptr exception)
                 {
+                    auto transport = weak_transport.lock();
+                    if (!transport)
+                    {
+                        callback(nullptr);
+                        return;
+                    }
+
                     try
                     {
                         if (exception != nullptr)
