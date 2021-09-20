@@ -818,6 +818,74 @@ TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
     }
 }
 
+TEST(stop, stops_with_inprogress_negotiate)
+{
+    auto stop_mre = manual_reset_event<void>();
+    auto done_mre = manual_reset_event<void>();
+    auto websocket_client = create_test_websocket_client();
+    auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&stop_mre, &done_mre](const std::string& url, http_request, cancellation_token)
+        {
+            stop_mre.get();
+
+            auto response_body =
+                url.find("/negotiate") != std::string::npos
+                ? "{ \"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
+                "\"availableTransports\" : [ { \"transport\": \"WebSockets\", \"transferFormats\": [ \"Text\", \"Binary\" ] } ] }"
+                : "";
+
+            done_mre.set();
+
+            return http_response{ 200, response_body };
+        }));
+
+    auto hub_connection = hub_connection_builder::create(create_uri())
+        .with_logging(std::make_shared<memory_log_writer>(), trace_level::verbose)
+        .with_http_client_factory([http_client](const signalr_client_config& config)
+            {
+                http_client->set_scheduler(config.get_scheduler());
+                return http_client;
+            })
+        .with_websocket_factory([websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            })
+        .build();
+
+    auto disconnected_called = false;
+    // disconnected not called for connections that never started successfully
+    hub_connection.set_disconnected([&disconnected_called](std::exception_ptr ex)
+        {
+            disconnected_called = true;
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    hub_connection.stop([&stop_mre](std::exception_ptr exception)
+        {
+            stop_mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const signalr::canceled_exception&)
+    {
+    }
+
+    // avoid AV from accessing stop_mre in callback
+    done_mre.get();
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_FALSE(disconnected_called);
+}
+
 TEST(hub_invocation, hub_connection_invokes_users_code_on_hub_invocations)
 {
     auto websocket_client = create_test_websocket_client();

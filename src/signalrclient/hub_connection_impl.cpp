@@ -134,21 +134,9 @@ namespace signalr
 
                 if (start_exception)
                 {
-                    connection->m_connection->stop([callback, weak_connection](std::exception_ptr ex)
-                    {
-                        try
-                        {
-                            auto connection = weak_connection.lock();
-                            if (!connection)
-                            {
-                                callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
-                                return;
-                            }
-                        }
-                        catch (...) {}
-
-                        callback(ex);
-                    }, start_exception);
+                    assert(connection->get_connection_state() == connection_state::disconnected);
+                    // connection didn't start, don't call stop
+                    callback(start_exception);
                     return;
                 }
 
