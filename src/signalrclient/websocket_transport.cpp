@@ -241,11 +241,16 @@ namespace signalr
 
         auto logger = m_logger;
         auto close_callback = m_close_callback;
+        auto weak_websocket_client = std::weak_ptr<signalr::websocket_client>(websocket_client);
 
-        websocket_client->stop([logger, callback, close_callback](std::exception_ptr exception)
+        websocket_client->stop([logger, callback, close_callback, weak_websocket_client](std::exception_ptr exception)
             {
                 try
                 {
+                    // Grab a strong reference to the websocket_client so that it can't get destructed in the middle of this lambda running.
+                    // Because we capture by weak reference we aren't causing any circular references, and the strong reference only lasts until this lambda returns.
+                    auto websocket_client = weak_websocket_client.lock();
+
                     close_callback(exception);
                     if (exception != nullptr)
                     {
