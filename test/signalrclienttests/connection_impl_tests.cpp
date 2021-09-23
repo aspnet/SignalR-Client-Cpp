@@ -2166,7 +2166,6 @@ public:
         std::thread([this]()
             {
                 m_stop_callback(m_exception_on_stop ? std::make_exception_ptr(std::runtime_error("")) : nullptr);
-                m_stop_callback = nullptr;
             }).detach();
     }
 
