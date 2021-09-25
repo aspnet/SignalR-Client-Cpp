@@ -1600,7 +1600,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> disconnected\n", log_entries)) << dump_vector(log_entries);
 }
 
-TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_before_init_message_received)
+TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_before_negotiate_message_received)
 {
     auto stop_mre = manual_reset_event<void>();
     auto done_mre = manual_reset_event<void>();
