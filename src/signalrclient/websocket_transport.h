@@ -46,6 +46,7 @@ namespace signalr
         signalr_client_config m_signalr_client_config;
 
         std::shared_ptr<cancellation_token_source> m_receive_loop_cts;
+        std::shared_ptr<cancellation_token_source> m_receive_loop_done_cts;
 
         void receive_loop(std::shared_ptr<cancellation_token_source> cts);
 

@@ -38,11 +38,11 @@ namespace signalr
     hub_connection_impl::hub_connection_impl(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, trace_level trace_level,
         const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
-        : m_connection(connection_impl::create(url, trace_level, log_writer,
-            http_client_factory, websocket_factory, skip_negotiation)), m_logger(log_writer, trace_level),
+        : m_connection(std::shared_ptr<connection>(new connection(url, trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation)))
+            , m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
         m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
-    {}
+    { }
 
     void hub_connection_impl::initialize()
     {

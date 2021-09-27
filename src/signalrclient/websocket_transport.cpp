@@ -26,11 +26,12 @@ namespace signalr
         const signalr_client_config& signalr_client_config, const logger& logger)
         : transport(logger), m_websocket_client_factory(websocket_client_factory), m_process_response_callback([](std::string, std::exception_ptr) {}),
         m_close_callback([](std::exception_ptr) {}), m_signalr_client_config(signalr_client_config),
-        m_receive_loop_cts(std::make_shared<cancellation_token_source>())
+        m_receive_loop_cts(std::make_shared<cancellation_token_source>()), m_receive_loop_done_cts(std::make_shared<cancellation_token_source>())
     {
         // we use this cts to check if the receive loop is running so it should be
         // initially canceled to indicate that the receive loop is not running
         m_receive_loop_cts->cancel();
+        m_receive_loop_done_cts->cancel();
     }
 
     websocket_transport::~websocket_transport()
@@ -65,12 +66,15 @@ namespace signalr
         auto weak_transport = std::weak_ptr<websocket_transport>(this_transport);
 
         auto websocket_client = this_transport->safe_get_websocket_client();
+        auto weak_websocket_client = std::weak_ptr<signalr::websocket_client>(websocket_client);
+
+        auto receive_loop_done_cts = this_transport->m_receive_loop_done_cts;
 
         // There are two cases when we exit the loop. The first case is implicit - we pass the cancellation_token_source
         // to `then` (note this is after the lambda body) and if the token is cancelled the continuation will not
         // run at all. The second - explicit - case happens if the token gets cancelled after the continuation has
         // been started in which case we just stop the loop by not scheduling another receive task.
-        websocket_client->receive([weak_transport, cts, logger, websocket_client](std::string message, std::exception_ptr exception)
+        websocket_client->receive([weak_transport, cts, logger, weak_websocket_client, receive_loop_done_cts](std::string message, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
@@ -94,10 +98,24 @@ namespace signalr
                         exception = std::make_exception_ptr(signalr_exception("unknown error"));
                     }
 
-                    cts->cancel();
+                    if (!cts->cancel())
+                    {
+                        receive_loop_done_cts->cancel();
+                        return;
+                    }
+                    receive_loop_done_cts->cancel();
 
                     std::promise<void> promise;
-                    websocket_client->stop([&promise](std::exception_ptr exception)
+                    auto client = weak_websocket_client.lock();
+                    if (!client)
+                    {
+                        // this should not be hit
+                        // we wait for the receive loop to complete before completing stop (which will then destruct the transport and client)
+                        logger.log(trace_level::critical,
+                            "[websocket transport] websocket client has been destructed before the receive loop completes, this is a bug");
+                        assert(client != nullptr);
+                    }
+                    client->stop([&promise](std::exception_ptr exception)
                     {
                         if (exception != nullptr)
                         {
@@ -129,12 +147,19 @@ namespace signalr
                 auto transport = weak_transport.lock();
                 if (transport)
                 {
-                    transport->m_process_response_callback(message, nullptr);
-
                     if (!cts->is_canceled())
                     {
+                        transport->m_process_response_callback(message, nullptr);
                         transport->receive_loop(cts);
                     }
+                    else
+                    {
+                        receive_loop_done_cts->cancel();
+                    }
+                }
+                else
+                {
+                    receive_loop_done_cts->cancel();
                 }
             });
     }
@@ -174,12 +199,21 @@ namespace signalr
                 m_websocket_client = websocket_client;
             }
 
-            auto receive_loop_cts = std::make_shared<cancellation_token_source>();
+            m_receive_loop_cts->reset();
+            m_receive_loop_done_cts->reset();
+            auto receive_loop_cts = m_receive_loop_cts;
 
-            auto transport = shared_from_this();
+            auto weak_transport = std::weak_ptr<websocket_transport>(shared_from_this());
 
-            websocket_client->start(url, [transport, receive_loop_cts, callback](std::exception_ptr exception)
+            websocket_client->start(url, [weak_transport, receive_loop_cts, callback](std::exception_ptr exception)
                 {
+                    auto transport = weak_transport.lock();
+                    if (!transport)
+                    {
+                        callback(nullptr);
+                        return;
+                    }
+
                     try
                     {
                         if (exception != nullptr)
@@ -202,8 +236,6 @@ namespace signalr
                         callback(std::current_exception());
                     }
                 });
-
-            m_receive_loop_cts = receive_loop_cts;
         }
     }
 
@@ -227,27 +259,31 @@ namespace signalr
 
         auto logger = m_logger;
         auto close_callback = m_close_callback;
+        auto receive_loop_done_cts = m_receive_loop_done_cts;
 
-        websocket_client->stop([logger, callback, close_callback](std::exception_ptr exception)
+        websocket_client->stop([logger, callback, close_callback, receive_loop_done_cts](std::exception_ptr exception)
             {
-                try
-                {
-                    close_callback(exception);
-                    if (exception != nullptr)
+                receive_loop_done_cts->register_callback([logger, callback, close_callback, exception]()
                     {
-                        std::rethrow_exception(exception);
-                    }
-                    callback(nullptr);
-                }
-                catch (const std::exception & e)
-                {
-                    logger.log(
-                        trace_level::error,
-                        std::string("[websocket transport] exception when closing websocket: ")
-                        .append(e.what()));
+                        try
+                        {
+                            close_callback(exception);
+                            if (exception != nullptr)
+                            {
+                                std::rethrow_exception(exception);
+                            }
+                            callback(nullptr);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            logger.log(
+                                trace_level::error,
+                                std::string("[websocket transport] exception when closing websocket: ")
+                                .append(e.what()));
 
-                    callback(exception);
-                }
+                            callback(exception);
+                        }
+                    });
             });
     }
 

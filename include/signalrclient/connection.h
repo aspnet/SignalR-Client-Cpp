@@ -12,6 +12,8 @@
 #include "log_writer.h"
 #include "signalr_client_config.h"
 #include "transfer_format.h"
+#include "http_client.h"
+#include "websocket_client.h"
 
 namespace signalr
 {
@@ -20,9 +22,11 @@ namespace signalr
     class connection
     {
     public:
-        typedef std::function<void __cdecl(const std::string&)> message_received_handler;
+        typedef std::function<void __cdecl(std::string&&)> message_received_handler;
 
-        SIGNALRCLIENT_API explicit connection(const std::string& url, trace_level trace_level = trace_level::info, std::shared_ptr<log_writer> log_writer = nullptr);
+        SIGNALRCLIENT_API explicit connection(const std::string& url, trace_level trace_level = trace_level::info, std::shared_ptr<log_writer> log_writer = nullptr,
+            std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory = nullptr,
+            std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory = nullptr, bool skip_negotiation = false);
 
         SIGNALRCLIENT_API ~connection();
 

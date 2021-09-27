@@ -35,6 +35,20 @@ TEST(cancellation_token_source, cancel_sets_canceled)
     ASSERT_TRUE(cts.is_canceled());
 }
 
+TEST(cancellation_token_source, cancel_returns_true)
+{
+    cancellation_token_source cts;
+    ASSERT_TRUE(cts.cancel());
+}
+
+TEST(cancellation_token_source, cancel_returns_false_if_already_canceled)
+{
+    cancellation_token_source cts;
+    cts.cancel();
+    ASSERT_FALSE(cts.cancel());
+    ASSERT_TRUE(cts.is_canceled());
+}
+
 TEST(cancellation_token_source, can_be_reset)
 {
     cancellation_token_source cts;

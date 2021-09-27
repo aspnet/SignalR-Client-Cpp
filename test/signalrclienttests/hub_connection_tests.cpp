@@ -727,7 +727,7 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
     // The underlying connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail. There is nothing we can block on.
-    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 9; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 8; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
@@ -814,7 +814,7 @@ TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
     }
     catch (const signalr_exception& e)
     {
-        ASSERT_STREQ("connection went out of scope before invocation result was received", e.what());
+        ASSERT_STREQ("connection was stopped before invocation result was received", e.what());
     }
 }
 

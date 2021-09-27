@@ -5,12 +5,14 @@
 #pragma once
 
 #include <unordered_map>
-#include "connection_impl.h"
 #include "callback_manager.h"
 #include "case_insensitive_comparison_utils.h"
 #include "completion_event.h"
 #include "signalrclient/signalr_value.h"
 #include "hub_protocol.h"
+#include "signalrclient/connection.h"
+#include "logger.h"
+#include "cancellation_token_source.h"
 
 namespace signalr
 {
@@ -51,7 +53,7 @@ namespace signalr
             std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory,
             bool skip_negotiation);
 
-        std::shared_ptr<connection_impl> m_connection;
+        std::shared_ptr<connection> m_connection;
         logger m_logger;
         callback_manager m_callback_manager;
         std::unordered_map<std::string, std::function<void(const std::vector<signalr::value>&)>, case_insensitive_hash, case_insensitive_equals> m_subscriptions;

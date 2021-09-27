@@ -947,7 +947,7 @@ TEST(connection_impl_start, negotiate_with_negotiateVersion_uses_connectionToken
         mre.get();
         ASSERT_TRUE(false);
     }
-    catch (const std::runtime_error & ex)
+    catch (const std::runtime_error& ex)
     {
         ASSERT_STREQ("connecting failed", ex.what());
     }
@@ -1472,13 +1472,13 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
     // The connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail
-    for (int wait_time_ms = 5; wait_time_ms < 1000 && memory_writer->get_log_entries().size() < 16; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 1000 && memory_writer->get_log_entries().size() < 14; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
 
     auto log_entries = memory_writer->get_log_entries();
-    ASSERT_EQ(16U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(14U, log_entries.size()) << dump_vector(log_entries);
 
     auto second_half = std::vector<std::string>(log_entries.begin() + 8, log_entries.end());
 
@@ -1517,7 +1517,7 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
     // The connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail
-    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 7; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 6; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
@@ -2145,4 +2145,113 @@ TEST(connection_impl_stop, http_client_throws_from_registered_token)
     auto log_entries = writer->get_log_entries();
 
     ASSERT_TRUE(has_log_entry("[warning  ] disconnect event threw an exception in shutdown: test: from http client\n", log_entries)) << dump_vector(log_entries);
+}
+
+class stop_capturing_websocket_client : public websocket_client
+{
+public:
+    stop_capturing_websocket_client(bool exception_on_stop = false)
+        : m_exception_on_stop(exception_on_stop)
+    {
+    }
+
+    virtual void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept
+    {
+        callback(nullptr);
+    }
+
+    virtual void stop(std::function<void(std::exception_ptr)> callback) noexcept
+    {
+        m_stop_callback = callback;
+        std::thread([this]()
+            {
+                m_stop_callback(m_exception_on_stop ? std::make_exception_ptr(std::runtime_error("")) : nullptr);
+            }).detach();
+    }
+
+    virtual void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
+    {
+        callback(nullptr);
+    }
+
+    virtual void receive(std::function<void(const std::string&, std::exception_ptr)> callback)
+    {
+        std::thread([callback]()
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                callback("", nullptr);
+            }).detach();
+    }
+private:
+    std::function<void(std::exception_ptr)> m_stop_callback;
+    bool m_exception_on_stop;
+};
+
+// regression test: if a websocket_client impl held onto a reference of the stop callback we passed in it could be destructed in the middle of the stop callback running
+// which would delete the callback while we're still running it, resulting in unexpected behavior
+TEST(connection_impl_stop, works_with_stop_callback_capturing_websocket_client_with_error)
+{
+    auto writer = std::shared_ptr<memory_log_writer>{ std::make_shared<memory_log_writer>() };
+
+    auto connection =
+        connection_impl::create(create_uri(), trace_level::verbose, writer,
+            create_test_http_client(), [](const signalr_client_config&)
+            {
+                return std::make_shared<stop_capturing_websocket_client>(true);
+            });
+
+    auto start_mre = manual_reset_event<void>();
+    connection->start([&start_mre](std::exception_ptr exception)
+        {
+            start_mre.set(exception);
+        });
+
+    start_mre.get();
+
+    auto stop_mre = manual_reset_event<void>();
+    connection->stop([&stop_mre](std::exception_ptr exception)
+        {
+            stop_mre.set(exception);
+        }, nullptr);
+
+    try
+    {
+        stop_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (...) {}
+
+    ASSERT_NE("", connection->get_connection_id());
+    ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
+}
+
+TEST(connection_impl_stop, works_with_stop_callback_capturing_websocket_client)
+{
+    auto writer = std::shared_ptr<memory_log_writer>{ std::make_shared<memory_log_writer>() };
+
+    auto connection =
+        connection_impl::create(create_uri(), trace_level::verbose, writer,
+            create_test_http_client(), [](const signalr_client_config&)
+            {
+                return std::make_shared<stop_capturing_websocket_client>();
+            });
+
+    auto start_mre = manual_reset_event<void>();
+    connection->start([&start_mre](std::exception_ptr exception)
+        {
+            start_mre.set(exception);
+        });
+
+    start_mre.get();
+
+    auto stop_mre = manual_reset_event<void>();
+    connection->stop([&stop_mre](std::exception_ptr exception)
+        {
+            stop_mre.set(exception);
+        }, nullptr);
+
+    stop_mre.get();
+
+    ASSERT_NE("", connection->get_connection_id());
+    ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 }
