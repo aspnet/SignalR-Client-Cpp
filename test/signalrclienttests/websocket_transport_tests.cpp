@@ -609,8 +609,8 @@ TEST(stop, s)
         }, signalr_client_config{},
         logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
-    std::atomic_int stop_called = 0;
-    std::atomic_int on_close_called = 0;
+    std::atomic_int stop_called{ 0 };
+    std::atomic_int on_close_called{ 0 };
     auto mre = manual_reset_event<void>();
     ws_transport->on_close([&mre, &on_close_called](std::exception_ptr ex)
         {
