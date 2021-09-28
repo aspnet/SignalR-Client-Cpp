@@ -1652,8 +1652,13 @@ TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_
     {
     }
 
+    for (int wait_time_ms = 5; wait_time_ms < 1000 && std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries().size() < 6; wait_time_ms <<= 1)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
+    }
+
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(5U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(6U, log_entries.size()) << dump_vector(log_entries);
     ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
     ASSERT_EQ("[info     ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
     ASSERT_EQ("[info     ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
@@ -2141,6 +2146,11 @@ TEST(connection_impl_stop, http_client_throws_from_registered_token)
     stop_mre.get();
 
     ASSERT_EQ("", connection->get_connection_id());
+
+    for (int wait_time_ms = 5; wait_time_ms < 1000 && std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries().size() < 6; wait_time_ms <<= 1)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
+    }
 
     auto log_entries = writer->get_log_entries();
 
