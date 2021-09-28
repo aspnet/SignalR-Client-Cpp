@@ -1729,7 +1729,9 @@ TEST(config, can_replace_scheduler)
 
     mre.get();
 
-    ASSERT_EQ(6, scheduler->schedule_count);
+    // http_client->send (negotiate), websocket_client->start, handshake timeout timer, websocket_client->send, websocket_client->send, websocket_client->stop
+    // handshake timeout timer can trigger more than once if test takes more than 1 second
+    ASSERT_GE(6, scheduler->schedule_count);
 }
 
 class throw_hub_protocol : public hub_protocol
