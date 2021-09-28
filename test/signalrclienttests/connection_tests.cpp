@@ -2093,13 +2093,13 @@ TEST(connection_impl_stop, http_client_throws_from_registered_token)
     auto websocket_client = create_test_websocket_client();
     auto http_client = std::shared_ptr<test_http_client>(new test_http_client([&send_started](const std::string& url, http_request, cancellation_token token)
         {
-            send_started.set();
             auto mre = manual_reset_event<void>();
             token.register_callback([&mre]()
                 {
                     mre.set();
                     throw custom_exception("test: from http client");
                 });
+            send_started.set();
             mre.get();
             auto response_body =
                 url.find("/negotiate") != std::string::npos
