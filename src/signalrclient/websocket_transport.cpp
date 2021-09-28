@@ -100,6 +100,7 @@ namespace signalr
 
                     if (!cts->cancel())
                     {
+                        // stop has been called, tell it the receive loop is done and return
                         receive_loop_done_cts->cancel();
                         return;
                     }

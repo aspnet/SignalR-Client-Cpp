@@ -599,7 +599,7 @@ private:
     bool m_stop;
 };
 
-TEST(stop, s)
+TEST(stop, error_from_receive_on_stop_properly_closes)
 {
     auto ws_transport = websocket_transport::create(
         [](const signalr_client_config& config)
