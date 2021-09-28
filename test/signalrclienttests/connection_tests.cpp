@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "test_utils.h"
 #include "test_websocket_client.h"
-#include "signalrclient/connection.h"
+#include "connection.h"
 #include "signalrclient/trace_level.h"
 #include "memory_log_writer.h"
 #include "signalr_default_scheduler.h"

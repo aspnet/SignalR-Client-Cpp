@@ -10,7 +10,7 @@
 #include "completion_event.h"
 #include "signalrclient/signalr_value.h"
 #include "hub_protocol.h"
-#include "signalrclient/connection.h"
+#include "connection.h"
 #include "logger.h"
 #include "cancellation_token_source.h"
 
