@@ -511,6 +511,15 @@ TEST(stop, does_nothing_on_disconnected_connection)
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
+// Makes sure the destructor of hub_connection is safe after moving the object
+TEST(dtor, can_move_connection)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto hub_connection2 = std::move(hub_connection);
+}
+
 TEST(stop, second_stop_waits_for_first_stop)
 {
     auto transport_stop_mre = manual_reset_event<void>();

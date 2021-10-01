@@ -20,12 +20,15 @@ namespace signalr
     // undefinded behavior since we are using an incomplete type. More details here:  http://herbsutter.com/gotw/_100/
     connection::~connection()
     {
-        completion_event completion;
-        m_pImpl->stop([completion](std::exception_ptr) mutable
-            {
-                completion.set();
-            }, nullptr);
-        completion.get();
+        if (m_pImpl)
+        {
+            completion_event completion;
+            m_pImpl->stop([completion](std::exception_ptr) mutable
+                {
+                    completion.set();
+                }, nullptr);
+            completion.get();
+        }
     }
 
     void connection::start(std::function<void(std::exception_ptr)> callback) noexcept
