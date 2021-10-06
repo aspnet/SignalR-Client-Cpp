@@ -5,12 +5,15 @@
 #pragma once
 
 #include <unordered_map>
-#include "connection_impl.h"
 #include "callback_manager.h"
 #include "case_insensitive_comparison_utils.h"
 #include "completion_event.h"
 #include "signalrclient/signalr_value.h"
 #include "hub_protocol.h"
+#include "connection.h"
+#include "logger.h"
+#include "cancellation_token_source.h"
+#include "connection_impl.h"
 
 namespace signalr
 {

@@ -27,8 +27,6 @@ namespace signalr
     class connection_impl : public std::enable_shared_from_this<connection_impl>
     {
     public:
-        static std::shared_ptr<connection_impl> create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer);
-
         static std::shared_ptr<connection_impl> create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
             std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation = false);
 

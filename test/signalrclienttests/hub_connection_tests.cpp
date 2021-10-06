@@ -511,6 +511,15 @@ TEST(stop, does_nothing_on_disconnected_connection)
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
+// Makes sure the destructor of hub_connection is safe after moving the object
+TEST(dtor, can_move_connection)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto hub_connection2 = std::move(hub_connection);
+}
+
 TEST(stop, second_stop_waits_for_first_stop)
 {
     auto transport_stop_mre = manual_reset_event<void>();
@@ -727,7 +736,7 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
     // The underlying connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail. There is nothing we can block on.
-    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 9; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 8; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
@@ -814,7 +823,7 @@ TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
     }
     catch (const signalr_exception& e)
     {
-        ASSERT_STREQ("connection went out of scope before invocation result was received", e.what());
+        ASSERT_STREQ("connection was stopped before invocation result was received", e.what());
     }
 }
 
@@ -1729,7 +1738,9 @@ TEST(config, can_replace_scheduler)
 
     mre.get();
 
-    ASSERT_EQ(6, scheduler->schedule_count);
+    // http_client->send (negotiate), websocket_client->start, handshake timeout timer, websocket_client->send, websocket_client->send, websocket_client->stop
+    // handshake timeout timer can trigger more than once if test takes more than 1 second
+    ASSERT_GE(6, scheduler->schedule_count);
 }
 
 class throw_hub_protocol : public hub_protocol

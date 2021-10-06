@@ -3,19 +3,33 @@
 // See the LICENSE file in the project root for more information.
 
 #include "stdafx.h"
-#include "signalrclient/connection.h"
+#include "connection.h"
 #include "signalrclient/transport_type.h"
 #include "connection_impl.h"
+#include "completion_event.h"
 
 namespace signalr
 {
-    connection::connection(const std::string& url, trace_level trace_level, std::shared_ptr<log_writer> log_writer)
-        : m_pImpl(connection_impl::create(url, trace_level, std::move(log_writer)))
+    connection::connection(const std::string& url, trace_level trace_level, std::shared_ptr<log_writer> log_writer,
+        std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation)
+        : m_pImpl(connection_impl::create(url, trace_level, std::move(log_writer), http_client_factory, websocket_factory, skip_negotiation))
     {}
 
     // Do NOT remove this destructor. Letting the compiler generate and inline the default dtor may lead to
     // undefinded behavior since we are using an incomplete type. More details here:  http://herbsutter.com/gotw/_100/
-    connection::~connection() = default;
+    connection::~connection()
+    {
+        if (m_pImpl)
+        {
+            completion_event completion;
+            m_pImpl->stop([completion](std::exception_ptr) mutable
+                {
+                    completion.set();
+                }, nullptr);
+            completion.get();
+        }
+    }
 
     void connection::start(std::function<void(std::exception_ptr)> callback) noexcept
     {

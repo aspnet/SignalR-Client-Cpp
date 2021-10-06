@@ -45,9 +45,10 @@ namespace signalr
         std::function<void(std::exception_ptr)> m_close_callback;
         signalr_client_config m_signalr_client_config;
 
-        std::shared_ptr<cancellation_token_source> m_receive_loop_cts;
+        bool m_disconnected;
+        std::shared_ptr<cancellation_token_source> m_receive_loop_task;
 
-        void receive_loop(std::shared_ptr<cancellation_token_source> cts);
+        void receive_loop();
 
         std::shared_ptr<websocket_client> safe_get_websocket_client();
     };

@@ -3,7 +3,7 @@ set (SOURCES
   callback_manager_tests.cpp
   cancellation_token_source_tests.cpp
   case_insensitive_comparison_utils_tests.cpp
-  connection_impl_tests.cpp
+  connection_tests.cpp
   handshake_tests.cpp
   hub_connection_tests.cpp
   hub_exception_tests.cpp

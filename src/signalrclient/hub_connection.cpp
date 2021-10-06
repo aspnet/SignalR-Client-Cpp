@@ -31,7 +31,18 @@ namespace signalr
 
     // Do NOT remove this destructor. Letting the compiler generate and inline the default dtor may lead to
     // undefined behavior since we are using an incomplete type. More details here:  http://herbsutter.com/gotw/_100/
-    hub_connection::~hub_connection() = default;
+    hub_connection::~hub_connection()
+    {
+        if (m_pImpl)
+        {
+            completion_event completion;
+            m_pImpl->stop([completion](std::exception_ptr) mutable
+                {
+                    completion.set();
+                });
+            completion.get();
+        }
+    }
 
     void hub_connection::start(std::function<void(std::exception_ptr)> callback) noexcept
     {

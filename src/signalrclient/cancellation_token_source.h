@@ -53,11 +53,14 @@ namespace signalr
         cancellation_token_source(const cancellation_token_source&) = delete;
         cancellation_token_source& operator=(const cancellation_token_source&) = delete;
 
-        void cancel()
+        // returns false if already canceled, otherwise true if this cancels
+        bool cancel()
         {
+            bool signal = false;
             std::vector<std::function<void()>> callbacks;
             {
                 std::lock_guard<std::mutex> lock(m_lock);
+                signal = !m_signaled;
                 m_signaled = true;
                 m_condition.notify_all();
                 callbacks = std::move(m_callbacks);
@@ -84,6 +87,8 @@ namespace signalr
                     throw errors;
                 }
             }
+
+            return signal;
         }
 
         void reset()
