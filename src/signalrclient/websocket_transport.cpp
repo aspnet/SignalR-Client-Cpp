@@ -15,7 +15,7 @@
 
 namespace signalr
 {
-    std::shared_ptr<transport> websocket_transport::create(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+    std::shared_ptr<signalr::transport> websocket_transport::create(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
         const signalr_client_config& signalr_client_config, const logger& logger)
     {
         return std::shared_ptr<transport>(
@@ -26,12 +26,11 @@ namespace signalr
         const signalr_client_config& signalr_client_config, const logger& logger)
         : transport(logger), m_websocket_client_factory(websocket_client_factory), m_process_response_callback([](std::string, std::exception_ptr) {}),
         m_close_callback([](std::exception_ptr) {}), m_signalr_client_config(signalr_client_config),
-        m_receive_loop_cts(std::make_shared<cancellation_token_source>()), m_receive_loop_done_cts(std::make_shared<cancellation_token_source>())
+        m_disconnected(true), m_receive_loop_task(std::make_shared<cancellation_token_source>())
     {
         // we use this cts to check if the receive loop is running so it should be
         // initially canceled to indicate that the receive loop is not running
-        m_receive_loop_cts->cancel();
-        m_receive_loop_done_cts->cancel();
+        m_receive_loop_task->cancel();
     }
 
     websocket_transport::~websocket_transport()
@@ -54,7 +53,7 @@ namespace signalr
     // Note that the connection assumes that the error callback won't be fired when the result is being processed. This
     // may no longer be true when we replace the `receive_loop` with "on_message_received" and "on_close" events if they
     // can be fired on different threads in which case we will have to lock before setting groups token and message id.
-    void websocket_transport::receive_loop(std::shared_ptr<cancellation_token_source> cts)
+    void websocket_transport::receive_loop()
     {
         auto this_transport = shared_from_this();
         auto logger = this_transport->m_logger;
@@ -67,14 +66,13 @@ namespace signalr
 
         auto websocket_client = this_transport->safe_get_websocket_client();
         auto weak_websocket_client = std::weak_ptr<signalr::websocket_client>(websocket_client);
-
-        auto receive_loop_done_cts = this_transport->m_receive_loop_done_cts;
+        auto receive_loop_task = m_receive_loop_task;
 
         // There are two cases when we exit the loop. The first case is implicit - we pass the cancellation_token_source
         // to `then` (note this is after the lambda body) and if the token is cancelled the continuation will not
         // run at all. The second - explicit - case happens if the token gets cancelled after the continuation has
         // been started in which case we just stop the loop by not scheduling another receive task.
-        websocket_client->receive([weak_transport, cts, logger, weak_websocket_client, receive_loop_done_cts](std::string message, std::exception_ptr exception)
+        websocket_client->receive([weak_transport, logger, receive_loop_task, weak_websocket_client](std::string message, std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {
@@ -98,13 +96,22 @@ namespace signalr
                         exception = std::make_exception_ptr(signalr_exception("unknown error"));
                     }
 
-                    if (!cts->cancel())
+                    auto transport = weak_transport.lock();
+                    // stop waits for the receive loop to complete so the transport should never be null
+                    assert(transport != nullptr);
+                    bool disconnected;
+                    {
+                        std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
+                        disconnected = transport->m_disconnected;
+                        transport->m_disconnected = true;
+                    }
+                    if (disconnected)
                     {
                         // stop has been called, tell it the receive loop is done and return
-                        receive_loop_done_cts->cancel();
+                        transport->m_receive_loop_task->cancel();
                         return;
                     }
-                    receive_loop_done_cts->cancel();
+                    transport->m_receive_loop_task->cancel();
 
                     std::promise<void> promise;
                     auto client = weak_websocket_client.lock();
@@ -136,11 +143,7 @@ namespace signalr
                     // REVIEW: log here?
                     catch (...) {}
 
-                    auto transport = weak_transport.lock();
-                    if (transport)
-                    {
-                        transport->m_close_callback(exception);
-                    }
+                    transport->m_close_callback(exception);
 
                     return;
                 }
@@ -148,19 +151,27 @@ namespace signalr
                 auto transport = weak_transport.lock();
                 if (transport)
                 {
-                    if (!cts->is_canceled())
+                    transport->m_process_response_callback(message, nullptr);
+
+                    bool disconnected;
                     {
-                        transport->m_process_response_callback(message, nullptr);
-                        transport->receive_loop(cts);
+                        std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
+                        disconnected = transport->m_disconnected;
+                    }
+
+                    if (!disconnected)
+                    {
+                        transport->receive_loop();
                     }
                     else
                     {
-                        receive_loop_done_cts->cancel();
+                        transport->m_receive_loop_task->cancel();
                     }
                 }
                 else
                 {
-                    receive_loop_done_cts->cancel();
+                    // this doesn't happen in practice, only hit by websocket tests that stop via the dtor
+                    receive_loop_task->cancel();
                 }
             });
     }
@@ -183,7 +194,7 @@ namespace signalr
         {
             std::lock_guard<std::mutex> stop_lock(m_start_stop_lock);
 
-            if (!m_receive_loop_cts->is_canceled())
+            if (!m_disconnected)
             {
                 callback(std::make_exception_ptr(signalr_exception("transport already connected")));
                 return;
@@ -200,18 +211,17 @@ namespace signalr
                 m_websocket_client = websocket_client;
             }
 
-            m_receive_loop_cts->reset();
-            m_receive_loop_done_cts->reset();
-            auto receive_loop_cts = m_receive_loop_cts;
+            m_disconnected = false;
+            m_receive_loop_task->reset();
 
             auto weak_transport = std::weak_ptr<websocket_transport>(shared_from_this());
 
-            websocket_client->start(url, [weak_transport, receive_loop_cts, callback](std::exception_ptr exception)
+            websocket_client->start(url, [weak_transport, callback](std::exception_ptr exception)
                 {
                     auto transport = weak_transport.lock();
                     if (!transport)
                     {
-                        callback(nullptr);
+                        callback(std::make_exception_ptr(signalr_exception("transport no longer exists")));
                         return;
                     }
 
@@ -221,9 +231,13 @@ namespace signalr
                         {
                             std::rethrow_exception(exception);
                         }
-                        receive_loop_cts->throw_if_cancellation_requested();
 
-                        transport->receive_loop(receive_loop_cts);
+                        if (transport->m_disconnected)
+                        {
+                            throw signalr::canceled_exception();
+                        }
+
+                        transport->receive_loop();
                         callback(nullptr);
                     }
                     catch (const std::exception & e)
@@ -233,7 +247,7 @@ namespace signalr
                             std::string("[websocket transport] exception when connecting to the server: ")
                             .append(e.what()));
 
-                        receive_loop_cts->cancel();
+                        transport->m_disconnected = true;
                         callback(std::current_exception());
                     }
                 });
@@ -247,24 +261,24 @@ namespace signalr
         {
             std::lock_guard<std::mutex> lock(m_start_stop_lock);
 
-            if (m_receive_loop_cts->is_canceled())
+            if (m_disconnected)
             {
                 callback(nullptr);
                 return;
             }
 
-            m_receive_loop_cts->cancel();
+            m_disconnected = true;
 
             websocket_client = safe_get_websocket_client();
         }
 
         auto logger = m_logger;
         auto close_callback = m_close_callback;
-        auto receive_loop_done_cts = m_receive_loop_done_cts;
+        auto receive_loop_task = m_receive_loop_task;
 
-        websocket_client->stop([logger, callback, close_callback, receive_loop_done_cts](std::exception_ptr exception)
+        websocket_client->stop([logger, callback, close_callback, receive_loop_task](std::exception_ptr exception)
             {
-                receive_loop_done_cts->register_callback([logger, callback, close_callback, exception]()
+                receive_loop_task->register_callback([logger, callback, close_callback, exception]()
                     {
                         try
                         {

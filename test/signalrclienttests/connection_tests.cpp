@@ -1478,7 +1478,7 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
     }
 
     auto log_entries = memory_writer->get_log_entries();
-    ASSERT_EQ(17U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(19U, log_entries.size()) << dump_vector(log_entries);
 
     auto second_half = std::vector<std::string>(log_entries.begin() + 8, log_entries.end());
 
