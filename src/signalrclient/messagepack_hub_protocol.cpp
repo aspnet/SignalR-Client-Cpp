@@ -119,7 +119,7 @@ namespace signalr
                     if (value <= (double)UINT64_MAX)
                     {
                         // Fits within uint64_t
-                        packer.pack_uint64((uint64_t)intPart);
+                        packer.pack_uint64(static_cast<uint64_t>(intPart));
                         return;
                     }
                     else
@@ -136,14 +136,14 @@ namespace signalr
         case signalr::value_type::string:
         {
             auto length = v.as_string().length();
-            packer.pack_str((uint32_t)length);
-            packer.pack_str_body(v.as_string().data(), (uint32_t)length);
+            packer.pack_str(static_cast<uint32_t>(length));
+            packer.pack_str_body(v.as_string().data(), static_cast<uint32_t>(length));
             return;
         }
         case signalr::value_type::array:
         {
             const auto& array = v.as_array();
-            packer.pack_array((uint32_t)array.size());
+            packer.pack_array(static_cast<uint32_t>(array.size()));
             for (auto& val : array)
             {
                 pack_messagepack(val, packer);
@@ -153,11 +153,11 @@ namespace signalr
         case signalr::value_type::map:
         {
             const auto& obj = v.as_map();
-            packer.pack_map((uint32_t)obj.size());
+            packer.pack_map(static_cast<uint32_t>(obj.size()));
             for (auto& val : obj)
             {
-                packer.pack_str((uint32_t)val.first.size());
-                packer.pack_str_body(val.first.data(), (uint32_t)val.first.size());
+                packer.pack_str(static_cast<uint32_t>(val.first.size()));
+                packer.pack_str_body(val.first.data(), static_cast<uint32_t>(val.first.size()));
                 pack_messagepack(val.second, packer);
             }
             return;
@@ -165,8 +165,8 @@ namespace signalr
         case signalr::value_type::binary:
         {
             const auto& bin = v.as_binary();
-            packer.pack_bin((uint32_t)bin.size());
-            packer.pack_bin_body((char*)bin.data(), (uint32_t)bin.size());
+            packer.pack_bin(static_cast<uint32_t>(bin.size()));
+            packer.pack_bin_body(reinterpret_cast<const char*>(bin.data()), static_cast<uint32_t>(bin.size()));
             return;
         }
         case signalr::value_type::null:
@@ -193,7 +193,7 @@ namespace signalr
 
             packer.pack_array(6);
 
-            packer.pack_int((int)message_type::invocation);
+            packer.pack_int(static_cast<int>(message_type::invocation));
             // Headers
             packer.pack_map(0);
 
@@ -203,14 +203,14 @@ namespace signalr
             }
             else
             {
-                packer.pack_str((uint32_t)invocation->invocation_id.length());
-                packer.pack_str_body(invocation->invocation_id.data(), (uint32_t)invocation->invocation_id.length());
+                packer.pack_str(static_cast<uint32_t>(invocation->invocation_id.length()));
+                packer.pack_str_body(invocation->invocation_id.data(), static_cast<uint32_t>(invocation->invocation_id.length()));
             }
 
-            packer.pack_str((uint32_t)invocation->target.length());
-            packer.pack_str_body(invocation->target.data(), (uint32_t)invocation->target.length());
+            packer.pack_str(static_cast<uint32_t>(invocation->target.length()));
+            packer.pack_str_body(invocation->target.data(), static_cast<uint32_t>(invocation->target.length()));
 
-            packer.pack_array((uint32_t)invocation->arguments.size());
+            packer.pack_array(static_cast<uint32_t>(invocation->arguments.size()));
             for (auto& val : invocation->arguments)
             {
                 pack_messagepack(val, packer);
@@ -228,21 +228,21 @@ namespace signalr
             size_t result_kind = completion->error.empty() ? (completion->has_result ? 3U : 2U) : 1U;
             packer.pack_array(4U + (result_kind != 2U ? 1U : 0U));
 
-            packer.pack_int((int)message_type::completion);
+            packer.pack_int(static_cast<int>(message_type::completion));
 
             // Headers
             packer.pack_map(0);
 
-            packer.pack_str((uint32_t)completion->invocation_id.length());
-            packer.pack_str_body(completion->invocation_id.data(), (uint32_t)completion->invocation_id.length());
+            packer.pack_str(static_cast<uint32_t>(completion->invocation_id.length()));
+            packer.pack_str_body(completion->invocation_id.data(), static_cast<uint32_t>(completion->invocation_id.length()));
 
-            packer.pack_int((int)result_kind);
+            packer.pack_int(static_cast<int>(result_kind));
             switch (result_kind)
             {
             // error result
             case 1:
-                packer.pack_str((uint32_t)completion->error.length());
-                packer.pack_str_body(completion->error.data(), (uint32_t)completion->error.length());
+                packer.pack_str(static_cast<uint32_t>(completion->error.length()));
+                packer.pack_str_body(completion->error.data(), static_cast<uint32_t>(completion->error.length()));
                 break;
             // non-void result
             case 3:
@@ -258,7 +258,7 @@ namespace signalr
             // auto ping = static_cast<ping_message const*>(hub_message);
 
             packer.pack_array(1);
-            packer.pack_int((int)message_type::ping);
+            packer.pack_int(static_cast<int>(message_type::ping));
 
             break;
         }
@@ -321,7 +321,7 @@ namespace signalr
 
 #pragma warning (push)
 #pragma warning (disable: 4061)
-            switch ((message_type)type)
+            switch (static_cast<message_type>(type))
             {
             case message_type::invocation:
             {

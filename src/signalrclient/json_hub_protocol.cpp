@@ -21,7 +21,7 @@ namespace signalr
         case message_type::invocation:
         {
             auto invocation = static_cast<invocation_message const*>(hub_message);
-            object["type"] = (int)invocation->message_type;
+            object["type"] = static_cast<int>(invocation->message_type);
             if (!invocation->invocation_id.empty())
             {
                 object["invocationId"] = invocation->invocation_id;
@@ -35,7 +35,7 @@ namespace signalr
         case message_type::completion:
         {
             auto completion = static_cast<completion_message const*>(hub_message);
-            object["type"] = (int)completion->message_type;
+            object["type"] = static_cast<int>(completion->message_type);
             object["invocationId"] = completion->invocation_id;
             if (!completion->error.empty())
             {
@@ -50,7 +50,7 @@ namespace signalr
         case message_type::ping:
         {
             auto ping = static_cast<ping_message const*>(hub_message);
-            object["type"] = (int)ping->message_type;
+            object["type"] = static_cast<int>(ping->message_type);
             break;
         }
         // TODO: other message types
@@ -112,7 +112,7 @@ namespace signalr
 #pragma warning (push)
         // not all cases handled (we have a default so it's fine)
 #pragma warning (disable: 4061)
-        switch ((message_type)found->second.as_double())
+        switch (static_cast<message_type>(static_cast<int>(found->second.as_double())))
         {
         case message_type::invocation:
         {
@@ -125,7 +125,6 @@ namespace signalr
             {
                 throw signalr_exception("Expected 'target' to be of type 'string'");
             }
-
 
             found = obj.find("arguments");
             if (found == obj.end())
