@@ -271,13 +271,7 @@ namespace signalr
 
         if (redirect_count >= MAX_NEGOTIATE_REDIRECTS)
         {
-<<<<<<< HEAD
-            change_state(connection_state::disconnected);
-            m_start_completed_event.cancel();
-            callback(std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
-=======
             transport_started(nullptr, std::make_exception_ptr(signalr_exception("Negotiate redirection limit exceeded.")));
->>>>>>> 5780ba6a38d4bc49f6a960f7801f3552c6842f3c
             return;
         }
 
@@ -310,25 +304,13 @@ namespace signalr
                                 .append(e.what()));
                         }
                     }
-<<<<<<< HEAD
-                    connection->change_state(connection_state::disconnected);
-                    connection->m_start_completed_event.cancel();
-                    callback(exception);
-=======
                     transport_started(nullptr, exception);
->>>>>>> 5780ba6a38d4bc49f6a960f7801f3552c6842f3c
                     return;
                 }
 
                 if (!response.error.empty())
                 {
-<<<<<<< HEAD
-                    connection->change_state(connection_state::disconnected);
-                    connection->m_start_completed_event.cancel();
-                    callback(std::make_exception_ptr(signalr_exception(response.error)));
-=======
                     transport_started(nullptr, std::make_exception_ptr(signalr_exception(response.error)));
->>>>>>> 5780ba6a38d4bc49f6a960f7801f3552c6842f3c
                     return;
                 }
 
@@ -361,13 +343,7 @@ namespace signalr
 
                 if (!foundWebsockets)
                 {
-<<<<<<< HEAD
-                    connection->change_state(connection_state::disconnected);
-                    connection->m_start_completed_event.cancel();
-                    callback(std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
-=======
                     transport_started(nullptr, std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
->>>>>>> 5780ba6a38d4bc49f6a960f7801f3552c6842f3c
                     return;
                 }
 
