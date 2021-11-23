@@ -25,11 +25,11 @@ namespace signalr
 
         transport_type get_transport_type() const noexcept override;
 
-        void start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback) noexcept override;
+        void start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept override;
         void stop(std::function<void(std::exception_ptr)> callback) noexcept override;
         void on_close(std::function<void(std::exception_ptr)> callback) override;
 
-        void send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept override;
+        void send(const std::string& payload, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept override;
 
         void on_receive(std::function<void(std::string&&, std::exception_ptr)>) override;
 
@@ -45,9 +45,10 @@ namespace signalr
         std::function<void(std::exception_ptr)> m_close_callback;
         signalr_client_config m_signalr_client_config;
 
-        std::shared_ptr<cancellation_token> m_receive_loop_cts;
+        bool m_disconnected;
+        std::shared_ptr<cancellation_token_source> m_receive_loop_task;
 
-        void receive_loop(std::shared_ptr<cancellation_token> cts);
+        void receive_loop();
 
         std::shared_ptr<websocket_client> safe_get_websocket_client();
     };

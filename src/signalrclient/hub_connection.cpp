@@ -8,13 +8,14 @@
 #include "signalrclient/signalr_exception.h"
 #include "signalrclient/http_client.h"
 #include "signalrclient/websocket_client.h"
+#include "hub_protocol.h"
 
 namespace signalr
 {
-    hub_connection::hub_connection(const std::string& url,
-        trace_level trace_level, std::shared_ptr<log_writer> log_writer, std::shared_ptr<http_client> http_client,
-        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
-        : m_pImpl(hub_connection_impl::create(url, trace_level, log_writer, http_client, websocket_factory))
+    hub_connection::hub_connection(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol,
+        trace_level trace_level, std::shared_ptr<log_writer> log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        : m_pImpl(hub_connection_impl::create(url, std::move(hub_protocol), trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
     {}
 
     hub_connection::hub_connection(hub_connection&& rhs) noexcept
@@ -30,7 +31,18 @@ namespace signalr
 
     // Do NOT remove this destructor. Letting the compiler generate and inline the default dtor may lead to
     // undefined behavior since we are using an incomplete type. More details here:  http://herbsutter.com/gotw/_100/
-    hub_connection::~hub_connection() = default;
+    hub_connection::~hub_connection()
+    {
+        if (m_pImpl)
+        {
+            completion_event completion;
+            m_pImpl->stop([completion](std::exception_ptr) mutable
+                {
+                    completion.set();
+                });
+            completion.get();
+        }
+    }
 
     void hub_connection::start(std::function<void(std::exception_ptr)> callback) noexcept
     {
@@ -62,7 +74,7 @@ namespace signalr
         return m_pImpl->on(event_name, handler);
     }
 
-    void hub_connection::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
+    void hub_connection::invoke(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
         if (!m_pImpl)
         {
@@ -73,7 +85,7 @@ namespace signalr
         return m_pImpl->invoke(method_name, arguments, callback);
     }
 
-    void hub_connection::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection::send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
         if (!m_pImpl)
         {
@@ -104,7 +116,7 @@ namespace signalr
         return m_pImpl->get_connection_id();
     }
 
-    void hub_connection::set_disconnected(const std::function<void()>& disconnected_callback)
+    void hub_connection::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected_callback)
     {
         if (!m_pImpl)
         {

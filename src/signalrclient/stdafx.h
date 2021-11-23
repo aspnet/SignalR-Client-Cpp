@@ -4,6 +4,9 @@
 
 #pragma once
 
+#define STRINGIFY_2(s) #s
+#define STRINGIFY(s) STRINGIFY_2(s)
+
 #ifdef _WIN32 // used in the default log writer and to build the dll
 
 // prevents from defining min/max macros that conflict with std::min()/std::max() functions

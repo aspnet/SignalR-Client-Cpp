@@ -21,7 +21,7 @@ variables:
     - group: DotNet-AspNet-SDLValidation-Params
 
 trigger:
-- master
+- main
 
 stages:
 - stage: build
@@ -37,14 +37,9 @@ stages:
       - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows --vcpkg-root ./submodules/vcpkg"
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows msgpack:x64-windows --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
-      afterBuild:
-      # Create empty build manifest for Build Asset Registry
-      - powershell: "eng/common/sdk-task.ps1 -restore -task GenerateBuildManifest /p:PackagesToPublishPattern=$(Build.ArtifactStagingDirectory)/*.nupkg /p:AssetManifestFilePath=$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/AssetManifest/manifest.xml /p:ManifestBuildData=\"Location=https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json\""
-        displayName: Generate Build Manifest
-        condition: eq(and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')), 'true')
 
   - template: .azure/default-build.yml
     parameters:
@@ -52,16 +47,10 @@ stages:
       jobName: Mac_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
-      # XCode 11 doesn't play nicely with gcc, workaround by using XCode 10. We can try updating to a newer XCode in the future
-      # Once the problem has been resolved
-      - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
-        displayName: xcode-select
-      - script: brew install gcc
-        displayName: Install gcc
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk msgpack"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -74,15 +63,26 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread --vcpkg-root ./submodules/vcpkg"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread msgpack --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
+      - bash: "sudo apt-get update && sudo apt install valgrind"
+        displayName: install valgrind
 
   - template: .azure/default-build.yml
     parameters:
       agentOs: Linux
       jobName: Linux_Build_Test
       useCppRestSDK: false
+      beforeBuild:
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - bash: "./submodules/vcpkg/vcpkg install msgpack --vcpkg-root ./submodules/vcpkg"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: vcpkg install dependencies
+      - bash: "sudo apt-get update && sudo apt install valgrind"
+        displayName: install valgrind
 
   - template: .azure/default-build.yml
     parameters:
@@ -90,6 +90,13 @@ stages:
       jobName: Windows_Build_Test
       useCppRestSDK: false
       cMakeRunArgs: '-A x64'
+      beforeBuild:
+      - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install msgpack:x64-windows --vcpkg-root ./submodules/vcpkg"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: vcpkg install dependencies
 
   - template: .azure/default-build.yml
     parameters:
@@ -97,48 +104,32 @@ stages:
       jobName: Mac_Build_Test
       useCppRestSDK: false
       beforeBuild:
-      # XCode 11 doesn't play nicely with gcc, workaround by using XCode 10. We can try updating to a newer XCode in the future
-      # Once the problem has been resolved
-      - script: sudo xcode-select --switch /Applications/Xcode_10.3.app
-        displayName: xcode-select
       - script: brew install gcc
         displayName: Install gcc
-
-  # Publish to the BAR
-  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - template: /eng/common/templates/job/publish-build-assets.yml
-      parameters:
-        dependsOn:
-          - Windows_Build_Test_With_CppRestSDK
-          - Mac_Build_Test_With_CppRestSDK
-          - Linux_Build_Test_With_CppRestSDK
-          - Windows_Build_Test
-          - Mac_Build_Test
-          - Linux_Build_Test
-        pool:
-          vmImage: vs2017-win2016
-        publishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-        enablePublishBuildArtifacts: true # publish artifacts/log files
-        continueOnError: true
+      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: Bootstrap vcpkg
+      - bash: "./submodules/vcpkg/vcpkg install msgpack"
+        condition: ne(variables.CACHE_RESTORED, 'true')
+        displayName: vcpkg install dependencies
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - template: /eng/common/templates/post-build/post-build.yml
-    parameters:
-      enableSigningValidation: false
-      enableNugetValidation: false
-      publishInstallersAndChecksums: false
-      # This is to enable SDL runs as part of Post-Build Validation Stage
-      SDLValidationParameters:
+  - stage: post_build
+    displayName: Post Build Validation
+    jobs:
+    - template: /eng/common/templates/job/execute-sdl.yml
+      parameters:
         enable: true
+        additionalParameters: ' -SourceToolsList @("policheck","credscan")
+          -TsaInstanceURL $(_TsaInstanceURL)
+          -TsaProjectName $(_TsaProjectName)
+          -TsaNotificationEmail $(_TsaNotificationEmail)
+          -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+          -TsaBugAreaPath $(_TsaBugAreaPath)
+          -TsaIterationPath $(_TsaIterationPath)
+          -TsaRepositoryName "AspNetCore"
+          -TsaCodebaseName "AspNetCore"
+          -TsaPublish $True
+          -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
         continueOnError: false
-        params: ' -SourceToolsList @("policheck","credscan")
-        -TsaInstanceURL $(_TsaInstanceURL)
-        -TsaProjectName $(_TsaProjectName)
-        -TsaNotificationEmail $(_TsaNotificationEmail)
-        -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-        -TsaBugAreaPath $(_TsaBugAreaPath)
-        -TsaIterationPath $(_TsaIterationPath)
-        -TsaRepositoryName "AspNetCore"
-        -TsaCodebaseName "AspNetCore"
-        -TsaPublish $True
-        -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
+        downloadArtifacts: false

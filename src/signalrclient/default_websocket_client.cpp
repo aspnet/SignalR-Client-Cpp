@@ -6,6 +6,7 @@
 
 #ifdef USE_CPPRESTSDK
 #include "default_websocket_client.h"
+#include <cpprest/producerconsumerstream.h>
 
 namespace signalr
 {
@@ -28,7 +29,7 @@ namespace signalr
         : m_underlying_client(create_client_config(signalr_client_config))
     { }
 
-    void default_websocket_client::start(const std::string& url, transfer_format, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::start(const std::string& url, std::function<void(std::exception_ptr)> callback)
     {
         m_underlying_client.connect(utility::conversions::to_string_t(url))
             .then([callback](pplx::task<void> task)
@@ -62,10 +63,20 @@ namespace signalr
             });
     }
 
-    void default_websocket_client::send(const std::string& payload, std::function<void(std::exception_ptr)> callback)
+    void default_websocket_client::send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback)
     {
         web::websockets::client::websocket_outgoing_message msg;
-        msg.set_utf8_message(payload);
+
+        if (transfer_format == signalr::transfer_format::binary)
+        {
+            concurrency::streams::producer_consumer_buffer<uint8_t> b;
+            b.putn_nocopy(reinterpret_cast<const uint8_t*>(payload.data()), payload.length());
+            msg.set_binary_message(b.create_istream(), payload.length());
+        }
+        else
+        {
+            msg.set_utf8_message(payload);
+        }
         m_underlying_client.send(msg)
             .then([callback](pplx::task<void> task)
             {
@@ -89,8 +100,20 @@ namespace signalr
                 try
                 {
                     auto response = task.get();
-                    auto msg = response.extract_string().get();
-                    callback(msg, nullptr);
+                    if (response.message_type() == web::websockets::client::websocket_message_type::binary_message)
+                    {
+                        concurrency::streams::producer_consumer_buffer<uint8_t> b;
+                        response.body().read_to_end(b).get();
+                        auto t = b.create_ostream().streambuf().in_avail();
+                        std::string msg(t, ' ');
+                        b.create_istream().streambuf().getn(reinterpret_cast<uint8_t*>(&msg[0]), t);
+
+                        callback(msg, nullptr);
+                    }
+                    else
+                    {
+                        callback(response.extract_string().get(), nullptr);
+                    }
                 }
                 catch (...)
                 {

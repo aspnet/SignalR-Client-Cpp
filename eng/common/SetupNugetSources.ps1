@@ -11,12 +11,14 @@
 # See example YAML call for this script below. Note the use of the variable `$(dn-bot-dnceng-artifact-feeds-rw)`
 # from the AzureDevOps-Artifact-Feeds-Pats variable group.
 #
+# Any disabledPackageSources entries which start with "darc-int" will be re-enabled as part of this script executing
+#
 #  - task: PowerShell@2
 #    displayName: Setup Private Feeds Credentials
 #    condition: eq(variables['Agent.OS'], 'Windows_NT')
 #    inputs:
 #      filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.ps1
-#      arguments: -ConfigFile ${Env:BUILD_SOURCESDIRECTORY}/NuGet.config -Password $Env:Token
+#      arguments: -ConfigFile $(Build.SourcesDirectory)/NuGet.config -Password $Env:Token
 #    env:
 #      Token: $(dn-bot-dnceng-artifact-feeds-rw)
 
@@ -83,7 +85,7 @@ function AddCredential($creds, $source, $username, $password) {
     $passwordElement.SetAttribute("value", $Password)
 }
 
-function InsertMaestroPrivateFeedCredentials($Sources, $Creds, $Password) {
+function InsertMaestroPrivateFeedCredentials($Sources, $Creds, $Username, $Password) {
     $maestroPrivateSources = $Sources.SelectNodes("add[contains(@key,'darc-int')]")
 
     Write-Host "Inserting credentials for $($maestroPrivateSources.Count) Maestro's private feeds."
@@ -94,41 +96,66 @@ function InsertMaestroPrivateFeedCredentials($Sources, $Creds, $Password) {
     }
 }
 
-try {
-    if (!(Test-Path $ConfigFile -PathType Leaf)) {
-    Write-PipelineTelemetryError -Category 'Build' -Message "Couldn't find the file NuGet config file: $ConfigFile"
-    ExitWithExitCode 1
+function EnablePrivatePackageSources($DisabledPackageSources) {
+    $maestroPrivateSources = $DisabledPackageSources.SelectNodes("add[contains(@key,'darc-int')]")
+    ForEach ($DisabledPackageSource in $maestroPrivateSources) {
+        Write-Host "`tEnsuring private source '$($DisabledPackageSource.key)' is enabled by deleting it from disabledPackageSource"
+        # Due to https://github.com/NuGet/Home/issues/10291, we must actually remove the disabled entries
+        $DisabledPackageSources.RemoveChild($DisabledPackageSource)
     }
-
-    # Load NuGet.config
-    $doc = New-Object System.Xml.XmlDocument
-    $filename = (Get-Item $ConfigFile).FullName
-    $doc.Load($filename)
-
-    # Get reference to <PackageSources> or create one if none exist already
-    $sources = $doc.DocumentElement.SelectSingleNode("packageSources")
-    if ($sources -eq $null) {
-        $sources = $doc.CreateElement("packageSources")
-        $doc.DocumentElement.AppendChild($sources) | Out-Null
-    }
-
-    # Looks for a <PackageSourceCredentials> node. Create it if none is found.
-    $creds = $doc.DocumentElement.SelectSingleNode("packageSourceCredentials")
-    if ($creds -eq $null) {
-        $creds = $doc.CreateElement("packageSourceCredentials")
-        $doc.DocumentElement.AppendChild($creds) | Out-Null
-    }
-
-    # Insert credential nodes for Maestro's private feeds
-    InsertMaestroPrivateFeedCredentials -Sources $sources -Creds $creds -Password $Password
-
-    AddPackageSource -Sources $sources -SourceName "dotnet3-internal" -SourceEndPoint "https://pkgs.dev.azure.com/dnceng/_packaging/dotnet3-internal/nuget/v2" -Creds $creds -Username "dn-bot" -Password $Password
-    AddPackageSource -Sources $sources -SourceName "dotnet3-internal-transport" -SourceEndPoint "https://pkgs.dev.azure.com/dnceng/_packaging/dotnet3-internal-transport/nuget/v2" -Creds $creds -Username "dn-bot" -Password $Password
-
-    $doc.Save($filename)
 }
-catch {
-    Write-Host $_.ScriptStackTrace
-    Write-PipelineTelemetryError -Category 'InitializeToolset' -Message $_
+
+if (!(Test-Path $ConfigFile -PathType Leaf)) {
+  Write-PipelineTelemetryError -Category 'Build' -Message "Eng/common/SetupNugetSources.ps1 returned a non-zero exit code. Couldn't find the NuGet config file: $ConfigFile"
+  ExitWithExitCode 1
+}
+
+if (!$Password) {
+    Write-PipelineTelemetryError -Category 'Build' -Message 'Eng/common/SetupNugetSources.ps1 returned a non-zero exit code. Please supply a valid PAT'
     ExitWithExitCode 1
 }
+
+# Load NuGet.config
+$doc = New-Object System.Xml.XmlDocument
+$filename = (Get-Item $ConfigFile).FullName
+$doc.Load($filename)
+
+# Get reference to <PackageSources> or create one if none exist already
+$sources = $doc.DocumentElement.SelectSingleNode("packageSources")
+if ($sources -eq $null) {
+    $sources = $doc.CreateElement("packageSources")
+    $doc.DocumentElement.AppendChild($sources) | Out-Null
+}
+
+# Looks for a <PackageSourceCredentials> node. Create it if none is found.
+$creds = $doc.DocumentElement.SelectSingleNode("packageSourceCredentials")
+if ($creds -eq $null) {
+    $creds = $doc.CreateElement("packageSourceCredentials")
+    $doc.DocumentElement.AppendChild($creds) | Out-Null
+}
+
+# Check for disabledPackageSources; we'll enable any darc-int ones we find there
+$disabledSources = $doc.DocumentElement.SelectSingleNode("disabledPackageSources")
+if ($disabledSources -ne $null) {
+    Write-Host "Checking for any darc-int disabled package sources in the disabledPackageSources node"
+    EnablePrivatePackageSources -DisabledPackageSources $disabledSources
+}
+
+$userName = "dn-bot"
+
+# Insert credential nodes for Maestro's private feeds
+InsertMaestroPrivateFeedCredentials -Sources $sources -Creds $creds -Username $userName -Password $Password
+
+$dotnet31Source = $sources.SelectSingleNode("add[@key='dotnet3.1']")
+if ($dotnet31Source -ne $null) {
+    AddPackageSource -Sources $sources -SourceName "dotnet3.1-internal" -SourceEndPoint "https://pkgs.dev.azure.com/dnceng/_packaging/dotnet3.1-internal/nuget/v2" -Creds $creds -Username $userName -Password $Password
+    AddPackageSource -Sources $sources -SourceName "dotnet3.1-internal-transport" -SourceEndPoint "https://pkgs.dev.azure.com/dnceng/_packaging/dotnet3.1-internal-transport/nuget/v2" -Creds $creds -Username $userName -Password $Password
+}
+
+$dotnet5Source = $sources.SelectSingleNode("add[@key='dotnet5']")
+if ($dotnet5Source -ne $null) {
+    AddPackageSource -Sources $sources -SourceName "dotnet5-internal" -SourceEndPoint "https://pkgs.dev.azure.com/dnceng/internal/_packaging/dotnet5-internal/nuget/v2" -Creds $creds -Username $userName -Password $Password
+    AddPackageSource -Sources $sources -SourceName "dotnet5-internal-transport" -SourceEndPoint "https://pkgs.dev.azure.com/dnceng/internal/_packaging/dotnet5-internal-transport/nuget/v2" -Creds $creds -Username $userName -Password $Password
+}
+
+$doc.Save($filename)

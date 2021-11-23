@@ -6,11 +6,15 @@
 
 #include "signalrclient/websocket_client.h"
 #include "signalrclient/http_client.h"
+#include "signalrclient/signalr_client_config.h"
 #include <future>
+#include <signalrclient/signalr_value.h>
+#include <hub_protocol.h>
 
 std::string remove_date_from_log_entry(const std::string &log_entry);
+bool has_log_entry(const std::string& log_entry, const std::vector<std::string>& logs);
 
-std::unique_ptr<signalr::http_client> create_test_http_client();
+std::function<std::shared_ptr<signalr::http_client>(const signalr::signalr_client_config&)> create_test_http_client();
 std::string create_uri();
 std::string create_uri(const std::string& query_string);
 std::vector<std::string> filter_vector(const std::vector<std::string>& source, const std::string& string);
@@ -97,3 +101,23 @@ public:
 private:
     std::promise<void> m_promise;
 };
+
+class custom_exception : public std::exception
+{
+public:
+    custom_exception() : m_message("custom exception") {}
+
+    custom_exception(const char* message)
+        : m_message(message)
+    { }
+
+    char const* what() const noexcept override
+    {
+        return m_message.data();
+    }
+private:
+    std::string m_message;
+};
+
+void assert_hub_message_equality(signalr::hub_message* expected, signalr::hub_message* actual);
+void assert_signalr_value_equality(const signalr::value& expected, const signalr::value& actual);

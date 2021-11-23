@@ -70,7 +70,7 @@ TEST(handshake, extra_fields_are_fine)
 
 TEST(handshake, writes_protocol_and_version)
 {
-    auto protocol = std::shared_ptr<hub_protocol>(new json_hub_protocol());
+    auto protocol = std::unique_ptr<hub_protocol>(new json_hub_protocol());
     auto message = handshake::write_handshake(protocol);
 
     ASSERT_STREQ("{\"protocol\":\"json\",\"version\":1}\x1e", message.c_str());

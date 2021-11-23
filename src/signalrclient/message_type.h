@@ -6,7 +6,7 @@
 
 namespace signalr
 {
-    enum message_type
+    enum class message_type
     {
         invocation = 1,
         stream_item,

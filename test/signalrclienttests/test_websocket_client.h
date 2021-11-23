@@ -7,8 +7,9 @@
 #include <functional>
 #include "signalrclient/websocket_client.h"
 #include "test_utils.h"
-#include "cancellation_token.h"
+#include "cancellation_token_source.h"
 #include <queue>
+#include "signalrclient/signalr_client_config.h"
 
 using namespace signalr;
 
@@ -18,11 +19,13 @@ public:
     test_websocket_client();
     ~test_websocket_client();
 
-    void start(const std::string& url, transfer_format format, std::function<void(std::exception_ptr)> callback);
+    void set_config(const signalr_client_config&);
+
+    void start(const std::string& url, std::function<void(std::exception_ptr)> callback);
 
     void stop(std::function<void(std::exception_ptr)> callback);
 
-    void send(const std::string& payload, std::function<void(std::exception_ptr)> callback);
+    void send(const std::string& payload, signalr::transfer_format transfer_format, std::function<void(std::exception_ptr)> callback);
 
     void receive(std::function<void(const std::string&, std::exception_ptr)> callback);
 
@@ -35,8 +38,8 @@ public:
     void receive_message(const std::string& message);
     void receive_message(std::exception_ptr ex);
 
-    cancellation_token receive_loop_started;
-    cancellation_token handshake_sent;
+    cancellation_token_source receive_loop_started;
+    cancellation_token_source handshake_sent;
     int receive_count;
 
 private:
@@ -53,7 +56,8 @@ private:
     std::mutex m_receive_lock;
     bool m_stopped;
     manual_reset_event<void> m_receive_waiting;
-    cancellation_token m_receive_loop_not_running;
+    cancellation_token_source m_receive_loop_not_running;
+    std::shared_ptr<scheduler> m_scheduler;
 };
 
 std::shared_ptr<test_websocket_client> create_test_websocket_client(

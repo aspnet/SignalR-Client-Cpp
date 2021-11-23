@@ -11,36 +11,38 @@
 #include "message_type.h"
 #include "handshake_protocol.h"
 #include "signalrclient/websocket_client.h"
+#include "signalr_default_scheduler.h"
 
 namespace signalr
 {
     // unnamed namespace makes it invisble outside this translation unit
     namespace
     {
-        static std::function<void(const signalr::value&)> create_hub_invocation_callback(const logger& logger,
+        static std::function<void(const char*, const signalr::value&)> create_hub_invocation_callback(const logger& logger,
             const std::function<void(const signalr::value&)>& set_result,
             const std::function<void(const std::exception_ptr e)>& set_exception);
     }
 
-    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
-        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
+    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol,
+        trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
-        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, trace_level, log_writer, http_client, websocket_factory));
+        auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, std::move(hub_protocol),
+            trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation));
 
         connection->initialize();
 
         return connection;
     }
 
-    hub_connection_impl::hub_connection_impl(const std::string& url, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::shared_ptr<http_client> http_client,
-        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
-        : m_connection(connection_impl::create(url, trace_level, log_writer,
-            http_client, websocket_factory)), m_logger(log_writer, trace_level),
-        m_callback_manager(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection went out of scope before invocation result was received") } })),
-        m_handshakeReceived(false), m_disconnected([]() noexcept {}), m_protocol(std::make_shared<json_hub_protocol>())
-    {}
+    hub_connection_impl::hub_connection_impl(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, trace_level trace_level,
+        const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        : m_connection(connection_impl::create(url, trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
+            , m_logger(log_writer, trace_level),
+        m_callback_manager("connection went out of scope before invocation result was received"),
+        m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
+    { }
 
     void hub_connection_impl::initialize()
     {
@@ -56,22 +58,34 @@ namespace signalr
             }
         });
 
-        m_connection->set_disconnected([weak_hub_connection]()
+        m_connection->set_disconnected([weak_hub_connection](std::exception_ptr exception)
         {
             auto connection = weak_hub_connection.lock();
             if (connection)
             {
                 // start may be waiting on the handshake response so we complete it here, this no-ops if already set
                 connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
+                try
+                {
+                    connection->m_disconnect_cts->cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    {
+                        connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
+                            .append(ex.what()));
+                    }
+                }
 
-                connection->m_callback_manager.clear(signalr::value(std::map<std::string, signalr::value> { { std::string("error"), std::string("connection was stopped before invocation result was received") } }));
+                connection->m_callback_manager.clear("connection was stopped before invocation result was received");
 
-                connection->m_disconnected();
+                connection->m_disconnected(exception);
             }
         });
     }
 
-    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const signalr::value &)>& handler)
+    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
     {
         if (event_name.length() == 0)
         {
@@ -105,6 +119,7 @@ namespace signalr
 
         m_connection->set_client_config(m_signalr_client_config);
         m_handshakeTask = std::make_shared<completion_event>();
+        m_disconnect_cts = std::make_shared<cancellation_token_source>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
         m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
@@ -119,28 +134,19 @@ namespace signalr
 
                 if (start_exception)
                 {
-                    connection->m_connection->stop([start_exception, callback, weak_connection](std::exception_ptr)
-                    {
-                        try
-                        {
-                            auto connection = weak_connection.lock();
-                            if (!connection)
-                            {
-                                callback(std::make_exception_ptr(signalr_exception("the hub connection has been deconstructed")));
-                                return;
-                            }
-                        }
-                        catch (...) {}
-
-                        callback(start_exception);
-                    });
+                    assert(connection->get_connection_state() == connection_state::disconnected);
+                    // connection didn't start, don't call stop
+                    callback(start_exception);
                     return;
                 }
 
-                auto handshake_request = handshake::write_handshake(connection->m_protocol);
+                std::shared_ptr<std::mutex> handshake_request_lock = std::make_shared<std::mutex>();
+                std::shared_ptr<bool> handshake_request_done = std::make_shared<bool>();
 
-                connection->m_connection->send(handshake_request, [weak_connection, callback](std::exception_ptr exception)
+                auto handle_handshake = [weak_connection, handshake_request_done, handshake_request_lock, callback](std::exception_ptr exception, bool fromSend)
                 {
+                    assert(fromSend ? *handshake_request_done : true);
+
                     auto connection = weak_connection.lock();
                     if (!connection)
                     {
@@ -149,25 +155,103 @@ namespace signalr
                         return;
                     }
 
-                    if (exception)
                     {
-                        callback(exception);
-                        return;
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                        // connection.send will be waiting on the handshake task which has been set by the caller already
+                        if (!fromSend && *handshake_request_done == true)
+                        {
+                            return;
+                        }
+                        *handshake_request_done = true;
                     }
 
                     try
                     {
-                        connection->m_handshakeTask->get();
-                        callback(nullptr);
+                        if (exception == nullptr)
+                        {
+                            connection->m_handshakeTask->get();
+                            callback(nullptr);
+                        }
                     }
                     catch (...)
                     {
-                        auto handshake_exception = std::current_exception();
-                        connection->m_connection->stop([callback, handshake_exception](std::exception_ptr)
-                        {
-                            callback(handshake_exception);
-                        });
+                        exception = std::current_exception();
                     }
+
+                    if (exception != nullptr)
+                    {
+                        connection->m_connection->stop([callback, exception](std::exception_ptr)
+                            {
+                                callback(exception);
+                            }, exception);
+                    }
+                };
+
+                auto handshake_request = handshake::write_handshake(connection->m_protocol);
+                auto handshake_task = connection->m_handshakeTask;
+                auto handshake_timeout = connection->m_signalr_client_config.get_handshake_timeout();
+
+                connection->m_disconnect_cts->register_callback([handle_handshake, handshake_request_lock, handshake_request_done]()
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                            // no op after connection.send returned, m_handshakeTask should be set before m_disconnect_cts is canceled
+                            if (*handshake_request_done == true)
+                            {
+                                return;
+                            }
+                        }
+
+                        // if the request isn't completed then no one is waiting on the handshake task
+                        // so we need to run the callback here instead of relying on connection.send completing
+                        // handshake_request_done is set in handle_handshake, don't set it here
+                        handle_handshake(nullptr, false);
+                    });
+
+                timer(connection->m_signalr_client_config.get_scheduler(),
+                    [handle_handshake, handshake_task, handshake_timeout, handshake_request_lock](std::chrono::milliseconds duration)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
+
+                            // if the task is set then connection.send is either already waiting on the handshake or has completed,
+                            // or stop has been called and will be handling the callback
+                            if (handshake_task->is_set())
+                            {
+                                return true;
+                            }
+
+                            if (duration < handshake_timeout)
+                            {
+                                return false;
+                            }
+                        }
+
+                        auto exception = std::make_exception_ptr(signalr_exception("timed out waiting for the server to respond to the handshake message."));
+                        // unblocks connection.send if it's waiting on the task
+                        handshake_task->set(exception);
+
+                        handle_handshake(exception, false);
+                        return true;
+                    });
+
+                connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
+                    [handle_handshake, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                        if (*handshake_request_done == true)
+                        {
+                            // callback ran from timer or cancellation token, nothing to do here
+                            return;
+                        }
+
+                        // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
+                        // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
+                        *handshake_request_done = true;
+                    }
+
+                    handle_handshake(exception, true);
                 });
             });
     }
@@ -203,6 +287,8 @@ namespace signalr
                         return;
                     }
 
+                    assert(connection->get_connection_state() == connection_state::disconnected);
+
                     std::vector<std::function<void(std::exception_ptr)>> callbacks;
 
                     {
@@ -217,7 +303,7 @@ namespace signalr
                     {
                         callback(exception);
                     }
-                });
+                }, nullptr);
         }
     }
 
@@ -235,8 +321,11 @@ namespace signalr
                 if (found != obj.end())
                 {
                     auto& error = found->second.as_string();
-                    m_logger.log(trace_level::errors, std::string("handshake error: ")
-                        .append(error));
+                    if (m_logger.is_enabled(trace_level::error))
+                    {
+                        m_logger.log(trace_level::error, std::string("handshake error: ")
+                            .append(error));
+                    }
                     m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
                     return;
                 }
@@ -246,6 +335,7 @@ namespace signalr
                     if (found != obj.end())
                     {
                         m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received unexpected message while waiting for the handshake response."))));
+                        return;
                     }
 
                     m_handshakeReceived = true;
@@ -262,25 +352,15 @@ namespace signalr
 
             for (const auto& val : messages)
             {
-                if (!val.is_map())
-                {
-                    m_logger.log(trace_level::info, std::string("unexpected response received from the server: ")
-                        .append(response));
-
-                    return;
-                }
-
-                const auto &obj = val.as_map();
-
-                switch ((int)obj.at("type").as_double())
+                switch (val->message_type)
                 {
                 case message_type::invocation:
                 {
-                    auto method = obj.at("target").as_string();
-                    auto event = m_subscriptions.find(method);
+                    auto invocation = static_cast<invocation_message*>(val.get());
+                    auto event = m_subscriptions.find(invocation->target);
                     if (event != m_subscriptions.end())
                     {
-                        const auto& args = obj.at("arguments");
+                        const auto& args = invocation->arguments;
                         event->second(args);
                     }
                     else
@@ -297,13 +377,8 @@ namespace signalr
                     break;
                 case message_type::completion:
                 {
-                    auto error = obj.find("error");
-                    auto result = obj.find("result");
-                    if (error != obj.end() && result != obj.end())
-                    {
-                        // TODO: error
-                    }
-                    invoke_callback(obj);
+                    auto completion = static_cast<completion_message*>(val.get());
+                    invoke_callback(completion);
                     break;
                 }
                 case message_type::cancel_invocation:
@@ -320,47 +395,42 @@ namespace signalr
         }
         catch (const std::exception &e)
         {
-            m_logger.log(trace_level::errors, std::string("error occured when parsing response: ")
-                .append(e.what())
-                .append(". response: ")
-                .append(response));
+            if (m_logger.is_enabled(trace_level::error))
+            {
+                m_logger.log(trace_level::error, std::string("error occured when parsing response: ")
+                    .append(e.what())
+                    .append(". response: ")
+                    .append(response));
+            }
 
             // TODO: Consider passing "reason" exception to stop
-            m_connection->stop([](std::exception_ptr) {});
+            m_connection->stop([](std::exception_ptr) {}, std::current_exception());
         }
     }
 
-    bool hub_connection_impl::invoke_callback(const signalr::value& message)
+    bool hub_connection_impl::invoke_callback(completion_message* completion)
     {
-        if (!message.is_map())
+        const char* error = nullptr;
+        if (!completion->error.empty())
         {
-            throw signalr_exception("expected object");
+            error = completion->error.data();
         }
 
-        auto& invocationId = message.as_map().at("invocationId");
-        if (!invocationId.is_string())
+        // TODO: consider transferring ownership of 'result' so that if we run user callbacks on a different thread we don't need to
+        // worry about object lifetime
+        if (!m_callback_manager.invoke_callback(completion->invocation_id, error, completion->result, true))
         {
-            throw signalr_exception("invocationId is not a string");
-        }
-
-        auto& id = invocationId.as_string();
-        if (!m_callback_manager.invoke_callback(id, message, true))
-        {
-            m_logger.log(trace_level::info, std::string("no callback found for id: ").append(id));
-            return false;
+            if (m_logger.is_enabled(trace_level::info))
+            {
+                m_logger.log(trace_level::info, std::string("no callback found for id: ").append(completion->invocation_id));
+            }
         }
 
         return true;
     }
 
-    void hub_connection_impl::invoke(const std::string& method_name, const signalr::value& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::invoke(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(const signalr::value&, std::exception_ptr)> callback) noexcept
     {
-        if (!arguments.is_array())
-        {
-            callback(signalr::value(), std::make_exception_ptr(signalr_exception("arguments should be an array")));
-            return;
-        }
-
         const auto& callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
                 [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
@@ -369,59 +439,54 @@ namespace signalr
             [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
     }
 
-    void hub_connection_impl::send(const std::string& method_name, const signalr::value& arguments, std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        if (!arguments.is_array())
-        {
-            callback(std::make_exception_ptr(signalr_exception("arguments should be an array")));
-            return;
-        }
-
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },
             [callback](const std::exception_ptr e){ callback(e); });
     }
 
-    void hub_connection_impl::invoke_hub_method(const std::string& method_name, const signalr::value& arguments,
+    void hub_connection_impl::invoke_hub_method(const std::string& method_name, const std::vector<signalr::value>& arguments,
         const std::string& callback_id, std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept
     {
-        auto map = std::map<std::string, signalr::value>
+        try
         {
-            { "type", signalr::value((double)message_type::invocation) },
-            { "target", signalr::value(method_name) },
-            { "arguments", arguments }
-        };
+            invocation_message invocation(callback_id, method_name, arguments);
+            auto message = m_protocol->write_message(&invocation);
 
-        if (!callback_id.empty())
-        {
-            map["invocationId"] = signalr::value(callback_id);
+            // weak_ptr prevents a circular dependency leading to memory leak and other problems
+            auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
+
+            m_connection->send(message, m_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+                {
+                    if (exception)
+                    {
+                        auto hub_connection = weak_hub_connection.lock();
+                        if (hub_connection)
+                        {
+                            hub_connection->m_callback_manager.remove_callback(callback_id);
+                        }
+                        set_exception(exception);
+                    }
+                    else
+                    {
+                        if (callback_id.empty())
+                        {
+                            // complete nonBlocking call
+                            set_completion();
+                        }
+                    }
+                });
         }
-
-        auto message = m_protocol->write_message(signalr::value(std::move(map)));
-
-        // weak_ptr prevents a circular dependency leading to memory leak and other problems
-        auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
-
-        m_connection->send(message, [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+        catch (const std::exception& e)
         {
-            if (exception)
+            m_callback_manager.remove_callback(callback_id);
+            if (m_logger.is_enabled(trace_level::warning))
             {
-                auto hub_connection = weak_hub_connection.lock();
-                if (hub_connection)
-                {
-                    hub_connection->m_callback_manager.remove_callback(callback_id);
-                }
-                set_exception(exception);
+                m_logger.log(trace_level::warning, std::string("failed to send invocation: ").append(e.what()));
             }
-            else
-            {
-                if (callback_id.empty())
-                {
-                    // complete nonBlocking call
-                    set_completion();
-                }
-            }
-        });
+            set_exception(std::current_exception());
+        }
     }
 
     connection_state hub_connection_impl::get_connection_state() const noexcept
@@ -440,7 +505,7 @@ namespace signalr
         m_connection->set_client_config(config);
     }
 
-    void hub_connection_impl::set_disconnected(const std::function<void()>& disconnected)
+    void hub_connection_impl::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected)
     {
         m_disconnected = disconnected;
     }
@@ -448,29 +513,21 @@ namespace signalr
     // unnamed namespace makes it invisble outside this translation unit
     namespace
     {
-        static std::function<void(const signalr::value&)> create_hub_invocation_callback(const logger& logger,
+        static std::function<void(const char* error, const signalr::value&)> create_hub_invocation_callback(const logger& logger,
             const std::function<void(const signalr::value&)>& set_result,
             const std::function<void(const std::exception_ptr)>& set_exception)
         {
-            return [logger, set_result, set_exception](const signalr::value& message)
+            return [logger, set_result, set_exception](const char* error, const signalr::value& message)
             {
-                assert(message.is_map());
-                const auto& map = message.as_map();
-                auto found = map.find("result");
-                if (found != map.end())
+                if (error != nullptr)
                 {
-                    set_result(found->second);
-                }
-                else if ((found = map.find("error")) != map.end())
-                {
-                    assert(found->second.is_string());
                     set_exception(
                         std::make_exception_ptr(
-                            hub_exception(found->second.as_string())));
+                            hub_exception(error)));
                 }
                 else
                 {
-                    set_result(signalr::value());
+                    set_result(message);
                 }
             };
         }

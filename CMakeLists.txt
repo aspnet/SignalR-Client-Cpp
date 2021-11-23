@@ -1,15 +1,16 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.14)
 
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 endif()
 
-project (signalrclient)
+project (microsoft-signalr)
 
 include(CTest)
 
 set(WERROR true CACHE BOOL "Enable warnings as errors.")
 set(WALL true CACHE BOOL "Enable all warnings.")
+set(INCLUDE_JSONCPP true CACHE BOOL "Include jsoncpp source")
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries")
 
 if(NOT WIN32)
@@ -18,8 +19,12 @@ else()
   set(EXTRA_FLAGS "-DSIGNALRCLIENT_EXPORTS")
 endif()
 
-if(USE_CPPRESTSDK)
-  string(APPEND EXTRA_FLAGS " -DUSE_CPPRESTSDK")
+if(USE_MSGPACK)
+  string(APPEND EXTRA_FLAGS " -DUSE_MSGPACK")
+endif()
+
+if(INJECT_HEADER_AFTER_STDAFX)
+  string(APPEND EXTRA_FLAGS " -DINJECT_HEADER_AFTER_STDAFX=${INJECT_HEADER_AFTER_STDAFX}")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_FLAGS}")
@@ -30,11 +35,20 @@ if(USE_CPPRESTSDK)
   set(CPPREST_LIB "cpprestsdk::cpprest")
 endif()
 
-include_directories (include)
+if(NOT INCLUDE_JSONCPP)
+  find_package(jsoncpp REQUIRED)
+  # jsoncpp has different target names depending on whether it
+  # was built as a shared or static library. We make this override-able
+  # so we can be resilient to the changes between versions.
+  set(JSONCPP_LIB "jsoncpp_lib" CACHE STRING "jsoncpp target name")
+endif()
 
-# TODO: We shouldn't use this, it makes the dll/lib export all symbols
-# We need this for testing, but we might just add all the files to the test project manually
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(USE_MSGPACK)
+  find_package(msgpack CONFIG REQUIRED)
+  set(MSGPACK_LIB "msgpackc-cxx")
+endif()
+
+include_directories (include)
 
 if(USE_CPPRESTSDK)
   if(NOT WIN32)

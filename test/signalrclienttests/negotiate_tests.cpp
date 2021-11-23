@@ -6,13 +6,14 @@
 #include "negotiate.h"
 #include "test_http_client.h"
 #include "test_utils.h"
+#include "signalr_default_scheduler.h"
 
 using namespace signalr;
 
 TEST(negotiate, request_created_with_correct_url)
 {
     std::string requested_url;
-    auto http_client = test_http_client([&requested_url](const std::string& url, http_request request)
+    auto http_client = std::make_shared<test_http_client>([&requested_url](const std::string& url, http_request request, cancellation_token token)
     {
         std::string response_body(
             "{ \"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
@@ -22,12 +23,15 @@ TEST(negotiate, request_created_with_correct_url)
         return http_response(200, response_body);
     });
 
+    http_client->set_scheduler(std::make_shared<signalr_default_scheduler>());
+
+    auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<void>();
     negotiate::negotiate(http_client, "http://fake/signalr", signalr_client_config(),
         [&mre](signalr::negotiation_response&&, std::exception_ptr exception)
         {
             mre.set();
-        });
+        }, get_cancellation_token(cts));
 
     mre.get();
     ASSERT_EQ("http://fake/signalr/negotiate?negotiateVersion=1", requested_url);
@@ -35,7 +39,7 @@ TEST(negotiate, request_created_with_correct_url)
 
 TEST(negotiate, negotiation_request_sent_and_response_serialized)
 {
-    auto request_factory = test_http_client([](const std::string&, http_request request)
+    auto request_factory = std::make_shared<test_http_client>([](const std::string&, http_request request, cancellation_token token)
     {
         std::string response_body(
             "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
@@ -45,12 +49,15 @@ TEST(negotiate, negotiation_request_sent_and_response_serialized)
         return http_response(200, response_body);
     });
 
+    request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
+
+    auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
     negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
-        });
+        }, get_cancellation_token(cts));
 
     auto response = mre.get();
 
@@ -66,7 +73,7 @@ TEST(negotiate, negotiation_request_sent_and_response_serialized)
 
 TEST(negotiate, negotiation_response_with_redirect)
 {
-    auto request_factory = test_http_client([](const std::string&, http_request request)
+    auto request_factory = std::make_shared<test_http_client>([](const std::string&, http_request request, cancellation_token token)
     {
         std::string response_body(
             "{\"url\" : \"http://redirect\", "
@@ -75,12 +82,15 @@ TEST(negotiate, negotiation_response_with_redirect)
         return http_response(200, response_body);
     });
 
+    request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
+
+    auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
     negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
-        });
+        }, get_cancellation_token(cts));
 
     auto response = mre.get();
 
@@ -90,7 +100,7 @@ TEST(negotiate, negotiation_response_with_redirect)
 
 TEST(negotiate, negotiation_response_with_negotiateVersion)
 {
-    auto request_factory = test_http_client([](const std::string&, http_request request)
+    auto request_factory = std::make_shared<test_http_client>([](const std::string&, http_request request, cancellation_token token)
         {
             std::string response_body(
                 "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
@@ -102,12 +112,15 @@ TEST(negotiate, negotiation_response_with_negotiateVersion)
             return http_response(200, response_body);
         });
 
+    request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
+
+    auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
     negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
-        });
+        }, get_cancellation_token(cts));
 
     auto response = mre.get();
 
@@ -117,7 +130,7 @@ TEST(negotiate, negotiation_response_with_negotiateVersion)
 
 TEST(negotiate, negotiation_response_with_future_negotiateVersion)
 {
-    auto request_factory = test_http_client([](const std::string&, http_request request)
+    auto request_factory = std::make_shared<test_http_client>([](const std::string&, http_request request, cancellation_token token)
         {
             std::string response_body(
                 "{\"connectionId\" : \"f7707523-307d-4cba-9abf-3eef701241e8\", "
@@ -129,12 +142,15 @@ TEST(negotiate, negotiation_response_with_future_negotiateVersion)
             return http_response(200, response_body);
         });
 
+    request_factory->set_scheduler(std::make_shared<signalr_default_scheduler>());
+
+    auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
     negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
-        });
+        }, get_cancellation_token(cts));
 
     auto response = mre.get();
 

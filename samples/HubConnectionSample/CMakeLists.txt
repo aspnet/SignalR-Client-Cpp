@@ -7,4 +7,4 @@ include_directories(
 
 add_executable (HubConnectionSample ${SOURCES})
 
-target_link_libraries(HubConnectionSample signalrclient)
+target_link_libraries(HubConnectionSample microsoft-signalr)

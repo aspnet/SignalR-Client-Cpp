@@ -25,12 +25,16 @@ namespace signalr
             return "null";
         case signalr::value_type::boolean:
             return "boolean";
+        case signalr::value_type::binary:
+            return "binary";
         default:
             return std::to_string((int)v);
         }
     }
 
     value::value() : mType(value_type::null) {}
+
+    value::value(std::nullptr_t) : mType(value_type::null) {}
 
     value::value(value_type t) : mType(t)
     {
@@ -50,6 +54,9 @@ namespace signalr
             break;
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>();
+            break;
+        case value_type::binary:
+            new (&mStorage.binary) std::vector<uint8_t>();
             break;
         case value_type::null:
         default:
@@ -82,6 +89,11 @@ namespace signalr
         new (&mStorage.string) std::string(val);
     }
 
+    value::value(const char* val, size_t length) : mType(value_type::string)
+    {
+        new (&mStorage.string) std::string(val, length);
+    }
+
     value::value(const std::vector<value>& val) : mType(value_type::array)
     {
         new (&mStorage.array) std::vector<value>(val);
@@ -100,6 +112,16 @@ namespace signalr
     value::value(std::map<std::string, value>&& map) : mType(value_type::map)
     {
         new (&mStorage.map) std::map<std::string, value>(std::move(map));
+    }
+
+    value::value(const std::vector<uint8_t>& bin) : mType(value_type::binary)
+    {
+        new (&mStorage.binary) std::vector<uint8_t>(bin);
+    }
+
+    value::value(std::vector<uint8_t>&& bin) : mType(value_type::binary)
+    {
+        new (&mStorage.binary) std::vector<uint8_t>(std::move(bin));
     }
 
     value::value(const value& rhs)
@@ -121,6 +143,9 @@ namespace signalr
             break;
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
+            break;
+        case value_type::binary:
+            new (&mStorage.binary) std::vector<uint8_t>(rhs.mStorage.binary);
             break;
         case value_type::null:
         default:
@@ -148,6 +173,9 @@ namespace signalr
         case value_type::map:
             new (&mStorage.map) std::map<std::string, signalr::value>(std::move(rhs.mStorage.map));
             break;
+        case value_type::binary:
+            new (&mStorage.binary) std::vector<uint8_t>(std::move(rhs.mStorage.binary));
+            break;
         case value_type::null:
         default:
             break;
@@ -171,6 +199,9 @@ namespace signalr
             break;
         case value_type::map:
             mStorage.map.~map();
+            break;
+        case value_type::binary:
+            mStorage.binary.~vector();
             break;
         case value_type::null:
         case value_type::float64:
@@ -202,6 +233,9 @@ namespace signalr
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
             break;
+        case value_type::binary:
+            new (&mStorage.binary) std::vector<uint8_t>(rhs.mStorage.binary);
+            break;
         case value_type::null:
         default:
             break;
@@ -231,6 +265,9 @@ namespace signalr
             break;
         case value_type::map:
             new (&mStorage.map) std::map<std::string, value>(std::move(rhs.mStorage.map));
+            break;
+        case value_type::binary:
+            new (&mStorage.binary) std::vector<uint8_t>(std::move(rhs.mStorage.binary));
             break;
         case value_type::null:
         default:
@@ -268,6 +305,11 @@ namespace signalr
     bool value::is_bool() const
     {
         return mType == signalr::value_type::boolean;
+    }
+
+    bool value::is_binary() const
+    {
+        return mType == signalr::value_type::binary;
     }
 
     double value::as_double() const
@@ -318,6 +360,16 @@ namespace signalr
         }
 
         return mStorage.map;
+    }
+
+    const std::vector<uint8_t>& value::as_binary() const
+    {
+        if (!is_binary())
+        {
+            throw signalr_exception("object is a '" + value_type_to_string(mType) + "' expected it to be a 'binary'");
+        }
+
+        return mStorage.binary;
     }
 
     value_type value::type() const

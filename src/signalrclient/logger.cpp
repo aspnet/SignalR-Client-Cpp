@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <assert.h>
+#include <chrono>
 
 namespace signalr
 {
@@ -23,26 +24,40 @@ namespace signalr
 
     void logger::log(trace_level level, const std::string& entry) const
     {
-        if ((level & m_trace_level) != trace_level::none && m_log_writer)
+        log(level, entry.data(), entry.length());
+    }
+
+    void logger::log(trace_level level, const char* entry, size_t entry_count) const
+    {
+        if (level >= m_trace_level && m_log_writer)
         {
             try
             {
-                time_t t;
+                std::chrono::milliseconds milliseconds =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+                std::chrono::seconds seconds = std::chrono::duration_cast<std::chrono::seconds>(milliseconds);
+                milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(milliseconds - seconds);
+
+                time_t t = seconds.count();
                 tm time;
-                // gets current calendar time
-                std::time(&t);
                 // convert time to utc
                 GMTIME(&time, &t);
 
-                // TODO: millisecond "precision"
-                char timeString[sizeof("2019-11-23T13:23:02Z")];
+                char timeString[sizeof("2019-11-23T13:23:02.000Z")];
 
-                // format string to ISO8601
-                std::strftime(timeString, sizeof(timeString), "%FT%TZ", &time);
+                // format string to ISO8601 with additional space for 3 digits of millisecond precision
+                std::strftime(timeString, sizeof(timeString), "%FT%T.000Z", &time);
+
+                // add millisecond part
+                // 5 = 3 digits of millisecond precision + 'Z' + null character ending
+                snprintf(timeString + sizeof(timeString) - 5, 5, "%03dZ", (int)milliseconds.count());
 
                 std::stringstream os;
-                os << timeString << " ["
-                    << std::left << std::setw(12) << translate_trace_level(level) << "] "<< entry << std::endl;
+                os << timeString;
+
+                write_trace_level(level, os);
+
+                os.write(entry, (std::streamsize)entry_count) << std::endl;
                 m_log_writer->write(os.str());
             }
             catch (const std::exception &e)
@@ -57,27 +72,35 @@ namespace signalr
         }
     }
 
-    std::string logger::translate_trace_level(trace_level trace_level)
+    void logger::write_trace_level(trace_level trace_level, std::ostream& stream)
     {
         switch (trace_level)
         {
-        case signalr::trace_level::messages:
-            return "message";
-        case signalr::trace_level::state_changes:
-            return "state change";
-        case signalr::trace_level::events:
-            return "event";
-        case signalr::trace_level::errors:
-            return "error";
+        case signalr::trace_level::verbose:
+            stream << " [verbose  ] ";
+            break;
+        case signalr::trace_level::debug:
+            stream << " [debug    ] ";
+            break;
         case signalr::trace_level::info:
-            return "info";
+            stream << " [info     ] ";
+            break;
+        case signalr::trace_level::warning:
+            stream << " [warning  ] ";
+            break;
+        case signalr::trace_level::error:
+            stream << " [error    ] ";
+            break;
+        case signalr::trace_level::critical:
+            stream << " [critical ] ";
+            break;
         case signalr::trace_level::none:
-            return "none";
-        case signalr::trace_level::all:
-            return "all";
+            stream << " [none     ] ";
+            break;
         default:
             assert(false);
-            return "(unknown)";
+            stream << " [(unknown)] ";
+            break;
         }
     }
 }
