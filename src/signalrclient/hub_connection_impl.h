@@ -65,6 +65,11 @@ namespace signalr
         signalr_client_config m_signalr_client_config;
         std::unique_ptr<hub_protocol> m_protocol;
 
+        const int default_keepalive_interval = 15;
+        const int default_server_timeout = default_keepalive_interval * 2;
+        std::atomic<int64_t> m_nextActivationServerTimeout;
+        std::atomic<int64_t> m_nextActivationSendPing;
+
         std::mutex m_stop_callback_lock;
         std::vector<std::function<void(std::exception_ptr)>> m_stop_callbacks;
 
@@ -75,5 +80,10 @@ namespace signalr
         void invoke_hub_method(const std::string& method_name, const std::vector<signalr::value>& arguments, const std::string& callback_id,
             std::function<void()> set_completion, std::function<void(const std::exception_ptr)> set_exception) noexcept;
         bool invoke_callback(completion_message* completion);
+
+        void reset_send_ping();
+        void reset_server_timeout();
+
+        void start_keepalive(std::weak_ptr<hub_connection_impl> weak_connection);
     };
 }
