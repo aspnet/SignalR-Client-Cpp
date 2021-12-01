@@ -521,14 +521,20 @@ namespace signalr
     void hub_connection_impl::reset_send_ping()
     {
       m_nextActivationSendPing.store(
-        std::chrono::duration_cast<std::chrono::seconds>((std::chrono::steady_clock::now() + std::chrono::seconds(default_keepalive_interval)).time_since_epoch()).count()
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+          (std::chrono::steady_clock::now() + m_signalr_client_config.get_keepalive_interval())
+          .time_since_epoch()
+          ).count()
       );
     }
 
     void hub_connection_impl::reset_server_timeout()
     {
       m_nextActivationServerTimeout.store(
-        std::chrono::duration_cast<std::chrono::seconds>((std::chrono::steady_clock::now() + std::chrono::seconds(default_server_timeout)).time_since_epoch()).count()
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+          (std::chrono::steady_clock::now() + m_signalr_client_config.get_server_timeout())
+          .time_since_epoch()
+          ).count()
       );
     }
 
@@ -601,9 +607,10 @@ namespace signalr
             return true;
           }
 
-          auto timeNowSeconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+          auto timeNowmSeconds = 
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
-          if (timeNowSeconds > connection->m_nextActivationServerTimeout.load())
+          if (timeNowmSeconds > connection->m_nextActivationServerTimeout.load())
           {
             if (connection->get_connection_state() == connection_state::connected)
             {
@@ -616,7 +623,7 @@ namespace signalr
             }
           }
 
-          if (timeNowSeconds > connection->m_nextActivationSendPing.load())
+          if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
           {
             if (connection->m_logger.is_enabled(trace_level::info))
               connection->m_logger.log(trace_level::info, std::string("Send ping to server..."));

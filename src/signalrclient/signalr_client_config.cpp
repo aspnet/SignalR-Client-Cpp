@@ -44,6 +44,8 @@ namespace signalr
 
     signalr_client_config::signalr_client_config()
         : m_handshake_timeout(std::chrono::seconds(15))
+        , m_server_timeout(std::chrono::seconds(30))
+        , m_keepalive_interval(std::chrono::seconds(15))
     {
         m_scheduler = std::make_shared<signalr_default_scheduler>();
     }
@@ -91,5 +93,34 @@ namespace signalr
     std::chrono::milliseconds signalr_client_config::get_handshake_timeout() const noexcept
     {
         return m_handshake_timeout;
+    }
+
+    void signalr_client_config::set_server_timeout(std::chrono::milliseconds timeout)
+    {
+      if (timeout <= std::chrono::seconds(0))
+      {
+        throw std::runtime_error("timeout must be greater than 0.");
+      }
+
+      m_server_timeout = timeout;
+    }
+
+    std::chrono::milliseconds signalr_client_config::get_server_timeout() const noexcept
+    {
+      return m_server_timeout;
+    }
+    void signalr_client_config::set_keepalive_interval(std::chrono::milliseconds interval)
+    {
+      if (interval <= std::chrono::seconds(0))
+      {
+        throw std::runtime_error("timeout must be greater than 0.");
+      }
+
+      m_keepalive_interval = interval;
+    }
+
+    std::chrono::milliseconds signalr_client_config::get_keepalive_interval() const noexcept
+    {
+      return m_keepalive_interval;
     }
 }
