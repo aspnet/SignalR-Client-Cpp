@@ -65,8 +65,6 @@ namespace signalr
         signalr_client_config m_signalr_client_config;
         std::unique_ptr<hub_protocol> m_protocol;
 
-        const int default_keepalive_interval = 15;
-        const int default_server_timeout = default_keepalive_interval * 2;
         std::atomic<int64_t> m_nextActivationServerTimeout;
         std::atomic<int64_t> m_nextActivationSendPing;
 
