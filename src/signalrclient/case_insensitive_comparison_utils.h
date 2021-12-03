@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <functional>
+#include <string>
 #include <cctype>
 
 namespace signalr
@@ -12,7 +12,7 @@ namespace signalr
     // Note: These functions are not pretending to be all-purpose helpers for case insensitive string comparison. Rather
     // we use them to compare hub and hub method names which are expected to be almost exclusively ASCII and this is the
     // simplest thing that would work without having to take dependencies on third party libraries.
-    struct case_insensitive_equals : std::binary_function<std::string, std::string, bool>
+    struct case_insensitive_equals
     {
         bool operator()(const std::string& s1, const std::string& s2) const
         {
@@ -33,7 +33,7 @@ namespace signalr
         }
     };
 
-    struct case_insensitive_hash : std::unary_function<std::string, std::size_t>
+    struct case_insensitive_hash
     {
         std::size_t operator()(const std::string& s) const noexcept
         {
