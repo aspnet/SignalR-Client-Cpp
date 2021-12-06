@@ -39,7 +39,7 @@ namespace signalr
         const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_connection(connection_impl::create(url, trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
-            , m_logger(log_writer, trace_level),
+        , m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
         m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
     { }
@@ -50,39 +50,39 @@ namespace signalr
         std::weak_ptr<hub_connection_impl> weak_hub_connection = shared_from_this();
 
         m_connection->set_message_received([weak_hub_connection](std::string&& message)
-        {
-            auto connection = weak_hub_connection.lock();
-            if (connection)
             {
-                connection->process_message(std::move(message));
-            }
-        });
+                auto connection = weak_hub_connection.lock();
+                if (connection)
+                {
+                    connection->process_message(std::move(message));
+                }
+            });
 
         m_connection->set_disconnected([weak_hub_connection](std::exception_ptr exception)
-        {
-            auto connection = weak_hub_connection.lock();
-            if (connection)
             {
-                // start may be waiting on the handshake response so we complete it here, this no-ops if already set
-                connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
-                try
+                auto connection = weak_hub_connection.lock();
+                if (connection)
                 {
-                    connection->m_disconnect_cts->cancel();
-                }
-                catch (const std::exception& ex)
-                {
-                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    // start may be waiting on the handshake response so we complete it here, this no-ops if already set
+                    connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
+                    try
                     {
-                        connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
-                            .append(ex.what()));
+                        connection->m_disconnect_cts->cancel();
                     }
+                    catch (const std::exception& ex)
+                    {
+                        if (connection->m_logger.is_enabled(trace_level::warning))
+                        {
+                            connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
+                                .append(ex.what()));
+                        }
+                    }
+
+                    connection->m_callback_manager.clear("connection was stopped before invocation result was received");
+
+                    connection->m_disconnected(exception);
                 }
-
-                connection->m_callback_manager.clear("connection was stopped before invocation result was received");
-
-                connection->m_disconnected(exception);
-            }
-        });
+            });
     }
 
     void hub_connection_impl::on(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
@@ -105,7 +105,7 @@ namespace signalr
                 "an action for this event has already been registered. event name: " + event_name);
         }
 
-        m_subscriptions.insert({event_name, handler});
+        m_subscriptions.insert({ event_name, handler });
     }
 
     void hub_connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
@@ -239,22 +239,22 @@ namespace signalr
 
                 connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
                     [handle_handshake, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
-                {
                     {
-                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                        if (*handshake_request_done == true)
                         {
-                            // callback ran from timer or cancellation token, nothing to do here
-                            return;
+                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                            if (*handshake_request_done == true)
+                            {
+                                // callback ran from timer or cancellation token, nothing to do here
+                                return;
+                            }
+
+                            // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
+                            // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
+                            *handshake_request_done = true;
                         }
 
-                        // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
-                        // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
-                        *handshake_request_done = true;
-                    }
-
-                    handle_handshake(exception, true);
-                });
+                        handle_handshake(exception, true);
+                    });
             });
     }
 
@@ -390,7 +390,7 @@ namespace signalr
                 case message_type::ping:
                     if (m_logger.is_enabled(trace_level::info))
                     {
-                      m_logger.log(trace_level::info, std::string("ping message received."));
+                        m_logger.log(trace_level::info, std::string("ping message received."));
                     }
                     break;
                 case message_type::close:
@@ -399,7 +399,7 @@ namespace signalr
                 }
             }
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             if (m_logger.is_enabled(trace_level::error))
             {
@@ -442,14 +442,14 @@ namespace signalr
                 [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
 
         invoke_hub_method(method_name, arguments, callback_id, nullptr,
-            [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
+            [callback](const std::exception_ptr e) { callback(signalr::value(), e); });
     }
 
     void hub_connection_impl::send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
     {
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },
-            [callback](const std::exception_ptr e){ callback(e); });
+            [callback](const std::exception_ptr e) { callback(e); });
     }
 
     void hub_connection_impl::invoke_hub_method(const std::string& method_name, const std::vector<signalr::value>& arguments,
@@ -520,118 +520,110 @@ namespace signalr
 
     void hub_connection_impl::reset_send_ping()
     {
-      m_nextActivationSendPing.store(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-          (std::chrono::steady_clock::now() + m_signalr_client_config.get_keepalive_interval())
-          .time_since_epoch()
-          ).count()
-      );
+        auto timeMs = (std::chrono::steady_clock::now() + m_signalr_client_config.get_keepalive_interval()).time_since_epoch();
+        m_nextActivationSendPing.store(std::chrono::duration_cast<std::chrono::milliseconds>(timeMs).count());
     }
 
     void hub_connection_impl::reset_server_timeout()
     {
-      m_nextActivationServerTimeout.store(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-          (std::chrono::steady_clock::now() + m_signalr_client_config.get_server_timeout())
-          .time_since_epoch()
-          ).count()
-      );
+        auto timeMs = (std::chrono::steady_clock::now() + m_signalr_client_config.get_server_timeout()).time_since_epoch();
+        m_nextActivationServerTimeout.store(std::chrono::duration_cast<std::chrono::milliseconds>(timeMs).count());
     }
 
     void hub_connection_impl::start_keepalive(std::weak_ptr<hub_connection_impl> weak_connection)
     {
-      auto connection = weak_connection.lock();
-
-      if (connection)
-      {
-        if (connection->m_logger.is_enabled(trace_level::info))
-          connection->m_logger.log(trace_level::info, std::string("Start keep alive timer!"));
-      }
-      
-      auto send_ping = [weak_connection]()
-      {
         auto connection = weak_connection.lock();
-        if (connection && connection->get_connection_state() != connection_state::connected)
+
+        if (connection)
         {
-          return;
-        }
-        
-        try
-        {
-          hub_message ping_msg(signalr::message_type::ping);
-          auto message = connection->m_protocol->write_message(&ping_msg);
-
-          connection->m_connection->send(
-            message, 
-            connection->m_protocol->transfer_format(), [weak_connection](std::exception_ptr exception)
-            {
-              auto connection = weak_connection.lock();
-              if (connection)
-              {
-                if (exception)
-                {
-                  if (connection->m_logger.is_enabled(trace_level::warning))
-                    connection->m_logger.log(trace_level::warning, std::string("failed to send ping!"));
-                }
-                else
-                {
-                  connection->reset_send_ping();
-                }
-              }
-            });
-        }
-        catch (const std::exception& e)
-        {
-          if (connection->m_logger.is_enabled(trace_level::warning))
-          {
-            connection->m_logger.log(trace_level::warning, std::string("failed to send ping: ").append(e.what()));
-          }
-        }
-      };
-
-      send_ping();
-      reset_server_timeout();
-
-      timer(m_signalr_client_config.get_scheduler(),
-        [send_ping, weak_connection](std::chrono::milliseconds)
-        {
-          auto connection = weak_connection.lock();
-
-          if (!connection)
-          {
-            return true;
-          }
-
-          if (connection && connection->get_connection_state() != connection_state::connected)
-          {
-            return true;
-          }
-
-          auto timeNowmSeconds = 
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-
-          if (timeNowmSeconds > connection->m_nextActivationServerTimeout.load())
-          {
-            if (connection->get_connection_state() == connection_state::connected)
-            {
-              if (connection->m_logger.is_enabled(trace_level::warning))
-                connection->m_logger.log(trace_level::warning, std::string("Server keepalive timeout. Stopping..."));
-              connection->m_connection->stop([](std::exception_ptr)
-                {
-
-                }, nullptr);
-            }
-          }
-
-          if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
-          {
             if (connection->m_logger.is_enabled(trace_level::info))
-              connection->m_logger.log(trace_level::info, std::string("Send ping to server..."));
-            send_ping();
-          }
-          
-          return false;
-        });
+                connection->m_logger.log(trace_level::info, std::string("Start keep alive timer!"));
+        }
+
+        auto send_ping = [weak_connection]()
+        {
+            auto connection = weak_connection.lock();
+            if (connection && connection->get_connection_state() != connection_state::connected)
+            {
+                return;
+            }
+
+            try
+            {
+                hub_message ping_msg(signalr::message_type::ping);
+                auto message = connection->m_protocol->write_message(&ping_msg);
+
+                connection->m_connection->send(
+                    message,
+                    connection->m_protocol->transfer_format(), [weak_connection](std::exception_ptr exception)
+                    {
+                        auto connection = weak_connection.lock();
+                        if (connection)
+                        {
+                            if (exception)
+                            {
+                                if (connection->m_logger.is_enabled(trace_level::warning))
+                                    connection->m_logger.log(trace_level::warning, std::string("failed to send ping!"));
+                            }
+                            else
+                            {
+                                connection->reset_send_ping();
+                            }
+                        }
+                    });
+            }
+            catch (const std::exception& e)
+            {
+                if (connection->m_logger.is_enabled(trace_level::warning))
+                {
+                    connection->m_logger.log(trace_level::warning, std::string("failed to send ping: ").append(e.what()));
+                }
+            }
+        };
+
+        send_ping();
+        reset_server_timeout();
+
+        timer(m_signalr_client_config.get_scheduler(),
+            [send_ping, weak_connection](std::chrono::milliseconds)
+            {
+                auto connection = weak_connection.lock();
+
+                if (!connection)
+                {
+                    return true;
+                }
+
+                if (connection && connection->get_connection_state() != connection_state::connected)
+                {
+                    return true;
+                }
+
+                auto timeNowmSeconds =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+                if (timeNowmSeconds > connection->m_nextActivationServerTimeout.load())
+                {
+                    if (connection->get_connection_state() == connection_state::connected)
+                    {
+                        if (connection->m_logger.is_enabled(trace_level::warning))
+                            connection->m_logger.log(trace_level::warning, std::string("Server keepalive timeout. Stopping..."));
+                        connection->m_connection->stop([](std::exception_ptr)
+                            {
+
+                            }, nullptr);
+                    }
+                }
+
+                if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
+                {
+                    if (connection->m_logger.is_enabled(trace_level::info))
+                        connection->m_logger.log(trace_level::info, std::string("Send ping to server..."));
+                    send_ping();
+                }
+
+                return false;
+            });
     }
 
     // unnamed namespace makes it invisble outside this translation unit
