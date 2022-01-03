@@ -14,7 +14,6 @@
 
 namespace signalr
 {
-
     default_http_client::default_http_client(const signalr_client_config& config) noexcept
        : m_config(config) 
     { }
