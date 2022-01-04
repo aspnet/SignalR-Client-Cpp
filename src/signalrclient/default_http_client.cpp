@@ -14,6 +14,10 @@
 
 namespace signalr
 {
+    default_http_client::default_http_client(const signalr_client_config& config) noexcept
+       : m_config(config) 
+    { }
+
     void default_http_client::send(const std::string& url, http_request& request,
         std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token)
     {
@@ -82,7 +86,7 @@ namespace signalr
                 cts.cancel();
             });
 
-        web::http::client::http_client client(utility::conversions::to_string_t(url));
+        web::http::client::http_client client(utility::conversions::to_string_t(url), m_config.get_http_client_config());
         client.request(http_request, cts.get_token())
             .then([context, callback](pplx::task<web::http::http_response> response_task)
         {
