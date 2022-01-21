@@ -82,6 +82,6 @@ namespace signalr
         void reset_send_ping();
         void reset_server_timeout();
 
-        void start_keepalive(std::weak_ptr<hub_connection_impl> weak_connection);
+        void start_keepalive();
     };
 }

@@ -185,8 +185,10 @@ namespace signalr
                                 callback(exception);
                             }, exception);
                     }
-
-                    connection->start_keepalive(weak_connection);
+                    else
+                    {
+                        connection->start_keepalive();
+                    }
                 };
 
                 auto handshake_request = handshake::write_handshake(connection->m_protocol);
@@ -388,9 +390,9 @@ namespace signalr
                     // Sent to server only, should not be received by client
                     throw std::runtime_error("Received unexpected message type 'CancelInvocation'.");
                 case message_type::ping:
-                    if (m_logger.is_enabled(trace_level::info))
+                    if (m_logger.is_enabled(trace_level::debug))
                     {
-                        m_logger.log(trace_level::info, std::string("ping message received."));
+                        m_logger.log(trace_level::debug, std::string("ping message received."));
                     }
                     break;
                 case message_type::close:
@@ -530,20 +532,21 @@ namespace signalr
         m_nextActivationServerTimeout.store(std::chrono::duration_cast<std::chrono::milliseconds>(timeMs).count());
     }
 
-    void hub_connection_impl::start_keepalive(std::weak_ptr<hub_connection_impl> weak_connection)
+    void hub_connection_impl::start_keepalive()
     {
-        auto connection = weak_connection.lock();
-
-        if (connection)
+        if (m_logger.is_enabled(trace_level::info))
         {
-            if (connection->m_logger.is_enabled(trace_level::info))
-                connection->m_logger.log(trace_level::info, std::string("Start keep alive timer!"));
+            m_logger.log(trace_level::info, std::string("starting keep alive timer..."));
         }
 
-        auto send_ping = [weak_connection]()
+        auto send_ping = [](std::shared_ptr<hub_connection_impl> connection)
         {
-            auto connection = weak_connection.lock();
-            if (connection && connection->get_connection_state() != connection_state::connected)
+            if (!connection)
+            {
+                return;
+            }
+
+            if (connection->get_connection_state() != connection_state::connected)
             {
                 return;
             }
@@ -553,6 +556,7 @@ namespace signalr
                 hub_message ping_msg(signalr::message_type::ping);
                 auto message = connection->m_protocol->write_message(&ping_msg);
 
+                std::weak_ptr<hub_connection_impl> weak_connection = connection;
                 connection->m_connection->send(
                     message,
                     connection->m_protocol->transfer_format(), [weak_connection](std::exception_ptr exception)
@@ -581,9 +585,10 @@ namespace signalr
             }
         };
 
-        send_ping();
+        send_ping(shared_from_this());
         reset_server_timeout();
 
+        std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
         timer(m_signalr_client_config.get_scheduler(),
             [send_ping, weak_connection](std::chrono::milliseconds)
             {
@@ -594,7 +599,7 @@ namespace signalr
                     return true;
                 }
 
-                if (connection && connection->get_connection_state() != connection_state::connected)
+                if (connection->get_connection_state() != connection_state::connected)
                 {
                     return true;
                 }
@@ -607,7 +612,7 @@ namespace signalr
                     if (connection->get_connection_state() == connection_state::connected)
                     {
                         if (connection->m_logger.is_enabled(trace_level::warning))
-                            connection->m_logger.log(trace_level::warning, std::string("Server keepalive timeout. Stopping..."));
+                            connection->m_logger.log(trace_level::warning, std::string("server keepalive timeout. Stopping..."));
                         connection->m_connection->stop([](std::exception_ptr)
                             {
 
@@ -618,8 +623,8 @@ namespace signalr
                 if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
                 {
                     if (connection->m_logger.is_enabled(trace_level::info))
-                        connection->m_logger.log(trace_level::info, std::string("Send ping to server..."));
-                    send_ping();
+                        connection->m_logger.log(trace_level::info, std::string("sending ping to server..."));
+                    send_ping(connection);
                 }
 
                 return false;

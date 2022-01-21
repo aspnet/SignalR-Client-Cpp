@@ -97,30 +97,31 @@ namespace signalr
 
     void signalr_client_config::set_server_timeout(std::chrono::milliseconds timeout)
     {
-      if (timeout <= std::chrono::seconds(0))
-      {
-        throw std::runtime_error("timeout must be greater than 0.");
-      }
+        if (timeout <= std::chrono::seconds(0))
+        {
+            throw std::runtime_error("timeout must be greater than 0.");
+        }
 
-      m_server_timeout = timeout;
+        m_server_timeout = timeout;
     }
 
     std::chrono::milliseconds signalr_client_config::get_server_timeout() const noexcept
     {
-      return m_server_timeout;
+        return m_server_timeout;
     }
+
     void signalr_client_config::set_keepalive_interval(std::chrono::milliseconds interval)
     {
-      if (interval <= std::chrono::seconds(0))
-      {
-        throw std::runtime_error("timeout must be greater than 0.");
-      }
+        if (interval <= std::chrono::seconds(0))
+        {
+            throw std::runtime_error("timeout must be greater than 0.");
+        }
 
-      m_keepalive_interval = interval;
+        m_keepalive_interval = interval;
     }
 
     std::chrono::milliseconds signalr_client_config::get_keepalive_interval() const noexcept
     {
-      return m_keepalive_interval;
+        return m_keepalive_interval;
     }
 }
