@@ -94,7 +94,7 @@ namespace signalr
         void reset()
         {
             std::lock_guard<std::mutex> lock(m_lock);
-            //assert(m_callbacks.empty());
+            assert(m_callbacks.empty());
             m_signaled = false;
             m_callbacks.clear();
         }
