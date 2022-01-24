@@ -31,7 +31,7 @@ Below are instructions to build on different OS's. You can also use the followin
 ```powershell
 PS> git submodule update --init
 PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
-PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk:x64-windows msgpack:x64-windows
+PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk:x64-windows
 PS> mkdir build.release
 PS> cd build.release
 PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE="..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
