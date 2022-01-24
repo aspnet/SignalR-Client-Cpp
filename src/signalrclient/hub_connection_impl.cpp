@@ -39,7 +39,7 @@ namespace signalr
         const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
         std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
         : m_connection(connection_impl::create(url, trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
-        , m_logger(log_writer, trace_level),
+            , m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
         m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
     { }
@@ -50,39 +50,39 @@ namespace signalr
         std::weak_ptr<hub_connection_impl> weak_hub_connection = shared_from_this();
 
         m_connection->set_message_received([weak_hub_connection](std::string&& message)
+        {
+            auto connection = weak_hub_connection.lock();
+            if (connection)
             {
-                auto connection = weak_hub_connection.lock();
-                if (connection)
-                {
-                    connection->process_message(std::move(message));
-                }
-            });
+                connection->process_message(std::move(message));
+            }
+        });
 
         m_connection->set_disconnected([weak_hub_connection](std::exception_ptr exception)
+        {
+            auto connection = weak_hub_connection.lock();
+            if (connection)
             {
-                auto connection = weak_hub_connection.lock();
-                if (connection)
+                // start may be waiting on the handshake response so we complete it here, this no-ops if already set
+                connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
+                try
                 {
-                    // start may be waiting on the handshake response so we complete it here, this no-ops if already set
-                    connection->m_handshakeTask->set(std::make_exception_ptr(signalr_exception("connection closed while handshake was in progress.")));
-                    try
-                    {
-                        connection->m_disconnect_cts->cancel();
-                    }
-                    catch (const std::exception& ex)
-                    {
-                        if (connection->m_logger.is_enabled(trace_level::warning))
-                        {
-                            connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
-                                .append(ex.what()));
-                        }
-                    }
-
-                    connection->m_callback_manager.clear("connection was stopped before invocation result was received");
-
-                    connection->m_disconnected(exception);
+                    connection->m_disconnect_cts->cancel();
                 }
-            });
+                catch (const std::exception& ex)
+                {
+                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    {
+                        connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
+                            .append(ex.what()));
+                    }
+                }
+                
+                connection->m_callback_manager.clear("connection was stopped before invocation result was received");
+                
+                connection->m_disconnected(exception);
+            }
+        });
     }
 
     void hub_connection_impl::on(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
@@ -105,7 +105,7 @@ namespace signalr
                 "an action for this event has already been registered. event name: " + event_name);
         }
 
-        m_subscriptions.insert({ event_name, handler });
+        m_subscriptions.insert({event_name, handler});
     }
 
     void hub_connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
