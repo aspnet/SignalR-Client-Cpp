@@ -441,7 +441,7 @@ namespace signalr
     {
         const auto& callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
-                [callback](const std::exception_ptr e){ callback(signalr::value(), e); }));
+                [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
 
         invoke_hub_method(method_name, arguments, callback_id, nullptr,
             [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
@@ -451,7 +451,7 @@ namespace signalr
     {
         invoke_hub_method(method_name, arguments, "",
             [callback]() { callback(nullptr); },
-            [callback](const std::exception_ptr e) { callback(e); });
+            [callback](const std::exception_ptr e){ callback(e); });
     }
 
     void hub_connection_impl::invoke_hub_method(const std::string& method_name, const std::vector<signalr::value>& arguments,
