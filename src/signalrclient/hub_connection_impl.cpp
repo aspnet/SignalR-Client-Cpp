@@ -77,9 +77,9 @@ namespace signalr
                             .append(ex.what()));
                     }
                 }
-                
+
                 connection->m_callback_manager.clear("connection was stopped before invocation result was received");
-                
+
                 connection->m_disconnected(exception);
             }
         });
@@ -241,22 +241,22 @@ namespace signalr
 
                 connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
                     [handle_handshake, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
+                {
                     {
+                        std::lock_guard<std::mutex> lock(*handshake_request_lock);
+                        if (*handshake_request_done == true)
                         {
-                            std::lock_guard<std::mutex> lock(*handshake_request_lock);
-                            if (*handshake_request_done == true)
-                            {
-                                // callback ran from timer or cancellation token, nothing to do here
-                                return;
-                            }
-
-                            // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
-                            // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
-                            *handshake_request_done = true;
+                            // callback ran from timer or cancellation token, nothing to do here
+                            return;
                         }
 
-                        handle_handshake(exception, true);
-                    });
+                        // indicates that the handshake timer doesn't need to call the callback, it just needs to set the timeout exception
+                        // handle_handshake will be waiting on the handshake completion (error or success) to call the callback
+                        *handshake_request_done = true;
+                    }
+
+                    handle_handshake(exception, true);
+                });
             });
     }
 
@@ -401,7 +401,7 @@ namespace signalr
                 }
             }
         }
-        catch (const std::exception& e)
+        catch (const std::exception &e)
         {
             if (m_logger.is_enabled(trace_level::error))
             {
@@ -441,10 +441,10 @@ namespace signalr
     {
         const auto& callback_id = m_callback_manager.register_callback(
             create_hub_invocation_callback(m_logger, [callback](const signalr::value& result) { callback(result, nullptr); },
-                [callback](const std::exception_ptr e) { callback(signalr::value(), e); }));
+                [callback](const std::exception_ptr e){ callback(signalr::value(), e); }));
 
         invoke_hub_method(method_name, arguments, callback_id, nullptr,
-            [callback](const std::exception_ptr e) { callback(signalr::value(), e); });
+            [callback](const std::exception_ptr e){ callback(signalr::value(), e); });
     }
 
     void hub_connection_impl::send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept
