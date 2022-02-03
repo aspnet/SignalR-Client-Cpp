@@ -114,7 +114,7 @@ namespace signalr
     {
         if (interval <= std::chrono::seconds(0))
         {
-            throw std::runtime_error("timeout must be greater than 0.");
+            throw std::runtime_error("interval must be greater than 0.");
         }
 
         m_keepalive_interval = interval;

@@ -392,7 +392,7 @@ namespace signalr
                 case message_type::ping:
                     if (m_logger.is_enabled(trace_level::debug))
                     {
-                        m_logger.log(trace_level::debug, std::string("ping message received."));
+                        m_logger.log(trace_level::debug, "ping message received.");
                     }
                     break;
                 case message_type::close:
@@ -536,7 +536,7 @@ namespace signalr
     {
         if (m_logger.is_enabled(trace_level::info))
         {
-            m_logger.log(trace_level::info, std::string("starting keep alive timer..."));
+            m_logger.log(trace_level::debug, "starting keep alive timer...");
         }
 
         auto send_ping = [](std::shared_ptr<hub_connection_impl> connection)
@@ -567,7 +567,9 @@ namespace signalr
                             if (exception)
                             {
                                 if (connection->m_logger.is_enabled(trace_level::warning))
-                                    connection->m_logger.log(trace_level::warning, std::string("failed to send ping!"));
+                                {
+                                    connection->m_logger.log(trace_level::warning, "failed to send ping!");
+                                }
                             }
                             else
                             {
@@ -612,10 +614,15 @@ namespace signalr
                     if (connection->get_connection_state() == connection_state::connected)
                     {
                         if (connection->m_logger.is_enabled(trace_level::warning))
-                            connection->m_logger.log(trace_level::warning, std::string("server keepalive timeout. Stopping..."));
+                        {
+                            connection->m_logger.log(trace_level::warning, std::string("server timeout (")
+                                .append(std::to_string(timeNowmSeconds - connection->m_nextActivationServerTimeout.load()))
+                                .append(" ms) elapsed without receiving a message from the server."));
+                        }
+
                         connection->m_connection->stop([](std::exception_ptr)
                             {
-
+                                ///TODO:
                             }, nullptr);
                     }
                 }
@@ -623,7 +630,9 @@ namespace signalr
                 if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
                 {
                     if (connection->m_logger.is_enabled(trace_level::info))
-                        connection->m_logger.log(trace_level::info, std::string("sending ping to server..."));
+                    {
+                        connection->m_logger.log(trace_level::debug, "sending ping to server...");
+                    }
                     send_ping(connection);
                 }
 

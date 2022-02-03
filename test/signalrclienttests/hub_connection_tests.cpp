@@ -1825,7 +1825,9 @@ TEST(keepalive, sends_ping_messages)
         /* send function */ [messages](const std::string& msg, std::function<void(std::exception_ptr)> callback)
         {
             if (messages->size() < 3)
+            {
                 messages->push_back(msg);
+            }
             callback(nullptr);
         });
     auto hub_connection = create_hub_connection(websocket_client);
@@ -1845,14 +1847,14 @@ TEST(keepalive, sends_ping_messages)
 
     std::this_thread::sleep_for(config.get_keepalive_interval() + std::chrono::milliseconds(500));
 
-    ASSERT_TRUE(messages->size() == 3);
-    ASSERT_EQ("{\"protocol\":\"json\",\"version\":1}\x1e", messages->size() > 0 ? (*messages)[0] : "");
-    ASSERT_EQ("{\"type\":6}\x1e", messages->size() > 1 ? (*messages)[1] : "");
-    ASSERT_EQ("{\"type\":6}\x1e", messages->size() > 2 ? (*messages)[2] : "");
+    ASSERT_EQ(3, messages->size());
+    ASSERT_EQ("{\"protocol\":\"json\",\"version\":1}\x1e", (*messages)[0]);
+    ASSERT_EQ("{\"type\":6}\x1e", (*messages)[1]);
+    ASSERT_EQ("{\"type\":6}\x1e",  (*messages)[2]);
     ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
 }
 
-TEST(keepalive, server_timeout_on_no_pong_from_server)
+TEST(keepalive, server_timeout_on_no_ping_from_server)
 {
     signalr_client_config config;
     config.set_keepalive_interval(std::chrono::seconds(1));
