@@ -10,12 +10,14 @@
 std::shared_ptr<test_websocket_client> create_test_websocket_client(
     std::function<void(const std::string & msg, std::function<void(std::exception_ptr)>)> send_function,
     std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function,
-    std::function<void(std::function<void(std::exception_ptr)>)> close_function)
+    std::function<void(std::function<void(std::exception_ptr)>)> close_function,
+    bool ignore_pings)
 {
     auto websocket_client = std::make_shared<test_websocket_client>();
     websocket_client->set_send_function(send_function);
     websocket_client->set_connect_function(connect_function);
     websocket_client->set_close_function(close_function);
+    websocket_client->ignore_pings = ignore_pings;
 
     return websocket_client;
 }
@@ -24,7 +26,7 @@ test_websocket_client::test_websocket_client()
     : m_connect_function(std::make_shared<std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>>([](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); })),
     m_send_function(std::make_shared<std::function<void(const std::string& msg, std::function<void(std::exception_ptr)>)>>([](const std::string msg, std::function<void(std::exception_ptr)> callback) { callback(nullptr); })),
     m_close_function(std::make_shared<std::function<void(std::function<void(std::exception_ptr)>)>>([](std::function<void(std::exception_ptr)> callback) { callback(nullptr); })),
-    m_receive_message_event(), m_receive_message(), m_stopped(true), receive_count(0)
+    m_receive_message_event(), m_receive_message(), m_stopped(true), receive_count(0), ignore_pings(true)
 {
     m_receive_loop_not_running.cancel();
 }
@@ -107,8 +109,14 @@ void test_websocket_client::send(const std::string& payload, signalr::transfer_f
 {
     handshake_sent.cancel();
     auto local_copy = m_send_function;
-    m_scheduler->schedule([payload, callback, local_copy]()
+    auto l_ignore_pings = ignore_pings;
+    m_scheduler->schedule([payload, callback, local_copy, l_ignore_pings]()
         {
+            if (l_ignore_pings && payload.find("\"type\":6") != -1)
+            {
+                callback(nullptr);
+                return;
+            }
             (*local_copy)(payload, callback);
         });
 }

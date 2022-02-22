@@ -1829,7 +1829,10 @@ TEST(keepalive, sends_ping_messages)
                 messages->push_back(msg);
             }
             callback(nullptr);
-        });
+        },
+        [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
+        [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
+        false);
     auto hub_connection = create_hub_connection(websocket_client);
     hub_connection.set_client_config(config);
 
@@ -1858,15 +1861,17 @@ TEST(keepalive, server_timeout_on_no_ping_from_server)
 {
     signalr_client_config config;
     config.set_keepalive_interval(std::chrono::seconds(1));
-    config.set_server_timeout(std::chrono::seconds(3));
+    config.set_server_timeout(std::chrono::seconds(1));
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
     hub_connection.set_client_config(config);
 
     auto disconnected_called = false;
-    hub_connection.set_disconnected([&disconnected_called](std::exception_ptr ex)
+
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&disconnected_called, &disconnect_mre](std::exception_ptr ex)
         {
-            disconnected_called = true;
+            disconnect_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
@@ -1881,24 +1886,23 @@ TEST(keepalive, server_timeout_on_no_ping_from_server)
 
     mre.get();
 
-    std::this_thread::sleep_for(config.get_server_timeout() + std::chrono::milliseconds(500));
+    disconnect_mre.get();
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
-    ASSERT_TRUE(disconnected_called);
 }
 
 TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
 {
     signalr_client_config config;
     config.set_keepalive_interval(std::chrono::seconds(1));
-    config.set_server_timeout(std::chrono::seconds(3));
+    config.set_server_timeout(std::chrono::seconds(1));
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
     hub_connection.set_client_config(config);
 
-    auto disconnected_called = false;
-    hub_connection.set_disconnected([&disconnected_called](std::exception_ptr ex)
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr ex)
         {
-            disconnected_called = true;
+            disconnect_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
@@ -1917,9 +1921,7 @@ TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
     websocket_client->receive_message("{\"type\":6}\x1e");
     std::this_thread::sleep_for(std::chrono::seconds(1));
     ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
-    ASSERT_FALSE(disconnected_called);
 
-    std::this_thread::sleep_for(config.get_server_timeout() + std::chrono::milliseconds(500));
+    disconnect_mre.get();
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
-    ASSERT_TRUE(disconnected_called);
 }
