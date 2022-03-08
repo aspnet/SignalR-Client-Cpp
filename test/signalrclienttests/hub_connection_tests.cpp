@@ -1740,7 +1740,7 @@ TEST(config, can_replace_scheduler)
 
     // http_client->send (negotiate), websocket_client->start, handshake timeout timer, websocket_client->send, websocket_client->send, keep alive timer, websocket_client->send ping, websocket_client->stop
     // handshake timeout timer can trigger more than once if test takes more than 1 second
-    ASSERT_GE(8, scheduler->schedule_count);
+    ASSERT_GE(scheduler->schedule_count, 8);
 }
 
 class throw_hub_protocol : public hub_protocol
@@ -1820,13 +1820,18 @@ TEST(keepalive, sends_ping_messages)
     signalr_client_config config;
     config.set_keepalive_interval(std::chrono::seconds(1));
     config.set_server_timeout(std::chrono::seconds(3));
+    auto ping_mre = manual_reset_event<void>();
     auto messages = std::make_shared<std::deque<std::string>>();
     auto websocket_client = create_test_websocket_client(
-        /* send function */ [messages](const std::string& msg, std::function<void(std::exception_ptr)> callback)
+        /* send function */ [messages, &ping_mre](const std::string& msg, std::function<void(std::exception_ptr)> callback)
         {
             if (messages->size() < 3)
             {
                 messages->push_back(msg);
+            }
+            if (messages->size() == 3)
+            {
+                ping_mre.set();
             }
             callback(nullptr);
         },
@@ -1848,7 +1853,7 @@ TEST(keepalive, sends_ping_messages)
 
     mre.get();
 
-    std::this_thread::sleep_for(config.get_keepalive_interval() + std::chrono::milliseconds(500));
+    ping_mre.get();
 
     ASSERT_EQ(3, messages->size());
     ASSERT_EQ("{\"protocol\":\"json\",\"version\":1}\x1e", (*messages)[0]);
@@ -1886,7 +1891,15 @@ TEST(keepalive, server_timeout_on_no_ping_from_server)
 
     mre.get();
 
-    disconnect_mre.get();
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
+    }
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
@@ -1922,6 +1935,14 @@ TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
     std::this_thread::sleep_for(std::chrono::seconds(1));
     ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
 
-    disconnect_mre.get();
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
+    }
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }

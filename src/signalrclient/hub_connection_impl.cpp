@@ -613,17 +613,17 @@ namespace signalr
                 {
                     if (connection->get_connection_state() == connection_state::connected)
                     {
+                        auto error_msg = std::string("server timeout (")
+                            .append(std::to_string(connection->m_signalr_client_config.get_server_timeout().count()))
+                            .append(" ms) elapsed without receiving a message from the server.");
                         if (connection->m_logger.is_enabled(trace_level::warning))
                         {
-                            connection->m_logger.log(trace_level::warning, std::string("server timeout (")
-                                .append(std::to_string(timeNowmSeconds - connection->m_nextActivationServerTimeout.load()))
-                                .append(" ms) elapsed without receiving a message from the server."));
+                            connection->m_logger.log(trace_level::warning, error_msg);
                         }
 
                         connection->m_connection->stop([](std::exception_ptr)
                             {
-                                ///TODO:
-                            }, nullptr);
+                            }, std::make_exception_ptr(signalr_exception(error_msg)));
                     }
                 }
 
