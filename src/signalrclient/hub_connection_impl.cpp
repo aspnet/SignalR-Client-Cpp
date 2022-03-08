@@ -534,9 +534,9 @@ namespace signalr
 
     void hub_connection_impl::start_keepalive()
     {
-        if (m_logger.is_enabled(trace_level::info))
+        if (m_logger.is_enabled(trace_level::debug))
         {
-            m_logger.log(trace_level::debug, "starting keep alive timer...");
+            m_logger.log(trace_level::debug, "starting keep alive timer.");
         }
 
         auto send_ping = [](std::shared_ptr<hub_connection_impl> connection)
@@ -629,9 +629,9 @@ namespace signalr
 
                 if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
                 {
-                    if (connection->m_logger.is_enabled(trace_level::info))
+                    if (connection->m_logger.is_enabled(trace_level::debug))
                     {
-                        connection->m_logger.log(trace_level::debug, "sending ping to server...");
+                        connection->m_logger.log(trace_level::debug, "sending ping to server.");
                     }
                     send_ping(connection);
                 }
