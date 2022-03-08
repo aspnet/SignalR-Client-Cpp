@@ -185,6 +185,10 @@ namespace signalr
                                 callback(exception);
                             }, exception);
                     }
+                    else
+                    {
+                        connection->start_keepalive();
+                    }
                 };
 
                 auto handshake_request = handshake::write_handshake(connection->m_protocol);
@@ -348,6 +352,7 @@ namespace signalr
                 }
             }
 
+            reset_server_timeout();
             auto messages = m_protocol->parse_messages(response);
 
             for (const auto& val : messages)
@@ -385,7 +390,10 @@ namespace signalr
                     // Sent to server only, should not be received by client
                     throw std::runtime_error("Received unexpected message type 'CancelInvocation'.");
                 case message_type::ping:
-                    // TODO
+                    if (m_logger.is_enabled(trace_level::debug))
+                    {
+                        m_logger.log(trace_level::debug, "ping message received.");
+                    }
                     break;
                 case message_type::close:
                     // TODO
@@ -477,6 +485,8 @@ namespace signalr
                         }
                     }
                 });
+
+            reset_send_ping();
         }
         catch (const std::exception& e)
         {
@@ -508,6 +518,126 @@ namespace signalr
     void hub_connection_impl::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected)
     {
         m_disconnected = disconnected;
+    }
+
+    void hub_connection_impl::reset_send_ping()
+    {
+        auto timeMs = (std::chrono::steady_clock::now() + m_signalr_client_config.get_keepalive_interval()).time_since_epoch();
+        m_nextActivationSendPing.store(std::chrono::duration_cast<std::chrono::milliseconds>(timeMs).count());
+    }
+
+    void hub_connection_impl::reset_server_timeout()
+    {
+        auto timeMs = (std::chrono::steady_clock::now() + m_signalr_client_config.get_server_timeout()).time_since_epoch();
+        m_nextActivationServerTimeout.store(std::chrono::duration_cast<std::chrono::milliseconds>(timeMs).count());
+    }
+
+    void hub_connection_impl::start_keepalive()
+    {
+        if (m_logger.is_enabled(trace_level::debug))
+        {
+            m_logger.log(trace_level::debug, "starting keep alive timer.");
+        }
+
+        auto send_ping = [](std::shared_ptr<hub_connection_impl> connection)
+        {
+            if (!connection)
+            {
+                return;
+            }
+
+            if (connection->get_connection_state() != connection_state::connected)
+            {
+                return;
+            }
+
+            try
+            {
+                hub_message ping_msg(signalr::message_type::ping);
+                auto message = connection->m_protocol->write_message(&ping_msg);
+
+                std::weak_ptr<hub_connection_impl> weak_connection = connection;
+                connection->m_connection->send(
+                    message,
+                    connection->m_protocol->transfer_format(), [weak_connection](std::exception_ptr exception)
+                    {
+                        auto connection = weak_connection.lock();
+                        if (connection)
+                        {
+                            if (exception)
+                            {
+                                if (connection->m_logger.is_enabled(trace_level::warning))
+                                {
+                                    connection->m_logger.log(trace_level::warning, "failed to send ping!");
+                                }
+                            }
+                            else
+                            {
+                                connection->reset_send_ping();
+                            }
+                        }
+                    });
+            }
+            catch (const std::exception& e)
+            {
+                if (connection->m_logger.is_enabled(trace_level::warning))
+                {
+                    connection->m_logger.log(trace_level::warning, std::string("failed to send ping: ").append(e.what()));
+                }
+            }
+        };
+
+        send_ping(shared_from_this());
+        reset_server_timeout();
+
+        std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
+        timer(m_signalr_client_config.get_scheduler(),
+            [send_ping, weak_connection](std::chrono::milliseconds)
+            {
+                auto connection = weak_connection.lock();
+
+                if (!connection)
+                {
+                    return true;
+                }
+
+                if (connection->get_connection_state() != connection_state::connected)
+                {
+                    return true;
+                }
+
+                auto timeNowmSeconds =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+                if (timeNowmSeconds > connection->m_nextActivationServerTimeout.load())
+                {
+                    if (connection->get_connection_state() == connection_state::connected)
+                    {
+                        auto error_msg = std::string("server timeout (")
+                            .append(std::to_string(connection->m_signalr_client_config.get_server_timeout().count()))
+                            .append(" ms) elapsed without receiving a message from the server.");
+                        if (connection->m_logger.is_enabled(trace_level::warning))
+                        {
+                            connection->m_logger.log(trace_level::warning, error_msg);
+                        }
+
+                        connection->m_connection->stop([](std::exception_ptr)
+                            {
+                            }, std::make_exception_ptr(signalr_exception(error_msg)));
+                    }
+                }
+
+                if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
+                {
+                    if (connection->m_logger.is_enabled(trace_level::debug))
+                    {
+                        connection->m_logger.log(trace_level::debug, "sending ping to server.");
+                    }
+                    send_ping(connection);
+                }
+
+                return false;
+            });
     }
 
     // unnamed namespace makes it invisble outside this translation unit

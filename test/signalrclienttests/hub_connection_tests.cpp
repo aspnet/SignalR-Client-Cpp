@@ -1738,9 +1738,9 @@ TEST(config, can_replace_scheduler)
 
     mre.get();
 
-    // http_client->send (negotiate), websocket_client->start, handshake timeout timer, websocket_client->send, websocket_client->send, websocket_client->stop
+    // http_client->send (negotiate), websocket_client->start, handshake timeout timer, websocket_client->send, websocket_client->send, keep alive timer, websocket_client->send ping, websocket_client->stop
     // handshake timeout timer can trigger more than once if test takes more than 1 second
-    ASSERT_GE(6, scheduler->schedule_count);
+    ASSERT_GE(scheduler->schedule_count, 8);
 }
 
 class throw_hub_protocol : public hub_protocol
@@ -1813,4 +1813,136 @@ TEST(send, throws_if_protocol_fails)
     }
 
     ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
+}
+
+TEST(keepalive, sends_ping_messages)
+{
+    signalr_client_config config;
+    config.set_keepalive_interval(std::chrono::seconds(1));
+    config.set_server_timeout(std::chrono::seconds(3));
+    auto ping_mre = manual_reset_event<void>();
+    auto messages = std::make_shared<std::deque<std::string>>();
+    auto websocket_client = create_test_websocket_client(
+        /* send function */ [messages, &ping_mre](const std::string& msg, std::function<void(std::exception_ptr)> callback)
+        {
+            if (messages->size() < 3)
+            {
+                messages->push_back(msg);
+            }
+            if (messages->size() == 3)
+            {
+                ping_mre.set();
+            }
+            callback(nullptr);
+        },
+        [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
+        [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
+        false);
+    auto hub_connection = create_hub_connection(websocket_client);
+    hub_connection.set_client_config(config);
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+
+    ping_mre.get();
+
+    ASSERT_EQ(3, messages->size());
+    ASSERT_EQ("{\"protocol\":\"json\",\"version\":1}\x1e", (*messages)[0]);
+    ASSERT_EQ("{\"type\":6}\x1e", (*messages)[1]);
+    ASSERT_EQ("{\"type\":6}\x1e",  (*messages)[2]);
+    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+}
+
+TEST(keepalive, server_timeout_on_no_ping_from_server)
+{
+    signalr_client_config config;
+    config.set_keepalive_interval(std::chrono::seconds(1));
+    config.set_server_timeout(std::chrono::seconds(1));
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+    hub_connection.set_client_config(config);
+
+    auto disconnected_called = false;
+
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&disconnected_called, &disconnect_mre](std::exception_ptr ex)
+        {
+            disconnect_mre.set(ex);
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
+    }
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+}
+
+TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
+{
+    signalr_client_config config;
+    config.set_keepalive_interval(std::chrono::seconds(1));
+    config.set_server_timeout(std::chrono::seconds(1));
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+    hub_connection.set_client_config(config);
+
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr ex)
+        {
+            disconnect_mre.set(ex);
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{}\x1e");
+
+    mre.get();
+
+    std::this_thread::sleep_for(config.get_server_timeout() - std::chrono::milliseconds(500));
+    websocket_client->receive_message("{\"type\":6}\x1e");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
+    }
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }

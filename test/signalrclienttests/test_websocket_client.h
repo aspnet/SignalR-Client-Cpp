@@ -41,6 +41,7 @@ public:
     cancellation_token_source receive_loop_started;
     cancellation_token_source handshake_sent;
     int receive_count;
+    bool ignore_pings;
 
 private:
     std::shared_ptr<std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_connect_function;
@@ -63,4 +64,4 @@ private:
 std::shared_ptr<test_websocket_client> create_test_websocket_client(
     std::function<void(const std::string & msg, std::function<void(std::exception_ptr)>)> send_function = [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
     std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function = [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
-    std::function<void(std::function<void(std::exception_ptr)>)> close_function = [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); });
+    std::function<void(std::function<void(std::exception_ptr)>)> close_function = [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); }, bool ignore_pings = true);
