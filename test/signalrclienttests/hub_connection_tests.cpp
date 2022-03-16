@@ -494,7 +494,7 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
             })
         .build();
 
-    std::atomic<bool> disconnected;
+    std::atomic<bool> disconnected { false };
     hub_connection.set_disconnected([&disconnected](std::exception_ptr ex)
         {
             disconnected.store(true);
