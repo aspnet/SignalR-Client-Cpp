@@ -494,6 +494,12 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
             })
         .build();
 
+    std::atomic<bool> disconnected;
+    hub_connection.set_disconnected([&disconnected](std::exception_ptr ex)
+        {
+            disconnected.store(true);
+        });
+
     auto mre = manual_reset_event<void>();
     hub_connection.start([&mre](std::exception_ptr exception)
         {
@@ -509,6 +515,8 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
     {
         ASSERT_STREQ("custom exception", e.what());
     }
+
+    ASSERT_FALSE(disconnected.load());
 
     hub_connection.start([&mre](std::exception_ptr exception)
         {
@@ -526,6 +534,7 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
     }
 
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_FALSE(disconnected.load());
 }
 
 TEST(stop, stop_stops_connection)
