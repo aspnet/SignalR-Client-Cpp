@@ -465,6 +465,78 @@ TEST(start, propogates_exception_from_negotiate)
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
 }
 
+// regression test: helps ensure internal state is in a working state for connecting again after connection failures
+TEST(start, propogates_exception_from_negotiate_and_can_start_again)
+{
+    auto start_count = 0;
+    auto http_client = std::make_shared<test_http_client>([&start_count](const std::string& url, http_request, cancellation_token) -> http_response
+        {
+            start_count++;
+            if (start_count == 1)
+            {
+                throw custom_exception();
+            }
+            throw custom_exception("custom exception 2");
+        });
+
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = hub_connection_builder::create("http://fakeuri")
+        .with_logging(std::make_shared<memory_log_writer>(), trace_level::none)
+        .with_http_client_factory([http_client](const signalr_client_config& config)
+            {
+                http_client->set_scheduler(config.get_scheduler());
+                return http_client;
+            })
+        .with_websocket_factory([websocket_client](const signalr_client_config& config)
+            {
+                websocket_client->set_config(config);
+                return websocket_client;
+            })
+        .build();
+
+    std::atomic<bool> disconnected { false };
+    hub_connection.set_disconnected([&disconnected](std::exception_ptr ex)
+        {
+            disconnected.store(true);
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const custom_exception& e)
+    {
+        ASSERT_STREQ("custom exception", e.what());
+    }
+
+    ASSERT_FALSE(disconnected.load());
+
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    try
+    {
+        mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const custom_exception& e)
+    {
+        ASSERT_STREQ("custom exception 2", e.what());
+    }
+
+    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_FALSE(disconnected.load());
+}
+
 TEST(stop, stop_stops_connection)
 {
     auto websocket_client = create_test_websocket_client();

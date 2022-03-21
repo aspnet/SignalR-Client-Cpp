@@ -212,6 +212,18 @@ namespace signalr
                             .append(ex.what()));
                     }
                 }
+                try
+                {
+                    connection->m_disconnect_cts->cancel();
+                }
+                catch (const std::exception& ex)
+                {
+                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    {
+                        connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception in start negotiate: ")
+                            .append(ex.what()));
+                    }
+                }
                 callback(std::current_exception());
                 return;
             }
