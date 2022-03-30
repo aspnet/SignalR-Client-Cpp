@@ -74,6 +74,31 @@ namespace signalr
         // been started in which case we just stop the loop by not scheduling another receive task.
         websocket_client->receive([weak_transport, logger, receive_loop_task, weak_websocket_client](std::string message, std::exception_ptr exception)
             {
+                auto transport = weak_transport.lock();
+                if (transport)
+                {
+                    bool disconnected;
+                    {
+                        std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
+                        disconnected = transport->m_disconnected;
+                    }
+                    if (disconnected)
+                    {
+                        // stop has been called, tell it the receive loop is done and return
+                        receive_loop_task->cancel();
+                        return;
+                    }
+                }
+                else
+                {
+                    // this doesn't happen in practice, only hit by websocket tests that stop via the dtor
+                    receive_loop_task->cancel();
+                    return;
+                }
+
+                // stop waits for the receive loop to complete so the transport should never be null
+                assert(transport != nullptr);
+
                 if (exception != nullptr)
                 {
                     try
@@ -96,9 +121,6 @@ namespace signalr
                         exception = std::make_exception_ptr(signalr_exception("unknown error"));
                     }
 
-                    auto transport = weak_transport.lock();
-                    // stop waits for the receive loop to complete so the transport should never be null
-                    assert(transport != nullptr);
                     bool disconnected;
                     {
                         std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
@@ -108,10 +130,10 @@ namespace signalr
                     if (disconnected)
                     {
                         // stop has been called, tell it the receive loop is done and return
-                        transport->m_receive_loop_task->cancel();
+                        receive_loop_task->cancel();
                         return;
                     }
-                    transport->m_receive_loop_task->cancel();
+                    receive_loop_task->cancel();
 
                     std::promise<void> promise;
                     auto client = weak_websocket_client.lock();
@@ -148,29 +170,20 @@ namespace signalr
                     return;
                 }
 
-                auto transport = weak_transport.lock();
-                if (transport)
+                transport->m_process_response_callback(message, nullptr);
+
+                bool disconnected;
                 {
-                    transport->m_process_response_callback(message, nullptr);
+                    std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
+                    disconnected = transport->m_disconnected;
+                }
 
-                    bool disconnected;
-                    {
-                        std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
-                        disconnected = transport->m_disconnected;
-                    }
-
-                    if (!disconnected)
-                    {
-                        transport->receive_loop();
-                    }
-                    else
-                    {
-                        transport->m_receive_loop_task->cancel();
-                    }
+                if (!disconnected)
+                {
+                    transport->receive_loop();
                 }
                 else
                 {
-                    // this doesn't happen in practice, only hit by websocket tests that stop via the dtor
                     receive_loop_task->cancel();
                 }
             });
@@ -276,28 +289,35 @@ namespace signalr
         auto close_callback = m_close_callback;
         auto receive_loop_task = m_receive_loop_task;
 
+        m_logger.log(trace_level::debug, "stopping websocket transport");
+
         websocket_client->stop([logger, callback, close_callback, receive_loop_task](std::exception_ptr exception)
             {
                 receive_loop_task->register_callback([logger, callback, close_callback, exception]()
                     {
                         try
                         {
-                            close_callback(exception);
                             if (exception != nullptr)
                             {
                                 std::rethrow_exception(exception);
                             }
-                            callback(nullptr);
+                            logger.log(trace_level::debug, "websocket transport stopped");
                         }
                         catch (const std::exception& e)
                         {
-                            logger.log(
-                                trace_level::error,
-                                std::string("[websocket transport] exception when closing websocket: ")
-                                .append(e.what()));
-
-                            callback(exception);
+                            if (logger.is_enabled(trace_level::error))
+                            {
+                                logger.log(
+                                    trace_level::error,
+                                    std::string("websocket transport stopped with error: ")
+                                    .append(e.what()));
+                            }
                         }
+
+                        // TODO: this doesn't seem to be used, might want to remove or start using it
+                        close_callback(exception);
+
+                        callback(exception);
                     });
             });
     }

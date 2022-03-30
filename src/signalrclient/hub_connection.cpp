@@ -39,7 +39,7 @@ namespace signalr
             m_pImpl->stop([completion](std::exception_ptr) mutable
                 {
                     completion.set();
-                });
+                }, /* is_dtor */true);
             completion.get();
         }
     }

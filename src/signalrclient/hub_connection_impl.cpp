@@ -42,7 +42,10 @@ namespace signalr
             , m_logger(log_writer, trace_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
         m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
-    { }
+    {
+        hub_message ping_msg(signalr::message_type::ping);
+        m_cached_ping = m_protocol->write_message(&ping_msg);
+    }
 
     void hub_connection_impl::initialize()
     {
@@ -260,11 +263,15 @@ namespace signalr
             });
     }
 
-    void hub_connection_impl::stop(std::function<void(std::exception_ptr)> callback) noexcept
+    void hub_connection_impl::stop(std::function<void(std::exception_ptr)> callback, bool is_dtor) noexcept
     {
         if (get_connection_state() == connection_state::disconnected)
         {
-            m_logger.log(trace_level::info, "Stop ignored because the connection is already disconnected.");
+            // don't log if already disconnected and stop called from dtor, it's just noise
+            if (!is_dtor)
+            {
+                m_logger.log(trace_level::debug, "stop ignored because the connection is already disconnected.");
+            }
             callback(nullptr);
             return;
         }
@@ -553,12 +560,9 @@ namespace signalr
 
             try
             {
-                hub_message ping_msg(signalr::message_type::ping);
-                auto message = connection->m_protocol->write_message(&ping_msg);
-
                 std::weak_ptr<hub_connection_impl> weak_connection = connection;
                 connection->m_connection->send(
-                    message,
+                    connection->m_cached_ping,
                     connection->m_protocol->transfer_format(), [weak_connection](std::exception_ptr exception)
                     {
                         auto connection = weak_connection.lock();

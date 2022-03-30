@@ -329,7 +329,7 @@ TEST(websocket_transport_disconnect, disconnect_logs_exceptions)
     ASSERT_NE(std::find_if(log_entries.begin(), log_entries.end(), [](const std::string& entry)
         {
             return remove_date_from_log_entry(entry) ==
-                "[error    ] [websocket transport] exception when closing websocket: connection closing failed\n";
+                "[error    ] websocket transport stopped with error: connection closing failed\n";
         }),
         log_entries.end());
 }

@@ -1344,9 +1344,11 @@ TEST(connection_impl_stop, stopping_disconnected_connection_is_no_op)
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(2U, log_entries.size()) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[info     ] stopping connection\n", log_entries)) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[info     ] acquired lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_EQ(4U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[info     ] closing connection\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] acquired lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[debug    ] connection already disconnected\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] released lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(connection_impl_stop, stopping_disconnecting_connection_returns_canceled_task)
@@ -1478,11 +1480,11 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
     }
 
     auto log_entries = memory_writer->get_log_entries();
-    ASSERT_EQ(19U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(34U, log_entries.size()) << dump_vector(log_entries);
 
-    auto second_half = std::vector<std::string>(log_entries.begin() + 8, log_entries.end());
+    auto second_half = std::vector<std::string>(log_entries.begin() + 16, log_entries.end());
 
-    log_entries = std::vector<std::string>(log_entries.begin(), log_entries.begin() + 8);
+    log_entries = std::vector<std::string>(log_entries.begin(), log_entries.begin() + 16);
 
     ASSERT_TRUE(has_log_entry("[verbose  ] disconnected -> connecting\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> connected\n", log_entries)) << dump_vector(log_entries);
@@ -1574,9 +1576,11 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
 
     wait_for_start_mre.get();
 
-    connection->stop([disconnect_completed_event](std::exception_ptr)
+    auto stop_mre = manual_reset_event<void>();
+    connection->stop([disconnect_completed_event, &stop_mre](std::exception_ptr)
         {
             disconnect_completed_event->cancel();
+            stop_mre.set();
         }, nullptr);
 
     try
@@ -1587,6 +1591,7 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
     catch (const canceled_exception&)
     {
     }
+    stop_mre.get();
 
     ASSERT_EQ(connection_state::disconnected, connection->get_connection_state());
 
@@ -1594,9 +1599,10 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
 
     ASSERT_TRUE(has_log_entry("[verbose  ] disconnected -> connecting\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[info     ] [websocket transport] connecting to: ws://stop_cancels_ongoing_start_request/?id=f7707523-307d-4cba-9abf-3eef701241e8\n", log_entries)) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[info     ] stopping connection\n", log_entries)) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[info     ] acquired lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[info     ] closing connection\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] acquired lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[info     ] starting the connection has been canceled by stop().\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[verbose  ] released lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[verbose  ] connecting -> disconnected\n", log_entries)) << dump_vector(log_entries);
 }
 
@@ -1652,18 +1658,22 @@ TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_
     {
     }
 
-    for (int wait_time_ms = 5; wait_time_ms < 1000 && std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries().size() < 6; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 1000 && std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries().size() < 9; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
-    ASSERT_EQ(6U, log_entries.size()) << dump_vector(log_entries);
-    ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[0]));
-    ASSERT_EQ("[info     ] stopping connection\n", remove_date_from_log_entry(log_entries[1]));
-    ASSERT_EQ("[info     ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[2]));
-    ASSERT_EQ("[info     ] starting the connection has been canceled by stop().\n", remove_date_from_log_entry(log_entries[3]));
-    ASSERT_EQ("[verbose  ] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[4]));
+    ASSERT_EQ(9U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ("[verbose  ] acquired lock in start()\n", remove_date_from_log_entry(log_entries[0]));
+    ASSERT_EQ("[verbose  ] disconnected -> connecting\n", remove_date_from_log_entry(log_entries[1]));
+    ASSERT_EQ("[verbose  ] released lock in start()\n", remove_date_from_log_entry(log_entries[2]));
+    ASSERT_EQ("[info     ] closing connection\n", remove_date_from_log_entry(log_entries[3]));
+    ASSERT_EQ("[verbose  ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[4]));
+    ASSERT_EQ("[info     ] starting the connection has been canceled by stop().\n", remove_date_from_log_entry(log_entries[5]));
+    ASSERT_EQ("[verbose  ] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[6]));
+    ASSERT_EQ("[verbose  ] released lock in shutdown()\n", remove_date_from_log_entry(log_entries[7]));
+    ASSERT_EQ("[error    ] connection could not be started due to: an operation was canceled\n", remove_date_from_log_entry(log_entries[8]));
 
     // avoid AV from accessing stop_mre in callback
     done_mre.get();

@@ -40,7 +40,7 @@ namespace signalr
         void send(const std::string& method_name, const std::vector<signalr::value>& arguments, std::function<void(std::exception_ptr)> callback) noexcept;
 
         void start(std::function<void(std::exception_ptr)> callback) noexcept;
-        void stop(std::function<void(std::exception_ptr)> callback) noexcept;
+        void stop(std::function<void(std::exception_ptr)> callback, bool is_dtor = false) noexcept;
 
         connection_state get_connection_state() const noexcept;
         std::string get_connection_id() const;
@@ -64,6 +64,7 @@ namespace signalr
         std::shared_ptr<cancellation_token_source> m_disconnect_cts;
         signalr_client_config m_signalr_client_config;
         std::unique_ptr<hub_protocol> m_protocol;
+        std::string m_cached_ping;
 
         std::atomic<int64_t> m_nextActivationServerTimeout;
         std::atomic<int64_t> m_nextActivationSendPing;

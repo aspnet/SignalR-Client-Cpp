@@ -1113,7 +1113,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
     ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[error    ] Connection closed with error: Field 'arguments' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] connection closed with error: Field 'arguments' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_target)
@@ -1157,7 +1157,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
     ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
-    ASSERT_TRUE(has_log_entry("[error    ] Connection closed with error: Field 'target' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] connection closed with error: Field 'target' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
 TEST(send, creates_correct_payload)
@@ -1817,8 +1817,12 @@ TEST(config, can_replace_scheduler)
 
 class throw_hub_protocol : public hub_protocol
 {
-    virtual std::string write_message(const hub_message*) const override
+    virtual std::string write_message(const hub_message* message) const override
     {
+        if (message->message_type == message_type::ping)
+        {
+            return "";
+        }
         throw signalr_exception("throw from write_message");
     }
     virtual std::vector<std::unique_ptr<hub_message>> parse_messages(const std::string&) const override
