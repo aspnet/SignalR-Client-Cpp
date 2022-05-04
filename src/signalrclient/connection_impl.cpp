@@ -74,6 +74,7 @@ namespace signalr
             }
             completion_event completion;
             auto logger = m_logger;
+            logger.log(signalr::trace_level::verbose, "calling shutdown() from the dtor");
             shutdown([completion, logger](std::exception_ptr exception) mutable
                 {
                     if (exception != nullptr)
@@ -184,6 +185,15 @@ namespace signalr
                 }
                 else
                 {
+                    // transport has a value only when we successfully called start on the transport
+                    if (transport)
+                    {
+                        // when we get here that means the connection was stopped during/after the transport started.
+                        // We need to stop the transport here because no one else is referencing it
+
+                        // Capture the transport in the lambda to prevent the shared_ptr from deleting the transport object until we finished stopping it
+                        transport->stop([transport](std::exception_ptr) {});
+                    }
                     return;
                 }
             }
@@ -619,11 +629,8 @@ namespace signalr
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
             {
-                // don't log if already disconnected and shutdown called from dtor, it's just noise
-                if (!is_dtor)
-                {
-                    m_logger.log(trace_level::debug, "connection already disconnected");
-                }
+                // change log level if already disconnected and shutdown called from dtor, it's just noise
+                m_logger.log(is_dtor ? trace_level::verbose : trace_level::debug, "connection already disconnected");
                 try
                 {
                     m_disconnect_cts->cancel();

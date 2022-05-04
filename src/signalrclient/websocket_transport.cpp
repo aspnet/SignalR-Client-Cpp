@@ -89,13 +89,8 @@ namespace signalr
                         return;
                     }
                 }
-                else
-                {
-                    // this doesn't happen in practice, only hit by websocket tests that stop via the dtor
-                    receive_loop_task->cancel();
-                    return;
-                }
 
+                // transport can be null if a websocket transport specific test doesn't call and wait for stop and relies on the destructor.
                 // stop waits for the receive loop to complete so the transport should never be null
                 assert(transport != nullptr);
 
@@ -180,6 +175,7 @@ namespace signalr
 
                 if (!disconnected)
                 {
+                    assert(!receive_loop_task->is_canceled());
                     transport->receive_loop();
                 }
                 else

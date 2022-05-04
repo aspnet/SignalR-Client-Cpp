@@ -1480,7 +1480,7 @@ TEST(connection_impl_stop, can_start_and_stop_connection_multiple_times)
     }
 
     auto log_entries = memory_writer->get_log_entries();
-    ASSERT_EQ(34U, log_entries.size()) << dump_vector(log_entries);
+    ASSERT_EQ(36U, log_entries.size()) << dump_vector(log_entries);
 
     auto second_half = std::vector<std::string>(log_entries.begin() + 16, log_entries.end());
 
@@ -1567,6 +1567,11 @@ TEST(connection_impl_stop, stop_cancels_ongoing_start_request)
             websocket_client->set_config(config);
             return websocket_client;
         }));
+
+    connection->set_disconnected([](std::exception_ptr ex)
+        {
+            ASSERT_TRUE(false);
+        });
 
     auto mre = manual_reset_event<void>();
     connection->start([&mre](std::exception_ptr exception)
@@ -1672,8 +1677,8 @@ TEST(connection_impl_stop, ongoing_start_request_canceled_if_connection_stopped_
     ASSERT_EQ("[verbose  ] acquired lock in shutdown()\n", remove_date_from_log_entry(log_entries[4]));
     ASSERT_EQ("[info     ] starting the connection has been canceled by stop().\n", remove_date_from_log_entry(log_entries[5]));
     ASSERT_EQ("[verbose  ] connecting -> disconnected\n", remove_date_from_log_entry(log_entries[6]));
-    ASSERT_EQ("[verbose  ] released lock in shutdown()\n", remove_date_from_log_entry(log_entries[7]));
-    ASSERT_EQ("[error    ] connection could not be started due to: an operation was canceled\n", remove_date_from_log_entry(log_entries[8]));
+    ASSERT_TRUE(has_log_entry("[verbose  ] released lock in shutdown()\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] connection could not be started due to: an operation was canceled\n", log_entries)) << dump_vector(log_entries);
 
     // avoid AV from accessing stop_mre in callback
     done_mre.get();
