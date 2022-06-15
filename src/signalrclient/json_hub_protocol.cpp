@@ -70,7 +70,10 @@ namespace signalr
         while (pos != std::string::npos)
         {
             auto hub_message = parse_message(message.c_str() + offset, pos - offset);
-            vec.emplace_back(std::move(hub_message));
+            if (hub_message != nullptr)
+            {
+                vec.emplace_back(std::move(hub_message));
+            }
 
             offset = pos + 1;
             pos = message.find(record_separator, offset);

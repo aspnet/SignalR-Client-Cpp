@@ -119,6 +119,17 @@ TEST(messagepack_hub_protocol, extra_items_ignored_when_parsing)
     assert_hub_message_equality(&message, output[0].get());
 }
 
+TEST(messagepack_hub_protocol, unknown_message_type_returns_null)
+{
+    ping_message message = ping_message();
+    auto payload = string_from_bytes({ 0x04, 0x93, 0x6E, 0x80, 0xC0,
+        // adding ping message, just make sure other messages are still being parsed
+        0x02, 0x91, 0x06 });
+    auto output = messagepack_hub_protocol().parse_messages(payload);
+    ASSERT_EQ(1, output.size());
+    assert_hub_message_equality(&message, output[0].get());
+}
+
 namespace
 {
     std::vector<std::pair<std::string, std::string>> invalid_messages
