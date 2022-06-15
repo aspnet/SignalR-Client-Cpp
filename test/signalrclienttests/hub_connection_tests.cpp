@@ -1961,6 +1961,8 @@ TEST(receive, ignores_null_hub_message)
 
     websocket_client->receive_message("{ \"type\": 134 }\x1e");
     websocket_client->receive_message("{ \"type\": 1, \"arguments\": [], \"target\": \"Target\" }\x1e");
+    // blocks until previous message is fully processed
+    websocket_client->receive_message("{ \"type\": 6 }\x1e");
 
     ASSERT_TRUE(on_called);
 }
