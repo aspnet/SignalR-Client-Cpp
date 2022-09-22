@@ -50,7 +50,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk[websockets] msgpack"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk[websockets] msgpack --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -109,7 +109,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install msgpack"
+      - bash: "./submodules/vcpkg/vcpkg install msgpack --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
