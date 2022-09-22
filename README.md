@@ -44,7 +44,7 @@ Output will be in `build.release\bin\Release\`
 $ git submodule update --init
 $ brew install gcc6
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets]
+$ ./submodules/vcpkg/vcpkg install "cpprestsdk[websockets]"
 $ mkdir build.release
 $ cd build.release
 $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
