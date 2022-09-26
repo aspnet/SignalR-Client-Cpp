@@ -120,6 +120,8 @@ namespace signalr
                     {
                         std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
                         disconnected = transport->m_disconnected;
+                        // prevent transport.stop() from doing anything, we'll handle the close logic here (we can't guarantee the close callback will only be called once otherwise)
+                        // this could happen if there was a transport error at the same time someone called stop on the connection
                         transport->m_disconnected = true;
                     }
                     if (disconnected)
@@ -140,6 +142,8 @@ namespace signalr
                             "[websocket transport] websocket client has been destructed before the receive loop completes, this is a bug");
                         assert(client != nullptr);
                     }
+
+                    // because transport.stop won't be called we need to stop the underlying client and invoke the transports close callback
                     client->stop([&promise](std::exception_ptr exception)
                     {
                         if (exception != nullptr)
@@ -310,7 +314,6 @@ namespace signalr
                             }
                         }
 
-                        // TODO: this doesn't seem to be used, might want to remove or start using it
                         close_callback(exception);
 
                         callback(exception);
