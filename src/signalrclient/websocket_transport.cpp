@@ -90,7 +90,7 @@ namespace signalr
                     }
                 }
 
-                // transport can be null if a websocket transport specific test doesn't call and wait for stop and relies on the destructor.
+                // transport can be null if a websocket transport specific test doesn't call and wait for stop and relies on the destructor, if that happens update the test to call and wait for stop.
                 // stop waits for the receive loop to complete so the transport should never be null
                 assert(transport != nullptr);
 
