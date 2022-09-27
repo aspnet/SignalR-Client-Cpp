@@ -1112,7 +1112,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
-    ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] error occurred when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[error    ] connection closed with error: Field 'arguments' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
@@ -1156,7 +1156,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
-    ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] error occurred when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[error    ] connection closed with error: Field 'target' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
@@ -1941,10 +1941,10 @@ TEST(receive, ignores_null_hub_message)
             return websocket_client;
         }, true);
 
-    bool on_called = false;
-    hub_connection->on("target", [&on_called](signalr::value)
+    auto close_mre = manual_reset_event<void>();
+    hub_connection->set_disconnected([&close_mre](std::exception_ptr exception)
         {
-            on_called = true;
+            close_mre.set(exception);
         });
 
     auto mre = manual_reset_event<void>();
@@ -1960,11 +1960,16 @@ TEST(receive, ignores_null_hub_message)
     mre.get();
 
     websocket_client->receive_message("{ \"type\": 134 }\x1e");
-    websocket_client->receive_message("{ \"type\": 1, \"arguments\": [], \"target\": \"Target\" }\x1e");
-    // blocks until previous message is fully processed
-    websocket_client->receive_message("{ \"type\": 6 }\x1e");
 
-    ASSERT_TRUE(on_called);
+    try
+    {
+        close_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("unknown message received", ex.what());
+    }
 }
 
 TEST(keepalive, sends_ping_messages)
