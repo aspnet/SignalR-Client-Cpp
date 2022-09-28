@@ -364,7 +364,7 @@ namespace signalr
 
             for (const auto& val : messages)
             {
-                // Protocol received an unknown message type and gave us a null object, safe to ignore
+                // Protocol received an unknown message type and gave us a null object, close the connection like we do in other client implementations
                 if (val == nullptr)
                 {
                     throw std::runtime_error("unknown message received");
@@ -410,6 +410,9 @@ namespace signalr
                     break;
                 case message_type::close:
                     // TODO
+                    break;
+                default:
+                    throw std::runtime_error("unknown message type '" + std::to_string(static_cast<int>(val->message_type)) + "' received");
                     break;
                 }
             }
