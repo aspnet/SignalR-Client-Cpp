@@ -37,7 +37,7 @@ stages:
       - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk[websockets]:x64-windows msgpack:x64-windows --vcpkg-root ./submodules/vcpkg"
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk[websockets]:x64-windows msgpack:x64-windows jsoncpp:x64-windows --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -50,7 +50,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk[websockets] msgpack --vcpkg-root ./submodules/vcpkg"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk[websockets] msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -63,7 +63,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk[websockets] boost-system boost-chrono boost-thread msgpack --vcpkg-root ./submodules/vcpkg"
+      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk[websockets] boost-system boost-chrono boost-thread msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
@@ -78,7 +78,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install msgpack --vcpkg-root ./submodules/vcpkg"
+      - bash: "./submodules/vcpkg/vcpkg install msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
@@ -94,7 +94,7 @@ stages:
       - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - powershell: "& ./submodules/vcpkg/vcpkg.exe install msgpack:x64-windows --vcpkg-root ./submodules/vcpkg"
+      - powershell: "& ./submodules/vcpkg/vcpkg.exe install msgpack:x64-windows jsoncpp:x64-windows --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 
@@ -109,7 +109,7 @@ stages:
       - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install msgpack --vcpkg-root ./submodules/vcpkg"
+      - bash: "./submodules/vcpkg/vcpkg install msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
         condition: ne(variables.CACHE_RESTORED, 'true')
         displayName: vcpkg install dependencies
 

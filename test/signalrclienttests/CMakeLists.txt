@@ -82,12 +82,7 @@ if(USE_MSGPACK)
   list (APPEND libraries ${MSGPACK_LIB})
 endif() # USE_MSGPACK
 
-if(INCLUDE_JSONCPP)
-  target_sources(signalrclienttests PRIVATE ../../third_party_code/jsoncpp/jsoncpp.cpp)
-  target_include_directories(signalrclienttests PRIVATE ../../third_party_code/jsoncpp)
-else()
-  list (APPEND libraries ${JSONCPP_LIB})
-endif()
+list (APPEND libraries ${JSONCPP_LIB})
 
 list (APPEND libraries gtest)
 
