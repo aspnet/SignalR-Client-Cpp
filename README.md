@@ -22,7 +22,6 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DBUILD_TESTING | Builds the test project | true |
 | -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) (requires cpprestsdk to be installed) | false |
 | -DUSE_MSGPACK | Adds an option to use the MessagePack Hub Protocol (requires msgpack-c to be installed) | false |
-| -DINCLUDE_JSONCPP | Builds jsoncpp source code as part of the output binary | true |
 | -DWERROR | Enables warnings as errors | true |
 | -DWALL | Enables all warnings | true |
 | -DINJECT_HEADER_AFTER_STDAFX=`<header path>` | Adds the provided header to the library compilation in stdafx.cpp, intended to allow "new" and "delete" to be replaced. | `<none>` |
@@ -31,7 +30,7 @@ Below are instructions to build on different OS's. You can also use the followin
 ```powershell
 PS> git submodule update --init
 PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
-PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk[websockets]:x64-windows
+PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk[websockets]:x64-windows jsoncpp:x64-windows
 PS> mkdir build.release
 PS> cd build.release
 PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE="..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
@@ -44,7 +43,7 @@ Output will be in `build.release\bin\Release\`
 $ git submodule update --init
 $ brew install gcc6
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets]
+$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets] jsoncpp
 $ mkdir build.release
 $ cd build.release
 $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
@@ -57,7 +56,7 @@ Output will be in `build.release/bin/`
 ```bash
 $ git submodule update --init
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets] boost-system boost-chrono boost-thread
+$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets] boost-system boost-chrono boost-thread jsoncpp
 $ mkdir build.release
 $ cd build.release
 $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true

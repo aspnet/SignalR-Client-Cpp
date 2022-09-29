@@ -10,7 +10,6 @@ include(CTest)
 
 set(WERROR true CACHE BOOL "Enable warnings as errors.")
 set(WALL true CACHE BOOL "Enable all warnings.")
-set(INCLUDE_JSONCPP true CACHE BOOL "Include jsoncpp source")
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries")
 
 if(NOT WIN32)
@@ -35,13 +34,11 @@ if(USE_CPPRESTSDK)
   set(CPPREST_LIB "cpprestsdk::cpprest")
 endif()
 
-if(NOT INCLUDE_JSONCPP)
-  find_package(jsoncpp REQUIRED)
-  # jsoncpp has different target names depending on whether it
-  # was built as a shared or static library. We make this override-able
-  # so we can be resilient to the changes between versions.
-  set(JSONCPP_LIB "jsoncpp_lib" CACHE STRING "jsoncpp target name")
-endif()
+find_package(jsoncpp REQUIRED)
+# jsoncpp has different target names depending on whether it
+# was built as a shared or static library. We make this override-able
+# so we can be resilient to the changes between versions.
+set(JSONCPP_LIB "jsoncpp_object" CACHE STRING "jsoncpp target name")
 
 if(USE_MSGPACK)
   find_package(msgpack CONFIG REQUIRED)

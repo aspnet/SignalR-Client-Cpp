@@ -71,12 +71,7 @@ else()
     target_compile_options(microsoft-signalr PRIVATE -Wextra -Wpedantic -Wno-unknown-pragmas)
 endif()
 
-if(INCLUDE_JSONCPP)
-  target_sources(microsoft-signalr PRIVATE ../../third_party_code/jsoncpp/jsoncpp.cpp)
-  target_include_directories(microsoft-signalr PRIVATE ../../third_party_code/jsoncpp)
-else()
-  target_link_libraries(microsoft-signalr PUBLIC ${JSONCPP_LIB})
-endif()
+target_link_libraries(microsoft-signalr PUBLIC ${JSONCPP_LIB})
 
 if(NOT USE_CPPRESTSDK)
   target_link_libraries(microsoft-signalr)
