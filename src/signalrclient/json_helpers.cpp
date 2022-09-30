@@ -9,7 +9,7 @@
 
 namespace signalr
 {
-    extern char record_separator = '\x1e';
+    char record_separator = '\x1e';
 
     signalr::value createValue(const Json::Value& v)
     {
