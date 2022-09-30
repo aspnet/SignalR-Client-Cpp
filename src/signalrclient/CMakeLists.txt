@@ -2,7 +2,6 @@ set (SOURCES
   callback_manager.cpp
   cancellation_token.cpp
   cancellation_token_source.cpp
-  connection.cpp
   connection_impl.cpp
   default_http_client.cpp
   default_websocket_client.cpp

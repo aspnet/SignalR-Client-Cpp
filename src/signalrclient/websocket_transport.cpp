@@ -75,24 +75,22 @@ namespace signalr
         websocket_client->receive([weak_transport, logger, receive_loop_task, weak_websocket_client](std::string message, std::exception_ptr exception)
             {
                 auto transport = weak_transport.lock();
-                if (transport)
-                {
-                    bool disconnected;
-                    {
-                        std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
-                        disconnected = transport->m_disconnected;
-                    }
-                    if (disconnected)
-                    {
-                        // stop has been called, tell it the receive loop is done and return
-                        receive_loop_task->cancel();
-                        return;
-                    }
-                }
 
                 // transport can be null if a websocket transport specific test doesn't call and wait for stop and relies on the destructor, if that happens update the test to call and wait for stop.
                 // stop waits for the receive loop to complete so the transport should never be null
                 assert(transport != nullptr);
+
+                bool disconnected;
+                {
+                    std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
+                    disconnected = transport->m_disconnected;
+                }
+                if (disconnected)
+                {
+                    // stop has been called, tell it the receive loop is done and return
+                    receive_loop_task->cancel();
+                    return;
+                }
 
                 if (exception != nullptr)
                 {
@@ -171,7 +169,6 @@ namespace signalr
 
                 transport->m_process_response_callback(message, nullptr);
 
-                bool disconnected;
                 {
                     std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
                     disconnected = transport->m_disconnected;
