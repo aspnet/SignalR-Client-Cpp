@@ -79,7 +79,7 @@ namespace signalr
 
         void process_response(std::string&& response);
 
-        void shutdown(std::function<void(std::exception_ptr)> callback);
+        void shutdown(std::function<void(std::exception_ptr)> callback, bool is_dtor = false);
         void stop_connection(std::exception_ptr);
 
         bool change_state(connection_state old_state, connection_state new_state);

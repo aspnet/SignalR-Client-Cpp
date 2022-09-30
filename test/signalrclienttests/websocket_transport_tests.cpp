@@ -49,6 +49,12 @@ TEST(websocket_transport_connect, connect_connects_and_starts_receive_loop)
 
     auto entry = remove_date_from_log_entry(log_entries[0]);
     ASSERT_EQ("[info     ] [websocket transport] connecting to: ws://fakeuri.org/connect?param=42\n", entry);
+
+    ws_transport->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+    mre.get();
 }
 
 TEST(websocket_transport_connect, connect_propagates_exceptions)
@@ -147,6 +153,12 @@ TEST(websocket_transport_connect, cannot_call_connect_on_already_connected_trans
     {
         ASSERT_STREQ("transport already connected", e.what());
     }
+
+    ws_transport->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+    mre.get();
 }
 
 TEST(websocket_transport_connect, can_connect_after_disconnecting)
@@ -175,6 +187,12 @@ TEST(websocket_transport_connect, can_connect_after_disconnecting)
     {
         mre.set(exception);
     });
+    mre.get();
+
+    ws_transport->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
     mre.get();
 }
 
@@ -210,6 +228,12 @@ TEST(websocket_transport_send, send_creates_and_sends_websocket_messages)
     mre.get();
 
     ASSERT_TRUE(send_called);
+
+    ws_transport->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+    mre.get();
 }
 
 TEST(websocket_transport_disconnect, disconnect_closes_websocket)
@@ -329,7 +353,7 @@ TEST(websocket_transport_disconnect, disconnect_logs_exceptions)
     ASSERT_NE(std::find_if(log_entries.begin(), log_entries.end(), [](const std::string& entry)
         {
             return remove_date_from_log_entry(entry) ==
-                "[error    ] [websocket transport] exception when closing websocket: connection closing failed\n";
+                "[error    ] websocket transport stopped with error: connection closing failed\n";
         }),
         log_entries.end());
 }
@@ -498,6 +522,12 @@ TEST(websocket_transport_receive_loop, process_response_callback_called_when_mes
     process_response_event->wait(1000);
 
     ASSERT_EQ(std::string("msg"), *msg);
+
+    ws_transport->stop([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+    mre.get();
 }
 
 TEST(websocket_transport_receive_loop, error_callback_called_when_exception_thrown)
@@ -677,5 +707,10 @@ TEST(websocket_client_custom_impl, caching_callbacks_does_not_leak)
         logger(std::make_shared<trace_log_writer>(), trace_level::none));
 
     ws_transport->start("ws://fakeuri.org", [](std::exception_ptr) {});
-    ws_transport->stop([](std::exception_ptr) {});
+    auto mre = manual_reset_event<void>();
+    ws_transport->stop([&mre](std::exception_ptr exception)
+    {
+        mre.set(exception);
+    });
+    mre.get();
 }

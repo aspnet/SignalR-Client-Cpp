@@ -23,7 +23,7 @@ void send_message(signalr::hub_connection& connection, const std::string& messag
     std::vector<signalr::value> args { std::string("c++"), message };
 
     // if you get an internal compiler error uncomment the lambda below or install VS Update 4
-    connection.invoke("Send", args, [](const signalr::value& value, std::exception_ptr exception)
+    connection.invoke("SendMessage", args, [](const signalr::value& value, std::exception_ptr exception)
     {
         try
         {
@@ -54,13 +54,13 @@ void chat()
         .with_logging(std::make_shared <logger>(), signalr::trace_level::verbose)
         .build();
 
-    connection.on("Send", [](const std::vector<signalr::value>& m)
+    connection.on("ReceiveMessage", [](const std::vector<signalr::value>& m)
     {
         std::cout << std::endl << m[0].as_string() << std::endl << "Enter your message: ";
     });
 
-    std::promise<void> task;
-    connection.start([&connection, &task](std::exception_ptr exception)
+    std::promise<void> startTask;
+    connection.start([&connection, &startTask](std::exception_ptr exception)
     {
         if (exception)
         {
@@ -72,25 +72,28 @@ void chat()
             {
                 std::cout << "exception when starting connection: " << ex.what() << std::endl;
             }
-            task.set_value();
-            return;
         }
+        startTask.set_value();
+    });
 
-        std::cout << "Enter your message:";
-        while (connection.get_connection_state() == signalr::connection_state::connected)
+    startTask.get_future().get();
+
+    std::cout << "Enter your message:";
+    while (connection.get_connection_state() == signalr::connection_state::connected)
+    {
+        std::string message;
+        std::getline(std::cin, message);
+
+        if (message == ":q" || connection.get_connection_state() != signalr::connection_state::connected)
         {
-            std::string message;
-            std::getline(std::cin, message);
-
-            if (message == ":q" || connection.get_connection_state() != signalr::connection_state::connected)
-            {
-                break;
-            }
-
-            send_message(connection, message);
+            break;
         }
 
-        connection.stop([&task](std::exception_ptr exception)
+        send_message(connection, message);
+    }
+
+    std::promise<void> stopTask;
+    connection.stop([&stopTask](std::exception_ptr exception)
         {
             try
             {
@@ -101,16 +104,14 @@ void chat()
 
                 std::cout << "connection stopped successfully" << std::endl;
             }
-            catch (const std::exception & e)
+            catch (const std::exception& e)
             {
                 std::cout << "exception when stopping connection: " << e.what() << std::endl;
             }
 
-            task.set_value();
+            stopTask.set_value();
         });
-    });
-
-    task.get_future().get();
+    stopTask.get_future().get();
 }
 
 int main()

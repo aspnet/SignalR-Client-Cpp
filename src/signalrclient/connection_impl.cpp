@@ -74,6 +74,7 @@ namespace signalr
             }
             completion_event completion;
             auto logger = m_logger;
+            logger.log(signalr::trace_level::verbose, "calling shutdown() from the dtor");
             shutdown([completion, logger](std::exception_ptr exception) mutable
                 {
                     if (exception != nullptr)
@@ -103,7 +104,7 @@ namespace signalr
 
                     // make sure this is last as it will unblock the destructor
                     completion.set();
-                });
+                }, /* is_dtor */ true);
 
             completion.get();
         }
@@ -114,10 +115,32 @@ namespace signalr
         change_state(connection_state::disconnected);
     }
 
+    struct callback_on_destruct
+    {
+        callback_on_destruct(std::function<void()> func)
+        {
+            mFunc = func;
+        }
+
+        ~callback_on_destruct()
+        {
+            mFunc();
+        }
+    private:
+        std::function<void()> mFunc;
+    };
+
     void connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
     {
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
+            m_logger.log(trace_level::verbose, "acquired lock in start()");
+            auto logger = m_logger;
+            auto _ = callback_on_destruct([logger]()
+                {
+                    logger.log(trace_level::verbose, "released lock in start()");
+                });
+
             if (!change_state(connection_state::disconnected, connection_state::connecting))
             {
                 callback(std::make_exception_ptr(signalr_exception("cannot start a connection that is not in the disconnected state")));
@@ -162,6 +185,15 @@ namespace signalr
                 }
                 else
                 {
+                    // transport has a value only when we successfully called start on the transport
+                    if (transport)
+                    {
+                        // when we get here that means the connection was stopped during/after the transport started.
+                        // We need to stop the transport here because no one else is referencing it
+
+                        // Capture the transport in the lambda to prevent the shared_ptr from deleting the transport object until we finished stopping it
+                        transport->stop([transport](std::exception_ptr) {});
+                    }
                     return;
                 }
             }
@@ -577,21 +609,28 @@ namespace signalr
     void connection_impl::stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept
     {
         m_stop_error = exception;
-        m_logger.log(trace_level::info, "stopping connection");
+        m_logger.log(trace_level::info, "closing connection");
 
         shutdown(callback);
     }
 
     // This function is called from the dtor so you must not use `shared_from_this` here (it will throw).
-    void connection_impl::shutdown(std::function<void(std::exception_ptr)> callback)
+    void connection_impl::shutdown(std::function<void(std::exception_ptr)> callback, bool is_dtor)
     {
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
-            m_logger.log(trace_level::info, "acquired lock in shutdown()");
+            m_logger.log(trace_level::verbose, "acquired lock in shutdown()");
+            auto logger = m_logger;
+            auto _ = callback_on_destruct([logger]()
+                {
+                    logger.log(trace_level::verbose, "released lock in shutdown()");
+                });
 
             const auto current_state = get_connection_state();
             if (current_state == connection_state::disconnected)
             {
+                // change log level if already disconnected and shutdown called from dtor, it's just noise
+                m_logger.log(is_dtor ? trace_level::verbose : trace_level::debug, "connection already disconnected");
                 try
                 {
                     m_disconnect_cts->cancel();
@@ -650,6 +689,7 @@ namespace signalr
             change_state(connection_state::disconnecting);
         }
 
+        m_logger.log(trace_level::debug, "stopping transport");
         m_transport->stop(callback);
     }
 
@@ -661,6 +701,12 @@ namespace signalr
             // on a different thread at the same time. In this case we must not null out the transport if we are
             // not in the `disconnecting` state to not affect the 'start' invocation.
             std::lock_guard<std::mutex> lock(m_stop_lock);
+            m_logger.log(trace_level::verbose, "acquired lock in stop_connection()");
+            auto logger = m_logger;
+            auto _ = callback_on_destruct([logger]()
+                {
+                    logger.log(trace_level::verbose, "released lock in stop_connection()");
+                });
 
             if (m_connection_state == connection_state::disconnected)
             {
@@ -689,13 +735,13 @@ namespace signalr
             {
                 if (m_logger.is_enabled(trace_level::error))
                 {
-                    m_logger.log(trace_level::error, std::string("Connection closed with error: ").append(ex.what()));
+                    m_logger.log(trace_level::error, std::string("connection closed with error: ").append(ex.what()));
                 }
             }
         }
         else
         {
-            m_logger.log(trace_level::info, "Connection closed.");
+            m_logger.log(trace_level::info, "connection closed");
         }
 
         try
@@ -798,7 +844,7 @@ namespace signalr
 
         // Words of wisdom (if we decide to add a state_changed callback and invoke it from here):
         // "Be extra careful when you add this callback, because this is sometimes being called with the m_stop_lock.
-        // This could lead to interesting problems.For example, you could run into a segfault if the connection is
+        // This could lead to interesting problems. For example, you could run into a segfault if the connection is
         // stopped while / after transitioning into the connecting state."
     }
 
