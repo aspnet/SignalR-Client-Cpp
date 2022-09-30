@@ -114,7 +114,6 @@ namespace signalr
                         exception = std::make_exception_ptr(signalr_exception("unknown error"));
                     }
 
-                    bool disconnected;
                     {
                         std::lock_guard<std::mutex> lock(transport->m_start_stop_lock);
                         disconnected = transport->m_disconnected;
