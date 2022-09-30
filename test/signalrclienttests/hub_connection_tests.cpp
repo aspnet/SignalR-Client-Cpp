@@ -1968,7 +1968,7 @@ TEST(receive, close_connection_on_null_hub_message)
     }
     catch (const std::exception& ex)
     {
-        ASSERT_STREQ("unknown message received", ex.what());
+        ASSERT_STREQ("null message received", ex.what());
     }
 }
 

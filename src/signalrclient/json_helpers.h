@@ -10,7 +10,7 @@
 
 namespace signalr
 {
-    static constexpr char record_separator = '\x1e';
+    extern char record_separator;
 
     signalr::value createValue(const Json::Value& v);
 

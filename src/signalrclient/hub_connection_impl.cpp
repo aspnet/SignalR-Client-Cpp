@@ -367,7 +367,7 @@ namespace signalr
                 // Protocol received an unknown message type and gave us a null object, close the connection like we do in other client implementations
                 if (val == nullptr)
                 {
-                    throw std::runtime_error("unknown message received");
+                    throw std::runtime_error("null message received");
                 }
 
                 switch (val->message_type)
