@@ -364,6 +364,12 @@ namespace signalr
 
             for (const auto& val : messages)
             {
+                // Protocol received an unknown message type and gave us a null object, close the connection like we do in other client implementations
+                if (val == nullptr)
+                {
+                    throw std::runtime_error("null message received");
+                }
+
                 switch (val->message_type)
                 {
                 case message_type::invocation:
@@ -405,6 +411,9 @@ namespace signalr
                 case message_type::close:
                     // TODO
                     break;
+                default:
+                    throw std::runtime_error("unknown message type '" + std::to_string(static_cast<int>(val->message_type)) + "' received");
+                    break;
                 }
             }
         }
@@ -412,7 +421,7 @@ namespace signalr
         {
             if (m_logger.is_enabled(trace_level::error))
             {
-                m_logger.log(trace_level::error, std::string("error occured when parsing response: ")
+                m_logger.log(trace_level::error, std::string("error occurred when parsing response: ")
                     .append(e.what())
                     .append(". response: ")
                     .append(response));

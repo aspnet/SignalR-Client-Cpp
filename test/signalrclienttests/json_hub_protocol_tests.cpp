@@ -128,6 +128,15 @@ TEST(json_hub_protocol, extra_items_ignored_when_parsing)
     assert_hub_message_equality(&message, output[0].get());
 }
 
+TEST(json_hub_protocol, unknown_message_type_returns_null)
+{
+    ping_message message = ping_message();
+    // adding ping message, just make sure other messages are still being parsed
+    auto output = json_hub_protocol().parse_messages("{\"type\":142}\x1e{\"type\":6}\x1e");
+    ASSERT_EQ(1, output.size());
+    assert_hub_message_equality(&message, output[0].get());
+}
+
 std::vector<std::pair<std::string, std::string>> invalid_messages
 {
     { "\x1e", "* Line 1, Column 1\n  Syntax error: value, object or array expected.\n* Line 1, Column 1\n  A valid JSON document must be either an array or an object value.\n" },

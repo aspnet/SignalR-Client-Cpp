@@ -1112,7 +1112,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
-    ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] error occurred when parsing response: Field 'arguments' not found for 'invocation' message. response: { \"type\": 1, \"target\": \"broadcast\" }\x1e\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[error    ] connection closed with error: Field 'arguments' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
@@ -1156,7 +1156,7 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_EQ(2, log_entries.size()) << dump_vector(log_entries);
 
-    ASSERT_TRUE(has_log_entry("[error    ] error occured when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
+    ASSERT_TRUE(has_log_entry("[error    ] error occurred when parsing response: Field 'target' not found for 'invocation' message. response: { \"type\": 1, \"arguments\": [] }\x1e\n", log_entries)) << dump_vector(log_entries);
     ASSERT_TRUE(has_log_entry("[error    ] connection closed with error: Field 'target' not found for 'invocation' message\n", log_entries)) << dump_vector(log_entries);
 }
 
@@ -1891,6 +1891,87 @@ TEST(send, throws_if_protocol_fails)
     ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 }
 
+class empty_hub_protocol : public hub_protocol
+{
+    virtual std::string write_message(const hub_message*) const override
+    {
+        return std::string { };
+    }
+    virtual std::vector<std::unique_ptr<hub_message>> parse_messages(const std::string& str) const override
+    {
+        auto vec = std::vector<std::unique_ptr<hub_message>>();
+        if (str.find("\"target\"") != std::string::npos)
+        {
+            vec.push_back(std::unique_ptr<hub_message>(new invocation_message("1", "target", std::vector<signalr::value>())));
+        }
+        else
+        {
+            vec.push_back(std::unique_ptr<hub_message>());
+        }
+        return vec;
+    }
+
+    virtual const std::string& name() const override
+    {
+        return m_protocol_name;
+    }
+
+    virtual int version() const override
+    {
+        return 1;
+    }
+
+    virtual signalr::transfer_format transfer_format() const override
+    {
+        return signalr::transfer_format::text;
+    }
+
+private:
+    std::string m_protocol_name = "json";
+};
+
+TEST(receive, close_connection_on_null_hub_message)
+{
+    auto websocket_client = create_test_websocket_client();
+
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    auto hub_connection = hub_connection_impl::create("", std::move(std::unique_ptr<hub_protocol>(new empty_hub_protocol())), signalr::trace_level::info, writer, nullptr, [websocket_client](const signalr_client_config& config)
+        {
+            websocket_client->set_config(config);
+            return websocket_client;
+        }, true);
+
+    auto close_mre = manual_reset_event<void>();
+    hub_connection->set_disconnected([&close_mre](std::exception_ptr exception)
+        {
+            close_mre.set(exception);
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    websocket_client->receive_message("{ \"type\": 134 }\x1e");
+
+    try
+    {
+        close_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("null message received", ex.what());
+    }
+}
+
 TEST(keepalive, sends_ping_messages)
 {
     signalr_client_config config;
@@ -2021,4 +2102,84 @@ TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
         ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
     }
     ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+}
+
+class unknown_message_type_hub_protocol : public hub_protocol
+{
+    class custom_hub_message : public hub_message
+    {
+    public:
+        custom_hub_message() : hub_message(static_cast<signalr::message_type>(100)) {}
+    };
+    virtual std::string write_message(const hub_message*) const override
+    {
+        return std::string{ };
+    }
+    virtual std::vector<std::unique_ptr<hub_message>> parse_messages(const std::string& str) const override
+    {
+        auto vec = std::vector<std::unique_ptr<hub_message>>();
+        vec.push_back(std::unique_ptr<hub_message>(new custom_hub_message()));
+        return vec;
+    }
+
+    virtual const std::string& name() const override
+    {
+        return m_protocol_name;
+    }
+
+    virtual int version() const override
+    {
+        return 1;
+    }
+
+    virtual signalr::transfer_format transfer_format() const override
+    {
+        return signalr::transfer_format::text;
+    }
+
+private:
+    std::string m_protocol_name = "json";
+};
+
+TEST(receive, unknown_message_type_closes_connection)
+{
+    auto websocket_client = create_test_websocket_client();
+
+    std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
+    auto hub_connection = hub_connection_impl::create("", std::move(std::unique_ptr<hub_protocol>(new unknown_message_type_hub_protocol())), signalr::trace_level::info, writer,
+        nullptr, [websocket_client](const signalr_client_config& config)
+        {
+            websocket_client->set_config(config);
+            return websocket_client;
+        }, true);
+
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection->set_disconnected([&disconnect_mre](std::exception_ptr ex)
+        {
+            disconnect_mre.set(ex);
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection->start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    websocket_client->receive_message("{ \"type\": 101 }\x1e");
+
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("unknown message type '100' received", ex.what());
+    }
 }
