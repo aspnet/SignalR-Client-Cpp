@@ -15,7 +15,7 @@
 
 using namespace signalr;
 
-hub_connection create_hub_connection(std::shared_ptr<test_websocket_client> websocket_client = create_test_websocket_client(),
+std::shared_ptr<hub_connection> create_hub_connection(std::shared_ptr<test_websocket_client> websocket_client = create_test_websocket_client(),
     std::shared_ptr<log_writer> log_writer = std::make_shared<memory_log_writer>(), trace_level trace_level = trace_level::verbose)
 {
     return hub_connection_builder::create(create_uri())
@@ -57,7 +57,7 @@ void invoke_common_numeric_handling_logic(TValue original_value, std::function<v
 
     auto connect_mre = manual_reset_event<void>();
 
-    hub_connection.start([&connect_mre](std::exception_ptr exception)
+    hub_connection->start([&connect_mre](std::exception_ptr exception)
         {
             connect_mre.set(exception);
         });
@@ -73,7 +73,7 @@ void invoke_common_numeric_handling_logic(TValue original_value, std::function<v
 
     std::vector<signalr::value> arr{ signalr::value((double)original_value) };
 
-    hub_connection.invoke("method", arr, [&callback_mre](const signalr::value& message, std::exception_ptr exception)
+    hub_connection->invoke("method", arr, [&callback_mre](const signalr::value& message, std::exception_ptr exception)
         {
             if (exception)
             {
@@ -124,7 +124,7 @@ TEST(url, negotiate_appended_to_url)
             .build();
 
         auto mre = manual_reset_event<void>();
-        hub_connection.start([&mre](std::exception_ptr exception)
+        hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -146,7 +146,7 @@ TEST(start, starts_connection)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -157,7 +157,7 @@ TEST(start, starts_connection)
 
     mre.get();
 
-    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 }
 
 TEST(start, start_sends_handshake)
@@ -168,7 +168,7 @@ TEST(start, start_sends_handshake)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -181,7 +181,7 @@ TEST(start, start_sends_handshake)
 
     ASSERT_EQ("{\"protocol\":\"json\",\"version\":1}\x1e", *message);
 
-    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 }
 
 TEST(start, start_waits_for_handshake_response)
@@ -191,7 +191,7 @@ TEST(start, start_waits_for_handshake_response)
 
     auto mre = manual_reset_event<void>();
     auto done = false;
-    hub_connection.start([&mre, &done](std::exception_ptr exception)
+    hub_connection->start([&mre, &done](std::exception_ptr exception)
     {
         done = true;
         mre.set(exception);
@@ -203,7 +203,7 @@ TEST(start, start_waits_for_handshake_response)
     websocket_client->receive_message("{}\x1e");
     mre.get();
 
-    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 }
 
 TEST(start, start_fails_for_handshake_response_with_error)
@@ -211,13 +211,13 @@ TEST(start, start_fails_for_handshake_response_with_error)
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
     std::exception_ptr exception;
-    hub_connection.set_disconnected([&exception](std::exception_ptr ex)
+    hub_connection->set_disconnected([&exception](std::exception_ptr ex)
         {
             exception = ex;
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -236,7 +236,7 @@ TEST(start, start_fails_for_handshake_response_with_error)
         ASSERT_STREQ("Received an error during handshake: bad things", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 
     try
     {
@@ -255,7 +255,7 @@ TEST(start, start_fails_if_non_handshake_message_received)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -274,7 +274,7 @@ TEST(start, start_fails_if_non_handshake_message_received)
         ASSERT_STREQ("Received unexpected message while waiting for the handshake response.", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(start, on_not_called_if_multiple_messages_received_before_handshake)
@@ -283,13 +283,13 @@ TEST(start, on_not_called_if_multiple_messages_received_before_handshake)
     auto hub_connection = create_hub_connection(websocket_client);
 
     bool on_called = false;
-    hub_connection.on("Target", [&on_called](signalr::value)
+    hub_connection->on("Target", [&on_called](signalr::value)
         {
             on_called = true;
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -308,7 +308,7 @@ TEST(start, on_not_called_if_multiple_messages_received_before_handshake)
         ASSERT_STREQ("Received unexpected message while waiting for the handshake response.", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 
     ASSERT_FALSE(on_called);
 }
@@ -319,7 +319,7 @@ TEST(start, start_fails_for_incomplete_handshake_response)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -338,7 +338,7 @@ TEST(start, start_fails_for_incomplete_handshake_response)
         ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(start, start_fails_for_invalid_json_handshake_response)
@@ -347,7 +347,7 @@ TEST(start, start_fails_for_invalid_json_handshake_response)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -366,7 +366,7 @@ TEST(start, start_fails_for_invalid_json_handshake_response)
         ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(start, start_fails_if_stop_called_before_handshake_response)
@@ -375,7 +375,7 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -383,7 +383,7 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
     ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
     ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
 
-    hub_connection.stop([](std::exception_ptr) {});
+    hub_connection->stop([](std::exception_ptr) {});
 
     try
     {
@@ -395,7 +395,7 @@ TEST(start, start_fails_if_stop_called_before_handshake_response)
         ASSERT_STREQ("connection closed while handshake was in progress.", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(start, start_fails_if_handshake_times_out)
@@ -404,10 +404,10 @@ TEST(start, start_fails_if_handshake_times_out)
     auto hub_connection = create_hub_connection(websocket_client);
     auto config = signalr_client_config();
     config.set_handshake_timeout(std::chrono::seconds(1));
-    hub_connection.set_client_config(config);
+    hub_connection->set_client_config(config);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -425,7 +425,7 @@ TEST(start, start_fails_if_handshake_times_out)
         ASSERT_STREQ("timed out waiting for the server to respond to the handshake message.", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(start, propogates_exception_from_negotiate)
@@ -447,7 +447,7 @@ TEST(start, propogates_exception_from_negotiate)
         .build();
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -462,7 +462,7 @@ TEST(start, propogates_exception_from_negotiate)
         ASSERT_STREQ("custom exception", e.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 // regression test: helps ensure internal state is in a working state for connecting again after connection failures
@@ -495,13 +495,13 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
         .build();
 
     std::atomic<bool> disconnected { false };
-    hub_connection.set_disconnected([&disconnected](std::exception_ptr ex)
+    hub_connection->set_disconnected([&disconnected](std::exception_ptr ex)
         {
             disconnected.store(true);
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -518,7 +518,7 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
 
     ASSERT_FALSE(disconnected.load());
 
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -533,7 +533,7 @@ TEST(start, propogates_exception_from_negotiate_and_can_start_again)
         ASSERT_STREQ("custom exception 2", e.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
     ASSERT_FALSE(disconnected.load());
 }
 
@@ -543,7 +543,7 @@ TEST(stop, stop_stops_connection)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -554,14 +554,14 @@ TEST(stop, stop_stops_connection)
 
     mre.get();
 
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
 
     mre.get();
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(stop, does_nothing_on_disconnected_connection)
@@ -571,16 +571,16 @@ TEST(stop, does_nothing_on_disconnected_connection)
 
     auto mre = manual_reset_event<void>();
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
 
     mre.get();
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 // Makes sure the destructor of hub_connection is safe after moving the object
@@ -603,13 +603,13 @@ TEST(stop, second_stop_waits_for_first_stop)
         });
     auto hub_connection = create_hub_connection(websocket_client);
     bool connection_closed = false;
-    hub_connection.set_disconnected([&connection_closed](std::exception_ptr)
+    hub_connection->set_disconnected([&connection_closed](std::exception_ptr)
         {
             connection_closed = true;
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -620,14 +620,14 @@ TEST(stop, second_stop_waits_for_first_stop)
 
     mre.get();
 
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
 
     bool second_stop_called = false;
     auto second_mre = manual_reset_event<void>();
-    hub_connection.stop([&second_stop_called, &second_mre](std::exception_ptr exception)
+    hub_connection->stop([&second_stop_called, &second_mre](std::exception_ptr exception)
         {
             second_stop_called = true;
             second_mre.set(exception);
@@ -643,7 +643,7 @@ TEST(stop, second_stop_waits_for_first_stop)
     second_mre.get();
     ASSERT_TRUE(second_stop_called);
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(stop, blocking_stop_callback_does_not_prevent_start)
@@ -653,7 +653,7 @@ TEST(stop, blocking_stop_callback_does_not_prevent_start)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -665,7 +665,7 @@ TEST(stop, blocking_stop_callback_does_not_prevent_start)
     mre.get();
 
     auto blocking_mre = manual_reset_event<void>();
-    hub_connection.stop([&mre, &blocking_mre](std::exception_ptr exception)
+    hub_connection->stop([&mre, &blocking_mre](std::exception_ptr exception)
         {
             mre.set(exception);
             blocking_mre.get();
@@ -673,9 +673,9 @@ TEST(stop, blocking_stop_callback_does_not_prevent_start)
         });
 
     mre.get();
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -685,7 +685,7 @@ TEST(stop, blocking_stop_callback_does_not_prevent_start)
     websocket_client->receive_message("{}\x1e");
 
     mre.get();
-    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 
     blocking_mre.set();
     mre.get();
@@ -697,10 +697,10 @@ TEST(stop, disconnected_callback_called_when_hub_connection_stops)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto disconnected_invoked = false;
-    hub_connection.set_disconnected([&disconnected_invoked](std::exception_ptr) { disconnected_invoked = true; });
+    hub_connection->set_disconnected([&disconnected_invoked](std::exception_ptr) { disconnected_invoked = true; });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -711,7 +711,7 @@ TEST(stop, disconnected_callback_called_when_hub_connection_stops)
 
     mre.get();
 
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -719,7 +719,7 @@ TEST(stop, disconnected_callback_called_when_hub_connection_stops)
     mre.get();
 
     ASSERT_TRUE(disconnected_invoked);
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(stop, disconnected_callback_called_when_transport_error_occurs)
@@ -728,10 +728,10 @@ TEST(stop, disconnected_callback_called_when_transport_error_occurs)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto disconnected_invoked = manual_reset_event<void>();
-    hub_connection.set_disconnected([&disconnected_invoked](std::exception_ptr) { disconnected_invoked.set(); });
+    hub_connection->set_disconnected([&disconnected_invoked](std::exception_ptr) { disconnected_invoked.set(); });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -745,7 +745,7 @@ TEST(stop, disconnected_callback_called_when_transport_error_occurs)
     websocket_client->receive_message(std::make_exception_ptr(std::runtime_error("transport error")));
 
     disconnected_invoked.get();
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(stop, transport_error_propogates_to_disconnected_callback)
@@ -754,10 +754,10 @@ TEST(stop, transport_error_propogates_to_disconnected_callback)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto disconnected_invoked = manual_reset_event<void>();
-    hub_connection.set_disconnected([&disconnected_invoked](std::exception_ptr exception) { disconnected_invoked.set(exception); });
+    hub_connection->set_disconnected([&disconnected_invoked](std::exception_ptr exception) { disconnected_invoked.set(exception); });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -779,7 +779,7 @@ TEST(stop, transport_error_propogates_to_disconnected_callback)
     {
         ASSERT_STREQ("transport error", e.what());
     }
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(stop, connection_stopped_when_going_out_of_scope)
@@ -791,7 +791,7 @@ TEST(stop, connection_stopped_when_going_out_of_scope)
         auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::verbose);
 
         auto mre = manual_reset_event<void>();
-        hub_connection.start([&mre](std::exception_ptr exception)
+        hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -827,7 +827,7 @@ TEST(stop, stop_cancels_pending_callbacks)
 
     auto hub_connection = create_hub_connection(websocket_client);
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -839,12 +839,12 @@ TEST(stop, stop_cancels_pending_callbacks)
     mre.get();
 
     auto invoke_mre = manual_reset_event<void>();
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
     {
         invoke_mre.set(exception);
     });
 
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -871,7 +871,7 @@ TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
     {
         auto hub_connection = create_hub_connection(websocket_client);
         auto mre = manual_reset_event<void>();
-        hub_connection.start([&mre](std::exception_ptr exception)
+        hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -882,7 +882,7 @@ TEST(stop, pending_callbacks_finished_if_hub_connections_goes_out_of_scope)
 
         mre.get();
 
-        hub_connection.invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
+        hub_connection->invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value&, std::exception_ptr exception)
         {
             invoke_mre.set(exception);
         });
@@ -935,18 +935,18 @@ TEST(stop, stops_with_inprogress_negotiate)
 
     auto disconnected_called = false;
     // disconnected not called for connections that never started successfully
-    hub_connection.set_disconnected([&disconnected_called](std::exception_ptr ex)
+    hub_connection->set_disconnected([&disconnected_called](std::exception_ptr ex)
         {
             disconnected_called = true;
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
 
-    hub_connection.stop([&stop_mre](std::exception_ptr exception)
+    hub_connection->stop([&stop_mre](std::exception_ptr exception)
         {
             stop_mre.set(exception);
         });
@@ -963,7 +963,7 @@ TEST(stop, stops_with_inprogress_negotiate)
     // avoid AV from accessing stop_mre in callback
     done_mre.get();
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
     ASSERT_FALSE(disconnected_called);
 }
 
@@ -975,14 +975,14 @@ TEST(hub_invocation, hub_connection_invokes_users_code_on_hub_invocations)
 
     auto payload = std::make_shared<std::vector<signalr::value>>();
     auto on_broadcast_event = std::make_shared<cancellation_token_source>();
-    hub_connection.on("broadCAST", [on_broadcast_event, payload](const std::vector<signalr::value>& message)
+    hub_connection->on("broadCAST", [on_broadcast_event, payload](const std::vector<signalr::value>& message)
     {
         *payload = message;
         on_broadcast_event->cancel();
     });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1008,14 +1008,14 @@ TEST(hub_invocation, hub_connection_can_receive_handshake_and_message_in_same_pa
 
     auto payload = std::make_shared<std::vector<signalr::value>>();
     auto on_broadcast_event = std::make_shared<cancellation_token_source>();
-    hub_connection.on("broadCAST", [on_broadcast_event, payload](const std::vector<signalr::value>& message)
+    hub_connection->on("broadCAST", [on_broadcast_event, payload](const std::vector<signalr::value>& message)
         {
             *payload = message;
             on_broadcast_event->cancel();
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1041,7 +1041,7 @@ TEST(hub_invocation, hub_connection_can_receive_multiple_messages_in_same_payloa
     auto payload = std::make_shared<std::vector<signalr::value>>();
     int count = 0;
     auto on_broadcast_event = std::make_shared<cancellation_token_source>();
-    hub_connection.on("broadCAST", [&count, on_broadcast_event, payload](const std::vector<signalr::value>& message)
+    hub_connection->on("broadCAST", [&count, on_broadcast_event, payload](const std::vector<signalr::value>& message)
         {
             ++count;
             *payload = message;
@@ -1052,7 +1052,7 @@ TEST(hub_invocation, hub_connection_can_receive_multiple_messages_in_same_payloa
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1080,13 +1080,13 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_argu
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::error);
 
     auto close_mre = manual_reset_event<void>();
-    hub_connection.set_disconnected([&close_mre](std::exception_ptr ex)
+    hub_connection->set_disconnected([&close_mre](std::exception_ptr ex)
         {
             close_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1124,13 +1124,13 @@ TEST(hub_invocation, hub_connection_closes_when_invocation_response_missing_targ
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::error);
 
     auto close_mre = manual_reset_event<void>();
-    hub_connection.set_disconnected([&close_mre](std::exception_ptr ex)
+    hub_connection->set_disconnected([&close_mre](std::exception_ptr ex)
         {
             close_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1180,7 +1180,7 @@ TEST(send, creates_correct_payload)
 
     auto hub_connection = create_hub_connection(websocket_client);
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1191,7 +1191,7 @@ TEST(send, creates_correct_payload)
 
     mre.get();
 
-    hub_connection.send("method", std::vector<signalr::value>(), [&mre](std::exception_ptr exception)
+    hub_connection->send("method", std::vector<signalr::value>(), [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1208,7 +1208,7 @@ TEST(send, does_not_wait_for_server_response)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1220,7 +1220,7 @@ TEST(send, does_not_wait_for_server_response)
     mre.get();
 
     // wont block waiting for server response
-    hub_connection.send("method", std::vector<signalr::value>(), [&mre](std::exception_ptr exception)
+    hub_connection->send("method", std::vector<signalr::value>(), [&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1247,7 +1247,7 @@ TEST(invoke, creates_correct_payload)
 
     auto hub_connection = create_hub_connection(websocket_client);
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1258,7 +1258,7 @@ TEST(invoke, creates_correct_payload)
 
     mre.get();
 
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1293,7 +1293,7 @@ TEST(invoke, callback_not_called_if_send_throws)
 
     auto hub_connection = create_hub_connection(websocket_client);
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1304,7 +1304,7 @@ TEST(invoke, callback_not_called_if_send_throws)
 
     mre.get();
 
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1322,7 +1322,7 @@ TEST(invoke, callback_not_called_if_send_throws)
     // stop completes all outstanding callbacks so if we did not remove a callback when `invoke` failed an
     // unobserved exception exception would be thrown. Note that this would happen on a different thread and would
     // crash the process
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1337,7 +1337,7 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1349,7 +1349,7 @@ TEST(invoke, invoke_returns_value_returned_from_the_server)
     mre.get();
 
     auto invoke_mre = manual_reset_event<signalr::value>();
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
     {
         if (exception)
         {
@@ -1376,7 +1376,7 @@ TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1387,7 +1387,7 @@ TEST(invoke, invoke_propagates_errors_from_server_as_hub_exceptions)
 
     mre.get();
 
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1413,7 +1413,7 @@ TEST(invoke, unblocks_task_when_server_completes_call)
     auto hub_connection = create_hub_connection(websocket_client);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1424,7 +1424,7 @@ TEST(invoke, unblocks_task_when_server_completes_call)
 
     mre.get();
 
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1442,7 +1442,7 @@ TEST(receive, logs_if_callback_for_given_id_not_found)
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::info);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1471,13 +1471,13 @@ TEST(receive, closes_if_error_from_parsing)
     auto hub_connection = create_hub_connection(websocket_client, writer, trace_level::info);
 
     auto disconnect_mre = manual_reset_event<void>();
-    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr ex)
+    hub_connection->set_disconnected([&disconnect_mre](std::exception_ptr ex)
         {
             disconnect_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1500,7 +1500,7 @@ TEST(receive, closes_if_error_from_parsing)
         ASSERT_STREQ("* Line 1, Column 33\n  Missing ',' or '}' in object declaration\n", ex.what());
     }
 
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(invoke_void, invoke_creates_runtime_error)
@@ -1510,7 +1510,7 @@ TEST(invoke_void, invoke_creates_runtime_error)
    auto hub_connection = create_hub_connection(websocket_client);
 
    auto mre = manual_reset_event<void>();
-   hub_connection.start([&mre](std::exception_ptr exception)
+   hub_connection->start([&mre](std::exception_ptr exception)
    {
        mre.set(exception);
    });
@@ -1521,7 +1521,7 @@ TEST(invoke_void, invoke_creates_runtime_error)
 
    mre.get();
 
-   hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+   hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
    {
        mre.set(exception);
    });
@@ -1545,10 +1545,10 @@ TEST(connection_id, can_get_connection_id)
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
 
-    ASSERT_EQ("", hub_connection.get_connection_id());
+    ASSERT_EQ("", hub_connection->get_connection_id());
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1558,9 +1558,9 @@ TEST(connection_id, can_get_connection_id)
     websocket_client->receive_message("{ }\x1e");
 
     mre.get();
-    auto connection_id = hub_connection.get_connection_id();
+    auto connection_id = hub_connection->get_connection_id();
 
-    hub_connection.stop([&mre](std::exception_ptr exception)
+    hub_connection->stop([&mre](std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1568,7 +1568,7 @@ TEST(connection_id, can_get_connection_id)
     mre.get();
 
     ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", connection_id);
-    ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", hub_connection.get_connection_id());
+    ASSERT_EQ("f7707523-307d-4cba-9abf-3eef701241e8", hub_connection->get_connection_id());
 }
 
 TEST(on, event_name_must_not_be_empty_string)
@@ -1576,7 +1576,7 @@ TEST(on, event_name_must_not_be_empty_string)
     auto hub_connection = create_hub_connection();
     try
     {
-        hub_connection.on("", [](const std::vector<signalr::value>&) {});
+        hub_connection->on("", [](const std::vector<signalr::value>&) {});
 
         ASSERT_TRUE(false); // exception expected but not thrown
     }
@@ -1589,11 +1589,11 @@ TEST(on, event_name_must_not_be_empty_string)
 TEST(on, cannot_register_multiple_handlers_for_event)
 {
     auto hub_connection = create_hub_connection();
-    hub_connection.on("ping", [](const std::vector<signalr::value>&) {});
+    hub_connection->on("ping", [](const std::vector<signalr::value>&) {});
 
     try
     {
-        hub_connection.on("ping", [](const std::vector<signalr::value>&) {});
+        hub_connection->on("ping", [](const std::vector<signalr::value>&) {});
         ASSERT_TRUE(false); // exception expected but not thrown
     }
     catch (const signalr_exception& e)
@@ -1610,7 +1610,7 @@ TEST(on, cannot_register_handler_if_connection_not_in_disconnected_state)
         auto hub_connection = create_hub_connection(websocket_client);
 
         auto mre = manual_reset_event<void>();
-        hub_connection.start([&mre](std::exception_ptr exception)
+        hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1621,7 +1621,7 @@ TEST(on, cannot_register_handler_if_connection_not_in_disconnected_state)
 
         mre.get();
 
-        hub_connection.on("myfunc", [](const std::vector<signalr::value>&) {});
+        hub_connection->on("myfunc", [](const std::vector<signalr::value>&) {});
 
         ASSERT_TRUE(false); // exception expected but not thrown
     }
@@ -1636,7 +1636,7 @@ TEST(invoke, invoke_throws_when_the_underlying_connection_is_not_valid)
     auto hub_connection = create_hub_connection();
 
     auto mre = manual_reset_event<void>();
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1657,7 +1657,7 @@ TEST(invoke, send_throws_when_the_underlying_connection_is_not_valid)
     auto hub_connection = create_hub_connection();
 
     auto mre = manual_reset_event<void>();
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&mre](const signalr::value&, std::exception_ptr exception)
     {
         mre.set(exception);
     });
@@ -1770,12 +1770,12 @@ TEST(config, can_replace_scheduler)
     signalr_client_config config{};
     auto scheduler = std::make_shared<test_scheduler>();
     config.set_scheduler(scheduler);
-    hub_connection.set_client_config(config);
+    hub_connection->set_client_config(config);
 
     // do some "work" to verify scheduler is used
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1787,7 +1787,7 @@ TEST(config, can_replace_scheduler)
     mre.get();
 
     auto invoke_mre = manual_reset_event<void>();
-    hub_connection.invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
+    hub_connection->invoke("method", std::vector<signalr::value>(), [&invoke_mre](const signalr::value& message, std::exception_ptr exception)
         {
             if (exception)
             {
@@ -1803,7 +1803,7 @@ TEST(config, can_replace_scheduler)
 
     invoke_mre.get();
 
-    hub_connection.stop([&mre](std::exception_ptr ex)
+    hub_connection->stop([&mre](std::exception_ptr ex)
         {
             mre.set();
         });
@@ -1911,10 +1911,10 @@ TEST(keepalive, sends_ping_messages)
         [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
         false);
     auto hub_connection = create_hub_connection(websocket_client);
-    hub_connection.set_client_config(config);
+    hub_connection->set_client_config(config);
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1931,7 +1931,7 @@ TEST(keepalive, sends_ping_messages)
     ASSERT_EQ("{\"protocol\":\"json\",\"version\":1}\x1e", (*messages)[0]);
     ASSERT_EQ("{\"type\":6}\x1e", (*messages)[1]);
     ASSERT_EQ("{\"type\":6}\x1e",  (*messages)[2]);
-    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 }
 
 TEST(keepalive, server_timeout_on_no_ping_from_server)
@@ -1941,18 +1941,18 @@ TEST(keepalive, server_timeout_on_no_ping_from_server)
     config.set_server_timeout(std::chrono::seconds(1));
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
-    hub_connection.set_client_config(config);
+    hub_connection->set_client_config(config);
 
     auto disconnected_called = false;
 
     auto disconnect_mre = manual_reset_event<void>();
-    hub_connection.set_disconnected([&disconnected_called, &disconnect_mre](std::exception_ptr ex)
+    hub_connection->set_disconnected([&disconnected_called, &disconnect_mre](std::exception_ptr ex)
         {
             disconnect_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -1972,7 +1972,7 @@ TEST(keepalive, server_timeout_on_no_ping_from_server)
     {
         ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
     }
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
 
 TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
@@ -1982,16 +1982,16 @@ TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
     config.set_server_timeout(std::chrono::seconds(1));
     auto websocket_client = create_test_websocket_client();
     auto hub_connection = create_hub_connection(websocket_client);
-    hub_connection.set_client_config(config);
+    hub_connection->set_client_config(config);
 
     auto disconnect_mre = manual_reset_event<void>();
-    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr ex)
+    hub_connection->set_disconnected([&disconnect_mre](std::exception_ptr ex)
         {
             disconnect_mre.set(ex);
         });
 
     auto mre = manual_reset_event<void>();
-    hub_connection.start([&mre](std::exception_ptr exception)
+    hub_connection->start([&mre](std::exception_ptr exception)
         {
             mre.set(exception);
         });
@@ -2005,7 +2005,7 @@ TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
     std::this_thread::sleep_for(config.get_server_timeout() - std::chrono::milliseconds(500));
     websocket_client->receive_message("{\"type\":6}\x1e");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    ASSERT_EQ(connection_state::connected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::connected, hub_connection->get_connection_state());
 
     try
     {
@@ -2016,5 +2016,5 @@ TEST(keepalive, resets_server_timeout_timer_on_any_message_from_server)
     {
         ASSERT_STREQ("server timeout (1000 ms) elapsed without receiving a message from the server.", ex.what());
     }
-    ASSERT_EQ(connection_state::disconnected, hub_connection.get_connection_state());
+    ASSERT_EQ(connection_state::disconnected, hub_connection->get_connection_state());
 }
