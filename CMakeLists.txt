@@ -41,7 +41,7 @@ find_package(jsoncpp REQUIRED)
 if(WIN32)
 set(JSONCPP_LIB "jsoncpp_lib" CACHE STRING "jsoncpp target name")
 else()
-set(JSONCPP_LIB "jsoncpp" CACHE STRING "jsoncpp target name")
+set(JSONCPP_LIB "jsoncpp_static" CACHE STRING "jsoncpp target name")
 endif()
 
 if(USE_MSGPACK)
