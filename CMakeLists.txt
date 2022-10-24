@@ -38,7 +38,7 @@ find_package(jsoncpp REQUIRED)
 # jsoncpp has different target names depending on whether it
 # was built as a shared or static library. We make this override-able
 # so we can be resilient to the changes between versions.
-set(JSONCPP_LIB "jsoncpp_object" CACHE STRING "jsoncpp target name")
+set(JSONCPP_LIB "JsonCpp::JsonCpp" CACHE STRING "jsoncpp target name")
 
 if(USE_MSGPACK)
   find_package(msgpack CONFIG REQUIRED)
