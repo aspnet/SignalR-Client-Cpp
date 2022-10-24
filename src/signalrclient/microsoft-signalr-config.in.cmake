@@ -4,7 +4,7 @@ if(@USE_CPPRESTSDK@)
   find_dependency(cpprestsdk)
 endif()
 
-find_dependency(@JSONCPP_LIB@)
+find_dependency(jsoncpp)
 
 if(@USE_MSGPACK@)
   find_dependency(msgpack)
