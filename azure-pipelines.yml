@@ -25,7 +25,7 @@ variables:
     value: 168
   - name: Codeql.SourceRoot
     value: src
-  - name: TSAEnabled
+  - name: Codeql.TSAEnabled
     value: true
   - name: Codeql.TSAOptionsPath
     value: '$(Build.SourcesDirectory)/.config/tsaoptions.json'
