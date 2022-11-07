@@ -189,6 +189,15 @@ void assert_hub_message_equality(signalr::hub_message* expected, signalr::hub_me
         // No fields on ping messages currently
         break;
     }
+    case message_type::close:
+    {
+        auto expected_message = reinterpret_cast<close_message*>(expected);
+        auto actual_message = reinterpret_cast<close_message*>(actual);
+
+        ASSERT_STREQ(expected_message->error.data(), actual_message->error.data());
+        ASSERT_EQ(expected_message->allowReconnect, actual_message->allowReconnect);
+        break;
+    }
     default:
         ASSERT_TRUE(false);
         break;

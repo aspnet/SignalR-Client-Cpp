@@ -216,6 +216,31 @@ namespace signalr
             hub_message = std::unique_ptr<signalr::hub_message>(new ping_message());
             break;
         }
+        case message_type::close:
+        {
+            found = obj.find("error");
+            std::string error;
+            if (found != obj.end())
+            {
+                if (!found->second.is_string())
+                {
+                    throw signalr_exception("Expected 'error' to be of type 'string'");
+                }
+                error = found->second.as_string();
+            }
+            bool allowReconnect = false;
+            found = obj.find("allowReconnect");
+            if (found != obj.end())
+            {
+                if (!found->second.is_bool())
+                {
+                    throw signalr_exception("Expected 'allowReconnect' to be of type 'bool'");
+                }
+                allowReconnect = found->second.as_bool();
+            }
+            hub_message = std::unique_ptr<signalr::hub_message>(new close_message(std::move(error), allowReconnect));
+            break;
+        }
         // TODO: other message types
         default:
             // Future protocol changes can add message types, old clients can ignore them
