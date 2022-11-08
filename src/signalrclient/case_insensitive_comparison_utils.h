@@ -34,8 +34,8 @@ namespace signalr
 
         bool operator()(const char* s1, const char* s2) const
         {
-            auto length = std::strlen(s1);
-            if (length != std::strlen(s2))
+            auto length = std::char_traits<char>::length(s1);
+            if (length != std::char_traits<char>::length(s2))
             {
                 return false;
             }
@@ -53,7 +53,7 @@ namespace signalr
 
         bool operator()(const std::string& s1, const char* s2) const
         {
-            if (s1.length() != std::strlen(s2))
+            if (s1.length() != std::char_traits<char>::length(s2))
             {
                 return false;
             }
@@ -71,7 +71,7 @@ namespace signalr
 
         bool operator()(const char* s1, const std::string& s2) const
         {
-            auto length = std::strlen(s1);
+            auto length = std::char_traits<char>::length(s1);
             if (length != s2.length())
             {
                 return false;

@@ -318,6 +318,7 @@ namespace signalr
             return "binary";
         }
         assert(false);
+        return "";
     }
 
     void connection_impl::start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> transport_started)
