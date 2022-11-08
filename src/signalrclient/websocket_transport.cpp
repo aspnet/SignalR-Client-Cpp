@@ -195,7 +195,7 @@ namespace signalr
         }
     }
 
-    void websocket_transport::start(const std::string& url, std::function<void(std::exception_ptr)> callback) noexcept
+    void websocket_transport::start(const std::string& url, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
     {
         signalr::uri uri(url);
         assert(uri.scheme() == "ws" || uri.scheme() == "wss");
@@ -213,6 +213,7 @@ namespace signalr
                 std::string("[websocket transport] connecting to: ")
                 .append(url));
 
+            m_transfer_format = transfer_format;
             auto websocket_client = m_websocket_client_factory(m_signalr_client_config);
 
             {
@@ -327,9 +328,9 @@ namespace signalr
         m_process_response_callback = callback;
     }
 
-    void websocket_transport::send(const std::string& payload, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
+    void websocket_transport::send(const std::string& payload, std::function<void(std::exception_ptr)> callback) noexcept
     {
-        safe_get_websocket_client()->send(payload, transfer_format, [callback](std::exception_ptr exception)
+        safe_get_websocket_client()->send(payload, m_transfer_format, [callback](std::exception_ptr exception)
             {
                 if (exception != nullptr)
                 {

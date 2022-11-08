@@ -31,6 +31,62 @@ namespace signalr
 
             return true;
         }
+
+        bool operator()(const char* s1, const char* s2) const
+        {
+            auto length = std::strlen(s1);
+            if (length != std::strlen(s2))
+            {
+                return false;
+            }
+
+            for (unsigned i = 0; i < length; ++i)
+            {
+                if (std::toupper(s1[i]) != std::toupper(s2[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        bool operator()(const std::string& s1, const char* s2) const
+        {
+            if (s1.length() != std::strlen(s2))
+            {
+                return false;
+            }
+
+            for (unsigned i = 0; i < s1.size(); ++i)
+            {
+                if (std::toupper(s1[i]) != std::toupper(s2[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        bool operator()(const char* s1, const std::string& s2) const
+        {
+            auto length = std::strlen(s1);
+            if (length != s2.length())
+            {
+                return false;
+            }
+
+            for (unsigned i = 0; i < length; ++i)
+            {
+                if (std::toupper(s1[i]) != std::toupper(s2[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     };
 
     struct case_insensitive_hash
