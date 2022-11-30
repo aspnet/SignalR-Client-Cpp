@@ -12,6 +12,7 @@
 #include "log_writer.h"
 #include "signalr_client_config.h"
 #include "signalr_value.h"
+#include "converters.h"
 
 namespace signalr
 {
@@ -20,6 +21,24 @@ namespace signalr
     class hub_connection_impl;
     class hub_connection_builder;
     class hub_protocol;
+
+    /*template <typename T, int = 0>
+    T convert_value(const signalr::value& value);*/
+
+    /*template <typename T, std::enable_if_t<!is_map<std::enable_if_t<!is_vector<T>::value, T>>::value, int> = 0>
+    T convert_value(const signalr::value& value);
+
+    template <>
+    int convert_value<int>(const signalr::value& value);
+
+    template <>
+    std::string convert_value<std::string>(const signalr::value& value);
+
+    template <typename T>
+    typename std::enable_if_t<is_map<T>::value, T> convert_value(const signalr::value& value);
+
+    template <typename T>
+    typename std::enable_if_t<is_vector<T>::value, T> convert_value(const signalr::value& value);*/
 
     class hub_connection
     {
@@ -47,6 +66,18 @@ namespace signalr
         SIGNALRCLIENT_API void __cdecl set_client_config(const signalr_client_config& config);
 
         SIGNALRCLIENT_API void __cdecl on(const std::string& event_name, const method_invoked_handler& handler);
+
+        template <typename T>
+        SIGNALRCLIENT_API void on(const std::string& event_name, std::function<void(T)> handler)
+        {
+            return on(event_name, [handler](const std::vector<signalr::value>& args)
+                {
+                    handler(convert_value<T>(args[0]));
+                });
+        }
+
+        /*template <typename T>
+        SIGNALRCLIENT_API void on(const std::string& event_name, std::function<void (T)> handler);*/
 
         SIGNALRCLIENT_API void invoke(const std::string& method_name, const std::vector<signalr::value>& arguments = std::vector<signalr::value>(), std::function<void(const signalr::value&, std::exception_ptr)> callback = [](const signalr::value&, std::exception_ptr) {}) noexcept;
 
