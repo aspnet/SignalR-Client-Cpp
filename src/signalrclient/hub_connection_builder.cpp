@@ -51,17 +51,17 @@ namespace signalr
     hub_connection_builder::~hub_connection_builder()
     {}
 
-    hub_connection_builder& hub_connection_builder::with_logging(std::shared_ptr<log_writer> logger, trace_level logLevel)
+    hub_connection_builder& hub_connection_builder::with_logging(std::shared_ptr<log_writer> logger, trace_level log_level)
     {
         m_logger = logger;
-        m_log_level = logLevel;
+        m_log_level = log_level;
 
         return *this;
     }
 
-    hub_connection_builder& hub_connection_builder::with_websocket_factory(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> factory)
+    hub_connection_builder& hub_connection_builder::with_websocket_factory(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory)
     {
-        m_websocket_factory = factory;
+        m_websocket_factory = websocket_factory;
 
         return *this;
     }
@@ -80,15 +80,17 @@ namespace signalr
         return *this;
     }
 
-#ifdef USE_MSGPACK
     hub_connection_builder& hub_connection_builder::with_messagepack_hub_protocol()
     {
+#ifdef USE_MSGPACK
         m_use_messagepack = true;
         return *this;
-    }
+#else
+        throw std::runtime_error("library was not built with messagepack support. Define USE_MSGPACK when building.");
 #endif
+    }
 
-    hub_connection hub_connection_builder::build()
+    std::unique_ptr<hub_connection> hub_connection_builder::build()
     {
 #ifndef USE_CPPRESTSDK
         if (m_http_client_factory == nullptr)
@@ -115,6 +117,13 @@ namespace signalr
             hub_protocol = std::unique_ptr<json_hub_protocol>(new json_hub_protocol());
         }
 
-        return hub_connection(m_url, std::move(hub_protocol), m_log_level, m_logger, m_http_client_factory, m_websocket_factory, m_skip_negotiation);
+        if (m_built)
+        {
+            throw std::runtime_error("calling build() more than once is not supported.");
+        }
+
+        m_built = true;
+
+        return std::unique_ptr<hub_connection>(new hub_connection(m_url, std::move(hub_protocol), m_log_level, m_logger, m_http_client_factory, m_websocket_factory, m_skip_negotiation));
     }
 }

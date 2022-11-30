@@ -12,7 +12,7 @@
 
 namespace signalr
 {
-    class hub_connection_builder
+    class hub_connection_builder final
     {
     public:
         SIGNALRCLIENT_API static hub_connection_builder create(const std::string& url);
@@ -27,19 +27,17 @@ namespace signalr
 
         SIGNALRCLIENT_API hub_connection_builder& operator=(const hub_connection_builder&);
 
-        SIGNALRCLIENT_API hub_connection_builder& with_logging(std::shared_ptr<log_writer> logger, trace_level logLevel);
+        SIGNALRCLIENT_API hub_connection_builder& with_logging(std::shared_ptr<log_writer> logger, trace_level log_level);
 
-        SIGNALRCLIENT_API hub_connection_builder& with_websocket_factory(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> factory);
+        SIGNALRCLIENT_API hub_connection_builder& with_websocket_factory(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory);
 
         SIGNALRCLIENT_API hub_connection_builder& with_http_client_factory(std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory);
 
         SIGNALRCLIENT_API hub_connection_builder& skip_negotiation(bool skip = true);
 
-#ifdef USE_MSGPACK
         SIGNALRCLIENT_API hub_connection_builder& with_messagepack_hub_protocol();
-#endif
 
-        SIGNALRCLIENT_API hub_connection build();
+        SIGNALRCLIENT_API std::unique_ptr<hub_connection> build();
     private:
         hub_connection_builder(const std::string& url);
 
@@ -50,5 +48,7 @@ namespace signalr
         std::function<std::shared_ptr<http_client>(const signalr_client_config&)> m_http_client_factory;
         bool m_skip_negotiation = false;
         bool m_use_messagepack = false;
+
+        bool m_built = false;
     };
 }
