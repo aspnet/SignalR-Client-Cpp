@@ -74,12 +74,7 @@ namespace signalr
         mStorage.number = val;
     }
 
-    value::value(const std::string& val) : mType(type::string)
-    {
-        new (&mStorage.string) std::string(val);
-    }
-
-    value::value(std::string&& val) : mType(type::string)
+    value::value(std::string val) : mType(type::string)
     {
         new (&mStorage.string) std::string(std::move(val));
     }
@@ -89,37 +84,17 @@ namespace signalr
         new (&mStorage.string) std::string(val);
     }
 
-    value::value(const char* val, size_t length) : mType(type::string)
-    {
-        new (&mStorage.string) std::string(val, length);
-    }
-
-    value::value(const std::vector<value>& val) : mType(type::array)
-    {
-        new (&mStorage.array) std::vector<value>(val);
-    }
-
-    value::value(std::vector<value>&& val) : mType(type::array)
+    value::value(std::vector<value> val) : mType(type::array)
     {
         new (&mStorage.array) std::vector<value>(std::move(val));
     }
 
-    value::value(const std::map<std::string, value>& map) : mType(type::map)
-    {
-        new (&mStorage.map) std::map<std::string, value>(map);
-    }
-
-    value::value(std::map<std::string, value>&& map) : mType(type::map)
+    value::value(std::map<std::string, value> map) : mType(type::map)
     {
         new (&mStorage.map) std::map<std::string, value>(std::move(map));
     }
 
-    value::value(const std::vector<uint8_t>& bin) : mType(type::binary)
-    {
-        new (&mStorage.binary) std::vector<uint8_t>(bin);
-    }
-
-    value::value(std::vector<uint8_t>&& bin) : mType(type::binary)
+    value::value(std::vector<uint8_t> bin) : mType(type::binary)
     {
         new (&mStorage.binary) std::vector<uint8_t>(std::move(bin));
     }
@@ -277,37 +252,37 @@ namespace signalr
         return *this;
     }
 
-    bool value::is_map() const
+    bool value::is_map() const noexcept
     {
         return mType == signalr::value::type::map;
     }
 
-    bool value::is_double() const
+    bool value::is_double() const noexcept
     {
         return mType == signalr::value::type::float64;
     }
 
-    bool value::is_string() const
+    bool value::is_string() const noexcept
     {
         return mType == signalr::value::type::string;
     }
 
-    bool value::is_null() const
+    bool value::is_null() const noexcept
     {
         return mType == signalr::value::type::null;
     }
 
-    bool value::is_array() const
+    bool value::is_array() const noexcept
     {
         return mType == signalr::value::type::array;
     }
 
-    bool value::is_bool() const
+    bool value::is_bool() const noexcept
     {
         return mType == signalr::value::type::boolean;
     }
 
-    bool value::is_binary() const
+    bool value::is_binary() const noexcept
     {
         return mType == signalr::value::type::binary;
     }

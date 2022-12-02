@@ -13,9 +13,10 @@ namespace signalr
     {
         std::string write_handshake(const std::unique_ptr<hub_protocol>& protocol)
         {
+            auto protocol_value = signalr::value(protocol->name());
             auto map = std::map<std::string, signalr::value>
             {
-                { "protocol", signalr::value(protocol->name()) },
+                { "protocol", std::move(protocol_value) },
                 { "version", signalr::value((double)protocol->version()) }
             };
 

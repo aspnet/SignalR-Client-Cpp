@@ -304,8 +304,8 @@ namespace signalr
         }
 
         auto http_client = m_http_client_factory(m_signalr_client_config);
-        std::shared_ptr<signalr::http_client> s(std::move(http_client));
-        start_negotiate_internal(url, 0, transport_started, std::move(s));
+        std::shared_ptr<signalr::http_client> shared_client(std::move(http_client));
+        start_negotiate_internal(url, 0, transport_started, std::move(shared_client));
     }
 
     void connection_impl::start_negotiate_internal(const std::string& url, int redirect_count,

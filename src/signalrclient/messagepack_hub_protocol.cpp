@@ -42,7 +42,7 @@ namespace signalr
         case msgpack::type::object_type::NEGATIVE_INTEGER:
             return signalr::value((double)v.via.i64);
         case msgpack::type::object_type::STR:
-            return signalr::value(v.via.str.ptr, v.via.str.size);
+            return signalr::value(std::string(v.via.str.ptr, v.via.str.size));
         case msgpack::type::object_type::ARRAY:
         {
             std::vector<signalr::value> vec;

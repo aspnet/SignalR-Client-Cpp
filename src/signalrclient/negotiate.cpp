@@ -29,7 +29,7 @@ namespace signalr
 
         // TODO: signalr_client_config
         http_request request;
-        request.set_method(http_method::POST);
+        request.set_method(http_request::method::POST);
         request.set_headers(config.get_http_headers());
         // TODO: timeout?
         // request.timeout = ;

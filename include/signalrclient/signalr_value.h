@@ -33,79 +33,54 @@ namespace signalr
         };
 
         /**
-         * Create an object representing a value_type::null value.
+         * Create an object representing a value::type::null value.
          */
         SIGNALRCLIENT_API value();
 
         /**
-         * Create an object representing a value_type::null value.
+         * Create an object representing a value::type::null value.
          */
         SIGNALRCLIENT_API value(std::nullptr_t);
 
         /**
-         * Create an object representing a default value for the given value_type.
+         * Create an object representing a default value for the given value::type.
          */
         SIGNALRCLIENT_API value(type t);
 
         /**
-         * Create an object representing a value_type::boolean with the given bool value.
+         * Create an object representing a value::type::boolean with the given bool value.
          */
         SIGNALRCLIENT_API value(bool val);
 
         /**
-         * Create an object representing a value_type::float64 with the given double value.
+         * Create an object representing a value::type::float64 with the given double value.
          */
         SIGNALRCLIENT_API value(double val);
 
         /**
-         * Create an object representing a value_type::string with the given string value.
+         * Create an object representing a value::type::string with the given string value.
          */
-        SIGNALRCLIENT_API value(const std::string& val);
+        SIGNALRCLIENT_API value(std::string val);
 
         /**
-         * Create an object representing a value_type::string with the given string value.
-         */
-        SIGNALRCLIENT_API value(std::string&& val);
-
-        /**
-         * Create an object representing a value_type::string with the given string value.
+         * Create an object representing a value::type::string with the given string value.
          */
         SIGNALRCLIENT_API value(const char* val);
 
         /**
-         * Create an object representing a value_type::string with the given string value.
+         * Create an object representing a value::type::array with the given vector of value's.
          */
-        SIGNALRCLIENT_API value(const char* val, size_t length);
+        SIGNALRCLIENT_API value(std::vector<value> val);
 
         /**
-         * Create an object representing a value_type::array with the given vector of value's.
+         * Create an object representing a value::type::map with the given map of string-value's.
          */
-        SIGNALRCLIENT_API value(const std::vector<value>& val);
+        SIGNALRCLIENT_API value(std::map<std::string, value> map);
 
         /**
-         * Create an object representing a value_type::array with the given vector of value's.
+         * Create an object representing a value::type::binary with the given array of byte's.
          */
-        SIGNALRCLIENT_API value(std::vector<value>&& val);
-
-        /**
-         * Create an object representing a value_type::map with the given map of string-value's.
-         */
-        SIGNALRCLIENT_API value(const std::map<std::string, value>& map);
-
-        /**
-         * Create an object representing a value_type::map with the given map of string-value's.
-         */
-        SIGNALRCLIENT_API value(std::map<std::string, value>&& map);
-
-        /**
-         * Create an object representing a value_type::binary with the given array of byte's.
-         */
-        SIGNALRCLIENT_API value(const std::vector<uint8_t>& bin);
-
-        /**
-         * Create an object representing a value_type::binary with the given array of byte's.
-         */
-        SIGNALRCLIENT_API value(std::vector<uint8_t>&& bin);
+        SIGNALRCLIENT_API value(std::vector<uint8_t> bin);
 
         /**
          * Copies an existing value.
@@ -120,7 +95,7 @@ namespace signalr
         /**
          * Cleans up the resources associated with the value.
          */
-        SIGNALRCLIENT_API ~value();
+        SIGNALRCLIENT_API ~value() noexcept;
 
         /**
          * Copies an existing value.
@@ -135,70 +110,70 @@ namespace signalr
         /**
          * True if the object stored is a Key-Value pair.
          */
-        SIGNALRCLIENT_API bool is_map() const;
+        SIGNALRCLIENT_API bool is_map() const noexcept;
 
         /**
          * True if the object stored is a double.
          */
-        SIGNALRCLIENT_API bool is_double() const;
+        SIGNALRCLIENT_API bool is_double() const noexcept;
 
         /**
          * True if the object stored is a string.
          */
-        SIGNALRCLIENT_API bool is_string() const;
+        SIGNALRCLIENT_API bool is_string() const noexcept;
 
         /**
          * True if the object stored is empty.
          */
-        SIGNALRCLIENT_API bool is_null() const;
+        SIGNALRCLIENT_API bool is_null() const noexcept;
 
         /**
          * True if the object stored is an array of signalr::value's.
          */
-        SIGNALRCLIENT_API bool is_array() const;
+        SIGNALRCLIENT_API bool is_array() const noexcept;
 
         /**
          * True if the object stored is a bool.
          */
-        SIGNALRCLIENT_API bool is_bool() const;
+        SIGNALRCLIENT_API bool is_bool() const noexcept;
 
         /**
          * True if the object stored is a binary blob.
          */
-        SIGNALRCLIENT_API bool is_binary() const;
+        SIGNALRCLIENT_API bool is_binary() const noexcept;
 
         /**
-         * Returns the stored object as a double. This will throw if the underlying object is not a signalr::type::float64.
+         * Returns the stored object as a double. This will throw if the underlying object is not a signalr::value::type::float64.
          */
         SIGNALRCLIENT_API double as_double() const;
 
         /**
-         * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::type::boolean.
+         * Returns the stored object as a bool. This will throw if the underlying object is not a signalr::value::type::boolean.
          */
         SIGNALRCLIENT_API bool as_bool() const;
 
         /**
-         * Returns the stored object as a string. This will throw if the underlying object is not a signalr::type::string.
+         * Returns the stored object as a string. This will throw if the underlying object is not a signalr::value::type::string.
          */
         SIGNALRCLIENT_API const std::string& as_string() const;
 
         /**
-         * Returns the stored object as an array of signalr::value's. This will throw if the underlying object is not a signalr::type::array.
+         * Returns the stored object as an array of signalr::value's. This will throw if the underlying object is not a signalr::value::type::array.
          */
         SIGNALRCLIENT_API const std::vector<value>& as_array() const;
 
         /**
-         * Returns the stored object as a map of property name to signalr::value. This will throw if the underlying object is not a signalr::type::map.
+         * Returns the stored object as a map of property name to signalr::value. This will throw if the underlying object is not a signalr::value::type::map.
          */
         SIGNALRCLIENT_API const std::map<std::string, value>& as_map() const;
 
         /**
-         * Returns the stored object as an array of bytes. This will throw if the underlying object is not a signalr::type::binary.
+         * Returns the stored object as an array of bytes. This will throw if the underlying object is not a signalr::value::type::binary.
          */
         SIGNALRCLIENT_API const std::vector<uint8_t>& as_binary() const;
 
         /**
-         * Returns the signalr::type that represents the stored object.
+         * Returns the signalr::value::type that represents the stored object.
          */
         SIGNALRCLIENT_API type type() const;
 
@@ -216,7 +191,7 @@ namespace signalr
 
             // constructor of types in union are not implicitly called
             // this is expected as we only construct a single type in the union once we know
-            // what that type is when constructing the signalr_value type.
+            // what that type is when constructing the signalr::value type.
 #pragma warning (push)
 #pragma warning (disable: 4582)
             storage() {}

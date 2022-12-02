@@ -18,15 +18,15 @@ namespace signalr
        : m_config(config) 
     { }
 
-    void default_http_client::send(const std::string& url, http_request& request,
+    void default_http_client::send(const std::string& url, const http_request& request,
         std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token)
     {
         web::http::method method;
-        if (request.get_method() == http_method::GET)
+        if (request.get_method() == http_request::method::GET)
         {
             method = U("GET");
         }
-        else if (request.get_method() == http_method::POST)
+        else if (request.get_method() == http_request::method::POST)
         {
             method = U("POST");
         }

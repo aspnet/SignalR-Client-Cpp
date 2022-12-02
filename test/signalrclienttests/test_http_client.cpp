@@ -10,7 +10,7 @@ test_http_client::test_http_client(std::function<http_response(const std::string
 {
 }
 
-void test_http_client::send(const std::string& url, http_request& request,
+void test_http_client::send(const std::string& url, const http_request& request,
     std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token)
 {
     auto create_response = m_http_response;

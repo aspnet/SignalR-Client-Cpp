@@ -14,7 +14,7 @@ namespace signalr
     public:
        explicit default_http_client(const signalr_client_config& config = {}) noexcept;
 
-        void send(const std::string& url, http_request& request,
+        void send(const std::string& url, const http_request& request,
             std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token) override;
 
     private:
