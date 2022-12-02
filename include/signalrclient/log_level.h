@@ -6,7 +6,7 @@
 
 namespace signalr
 {
-    enum class trace_level : int
+    enum class log_level
     {
         verbose = 0,
         debug = 1,

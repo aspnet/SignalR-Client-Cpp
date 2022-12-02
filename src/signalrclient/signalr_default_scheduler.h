@@ -19,7 +19,7 @@ namespace signalr
         thread(const thread&) = delete;
         thread& operator=(const thread&) = delete;
 
-        void add(signalr_base_cb);
+        void add(std::function<void()>);
         void start();
         bool is_free() const;
         void shutdown();
@@ -29,7 +29,7 @@ namespace signalr
 #pragma warning( disable: 4625 5026 4626 5027 )
         struct internals
         {
-            signalr_base_cb m_callback;
+            std::function<void()> m_callback;
             std::mutex m_callback_lock;
             std::condition_variable m_callback_cv;
             bool m_closed;
@@ -43,24 +43,25 @@ namespace signalr
 
     struct signalr_default_scheduler : scheduler
     {
-        signalr_default_scheduler() : m_internals(std::make_shared<internals>())
-        {
-            run();
-        }
+        signalr_default_scheduler() : m_started(false), m_internals(std::make_shared<internals>())
+        { }
+        
         signalr_default_scheduler(const signalr_default_scheduler&) = delete;
         signalr_default_scheduler& operator=(const signalr_default_scheduler&) = delete;
 
-        void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
+        void schedule(std::function<void()> cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero());
         ~signalr_default_scheduler();
 
     private:
         void run();
 
+        bool m_started;
+
 #pragma warning( push )
 #pragma warning( disable: 4625 5026 4626 5027 )
         struct internals
         {
-            std::vector<std::pair<signalr_base_cb, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>> m_callbacks;
+            std::vector<std::pair<std::function<void()>, std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>>> m_callbacks;
             std::mutex m_callback_lock;
             std::condition_variable m_callback_cv;
             bool m_closed;

@@ -13,25 +13,25 @@
 namespace signalr
 {
     /**
-     * An enum defining the types a signalr::value may be.
-     */
-    enum class value_type
-    {
-        map,
-        array,
-        string,
-        float64,
-        null,
-        boolean,
-        binary
-    };
-
-    /**
      * Represents a value to be provided to a SignalR method as a parameter, or returned as a return value.
      */
     class value
     {
     public:
+        /**
+         * An enum defining the types a signalr::value may be.
+         */
+        enum class type
+        {
+            map,
+            array,
+            string,
+            float64,
+            null,
+            boolean,
+            binary
+        };
+
         /**
          * Create an object representing a value_type::null value.
          */
@@ -45,7 +45,7 @@ namespace signalr
         /**
          * Create an object representing a default value for the given value_type.
          */
-        SIGNALRCLIENT_API value(value_type t);
+        SIGNALRCLIENT_API value(type t);
 
         /**
          * Create an object representing a value_type::boolean with the given bool value.
@@ -200,10 +200,10 @@ namespace signalr
         /**
          * Returns the signalr::type that represents the stored object.
          */
-        SIGNALRCLIENT_API value_type type() const;
+        SIGNALRCLIENT_API type type() const;
 
     private:
-        value_type mType;
+        enum type mType;
 
         union storage
         {

@@ -79,7 +79,7 @@ namespace signalr
     {
         switch (v.type())
         {
-        case signalr::value_type::boolean:
+        case signalr::value::type::boolean:
         {
             if (v.as_bool())
             {
@@ -91,7 +91,7 @@ namespace signalr
             }
             return;
         }
-        case signalr::value_type::float64:
+        case signalr::value::type::float64:
         {
             auto value = v.as_double();
             double intPart;
@@ -133,14 +133,14 @@ namespace signalr
             packer.pack_double(v.as_double());
             return;
         }
-        case signalr::value_type::string:
+        case signalr::value::type::string:
         {
             auto length = v.as_string().length();
             packer.pack_str(static_cast<uint32_t>(length));
             packer.pack_str_body(v.as_string().data(), static_cast<uint32_t>(length));
             return;
         }
-        case signalr::value_type::array:
+        case signalr::value::type::array:
         {
             const auto& array = v.as_array();
             packer.pack_array(static_cast<uint32_t>(array.size()));
@@ -150,7 +150,7 @@ namespace signalr
             }
             return;
         }
-        case signalr::value_type::map:
+        case signalr::value::type::map:
         {
             const auto& obj = v.as_map();
             packer.pack_map(static_cast<uint32_t>(obj.size()));
@@ -162,14 +162,14 @@ namespace signalr
             }
             return;
         }
-        case signalr::value_type::binary:
+        case signalr::value::type::binary:
         {
             const auto& bin = v.as_binary();
             packer.pack_bin(static_cast<uint32_t>(bin.size()));
             packer.pack_bin_body(reinterpret_cast<const char*>(bin.data()), static_cast<uint32_t>(bin.size()));
             return;
         }
-        case signalr::value_type::null:
+        case signalr::value::type::null:
         default:
         {
             packer.pack_nil();

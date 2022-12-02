@@ -42,6 +42,7 @@ list (APPEND SOURCES
   ../../src/signalrclient/default_http_client.cpp
   ../../src/signalrclient/default_websocket_client.cpp
   ../../src/signalrclient/handshake_protocol.cpp
+  ../../src/signalrclient/http_utilities.cpp
   ../../src/signalrclient/hub_connection.cpp
   ../../src/signalrclient/hub_connection_builder.cpp
   ../../src/signalrclient/hub_connection_impl.cpp

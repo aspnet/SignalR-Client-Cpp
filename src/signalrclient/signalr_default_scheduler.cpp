@@ -19,7 +19,7 @@ namespace signalr
                 while (true)
                 {
                     {
-                        signalr_base_cb cb;
+                        std::function<void()> cb;
                         {
                             std::unique_lock<std::mutex> lock(internals->m_callback_lock);
                             auto& callback = internals->m_callback;
@@ -69,7 +69,7 @@ namespace signalr
             });
     }
 
-    void thread::add(signalr_base_cb cb)
+    void thread::add(std::function<void()> cb)
     {
         {
             assert(m_internals->m_closed == false);
@@ -106,11 +106,17 @@ namespace signalr
         shutdown();
     }
 
-    void signalr_default_scheduler::schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay)
+    void signalr_default_scheduler::schedule(std::function<void()> cb, std::chrono::milliseconds delay)
     {
         {
             std::lock_guard<std::mutex> lock(m_internals->m_callback_lock);
             assert(m_internals->m_closed == false);
+            if (!m_started)
+            {
+                // start threads on first scheduled work item, otherwise we might be creating the threads and then throwing them away immediately
+                // if the scheduler is replaced or if the config isn't used.
+                run();
+            }
             m_internals->m_callbacks.push_back(std::make_pair(cb, std::chrono::steady_clock::now() + delay));
         } // unlock
 
@@ -123,6 +129,12 @@ namespace signalr
 
     void signalr_default_scheduler::run()
     {
+        if (m_started)
+        {
+            return;
+        }
+
+        m_started = true;
         auto internals = m_internals;
 
         std::thread([=]()

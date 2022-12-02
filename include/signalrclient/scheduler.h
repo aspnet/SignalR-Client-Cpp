@@ -10,11 +10,9 @@
 
 namespace signalr
 {
-    typedef std::function<void()> signalr_base_cb;
-
     struct scheduler
     {
-        virtual void schedule(const signalr_base_cb& cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
+        virtual void schedule(std::function<void()> cb, std::chrono::milliseconds delay = std::chrono::milliseconds::zero()) = 0;
 
         virtual ~scheduler() {}
     };

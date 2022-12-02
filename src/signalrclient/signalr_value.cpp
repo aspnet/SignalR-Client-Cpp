@@ -9,117 +9,117 @@
 
 namespace signalr
 {
-    std::string value_type_to_string(value_type v)
+    std::string value_type_to_string(enum value::type v)
     {
         switch (v)
         {
-        case signalr::value_type::map:
+        case signalr::value::type::map:
             return "map";
-        case signalr::value_type::array:
+        case signalr::value::type::array:
             return "array";
-        case signalr::value_type::string:
+        case signalr::value::type::string:
             return "string";
-        case signalr::value_type::float64:
+        case signalr::value::type::float64:
             return "float64";
-        case signalr::value_type::null:
+        case signalr::value::type::null:
             return "null";
-        case signalr::value_type::boolean:
+        case signalr::value::type::boolean:
             return "boolean";
-        case signalr::value_type::binary:
+        case signalr::value::type::binary:
             return "binary";
         default:
             return std::to_string((int)v);
         }
     }
 
-    value::value() : mType(value_type::null) {}
+    value::value() : mType(value::type::null) {}
 
-    value::value(std::nullptr_t) : mType(value_type::null) {}
+    value::value(std::nullptr_t) : mType(value::type::null) {}
 
-    value::value(value_type t) : mType(t)
+    value::value(enum value::type t) : mType(t)
     {
         switch (mType)
         {
-        case value_type::array:
+        case type::array:
             new (&mStorage.array) std::vector<value>();
             break;
-        case value_type::string:
+        case type::string:
             new (&mStorage.string) std::string();
             break;
-        case value_type::float64:
+        case type::float64:
             mStorage.number = 0;
             break;
-        case value_type::boolean:
+        case type::boolean:
             mStorage.boolean = false;
             break;
-        case value_type::map:
+        case type::map:
             new (&mStorage.map) std::map<std::string, value>();
             break;
-        case value_type::binary:
+        case type::binary:
             new (&mStorage.binary) std::vector<uint8_t>();
             break;
-        case value_type::null:
+        case type::null:
         default:
             break;
         }
     }
 
-    value::value(bool val) : mType(value_type::boolean)
+    value::value(bool val) : mType(type::boolean)
     {
         mStorage.boolean = val;
     }
 
-    value::value(double val) : mType(value_type::float64)
+    value::value(double val) : mType(type::float64)
     {
         mStorage.number = val;
     }
 
-    value::value(const std::string& val) : mType(value_type::string)
+    value::value(const std::string& val) : mType(type::string)
     {
         new (&mStorage.string) std::string(val);
     }
 
-    value::value(std::string&& val) : mType(value_type::string)
+    value::value(std::string&& val) : mType(type::string)
     {
         new (&mStorage.string) std::string(std::move(val));
     }
 
-    value::value(const char* val) : mType(value_type::string)
+    value::value(const char* val) : mType(type::string)
     {
         new (&mStorage.string) std::string(val);
     }
 
-    value::value(const char* val, size_t length) : mType(value_type::string)
+    value::value(const char* val, size_t length) : mType(type::string)
     {
         new (&mStorage.string) std::string(val, length);
     }
 
-    value::value(const std::vector<value>& val) : mType(value_type::array)
+    value::value(const std::vector<value>& val) : mType(type::array)
     {
         new (&mStorage.array) std::vector<value>(val);
     }
 
-    value::value(std::vector<value>&& val) : mType(value_type::array)
+    value::value(std::vector<value>&& val) : mType(type::array)
     {
         new (&mStorage.array) std::vector<value>(std::move(val));
     }
 
-    value::value(const std::map<std::string, value>& map) : mType(value_type::map)
+    value::value(const std::map<std::string, value>& map) : mType(type::map)
     {
         new (&mStorage.map) std::map<std::string, value>(map);
     }
 
-    value::value(std::map<std::string, value>&& map) : mType(value_type::map)
+    value::value(std::map<std::string, value>&& map) : mType(type::map)
     {
         new (&mStorage.map) std::map<std::string, value>(std::move(map));
     }
 
-    value::value(const std::vector<uint8_t>& bin) : mType(value_type::binary)
+    value::value(const std::vector<uint8_t>& bin) : mType(type::binary)
     {
         new (&mStorage.binary) std::vector<uint8_t>(bin);
     }
 
-    value::value(std::vector<uint8_t>&& bin) : mType(value_type::binary)
+    value::value(std::vector<uint8_t>&& bin) : mType(type::binary)
     {
         new (&mStorage.binary) std::vector<uint8_t>(std::move(bin));
     }
@@ -129,25 +129,25 @@ namespace signalr
         mType = rhs.mType;
         switch (mType)
         {
-        case value_type::array:
+        case type::array:
             new (&mStorage.array) std::vector<value>(rhs.mStorage.array);
             break;
-        case value_type::string:
+        case type::string:
             new (&mStorage.string) std::string(rhs.mStorage.string);
             break;
-        case value_type::float64:
+        case type::float64:
             mStorage.number = rhs.mStorage.number;
             break;
-        case value_type::boolean:
+        case type::boolean:
             mStorage.boolean = rhs.mStorage.boolean;
             break;
-        case value_type::map:
+        case type::map:
             new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
             break;
-        case value_type::binary:
+        case type::binary:
             new (&mStorage.binary) std::vector<uint8_t>(rhs.mStorage.binary);
             break;
-        case value_type::null:
+        case type::null:
         default:
             break;
         }
@@ -158,25 +158,25 @@ namespace signalr
         mType = std::move(rhs.mType);
         switch (mType)
         {
-        case value_type::array:
+        case type::array:
             new (&mStorage.array) std::vector<signalr::value>(std::move(rhs.mStorage.array));
             break;
-        case value_type::string:
+        case type::string:
             new (&mStorage.string) std::string(std::move(rhs.mStorage.string));
             break;
-        case value_type::float64:
+        case type::float64:
             mStorage.number = std::move(rhs.mStorage.number);
             break;
-        case value_type::boolean:
+        case type::boolean:
             mStorage.boolean = std::move(rhs.mStorage.boolean);
             break;
-        case value_type::map:
+        case type::map:
             new (&mStorage.map) std::map<std::string, signalr::value>(std::move(rhs.mStorage.map));
             break;
-        case value_type::binary:
+        case type::binary:
             new (&mStorage.binary) std::vector<uint8_t>(std::move(rhs.mStorage.binary));
             break;
-        case value_type::null:
+        case type::null:
         default:
             break;
         }
@@ -191,21 +191,21 @@ namespace signalr
     {
         switch (mType)
         {
-        case value_type::array:
+        case type::array:
             mStorage.array.~vector();
             break;
-        case value_type::string:
+        case type::string:
             mStorage.string.~basic_string();
             break;
-        case value_type::map:
+        case type::map:
             mStorage.map.~map();
             break;
-        case value_type::binary:
+        case type::binary:
             mStorage.binary.~vector();
             break;
-        case value_type::null:
-        case value_type::float64:
-        case value_type::boolean:
+        case type::null:
+        case type::float64:
+        case type::boolean:
         default:
             break;
         }
@@ -218,25 +218,25 @@ namespace signalr
         mType = rhs.mType;
         switch (mType)
         {
-        case value_type::array:
+        case type::array:
             new (&mStorage.array) std::vector<value>(rhs.mStorage.array);
             break;
-        case value_type::string:
+        case type::string:
             new (&mStorage.string) std::string(rhs.mStorage.string);
             break;
-        case value_type::float64:
+        case type::float64:
             mStorage.number = rhs.mStorage.number;
             break;
-        case value_type::boolean:
+        case type::boolean:
             mStorage.boolean = rhs.mStorage.boolean;
             break;
-        case value_type::map:
+        case type::map:
             new (&mStorage.map) std::map<std::string, value>(rhs.mStorage.map);
             break;
-        case value_type::binary:
+        case type::binary:
             new (&mStorage.binary) std::vector<uint8_t>(rhs.mStorage.binary);
             break;
-        case value_type::null:
+        case type::null:
         default:
             break;
         }
@@ -251,25 +251,25 @@ namespace signalr
         mType = std::move(rhs.mType);
         switch (mType)
         {
-        case value_type::array:
+        case type::array:
             new (&mStorage.array) std::vector<value>(std::move(rhs.mStorage.array));
             break;
-        case value_type::string:
+        case type::string:
             new (&mStorage.string) std::string(std::move(rhs.mStorage.string));
             break;
-        case value_type::float64:
+        case type::float64:
             mStorage.number = std::move(rhs.mStorage.number);
             break;
-        case value_type::boolean:
+        case type::boolean:
             mStorage.boolean = std::move(rhs.mStorage.boolean);
             break;
-        case value_type::map:
+        case type::map:
             new (&mStorage.map) std::map<std::string, value>(std::move(rhs.mStorage.map));
             break;
-        case value_type::binary:
+        case type::binary:
             new (&mStorage.binary) std::vector<uint8_t>(std::move(rhs.mStorage.binary));
             break;
-        case value_type::null:
+        case type::null:
         default:
             break;
         }
@@ -279,37 +279,37 @@ namespace signalr
 
     bool value::is_map() const
     {
-        return mType == signalr::value_type::map;
+        return mType == signalr::value::type::map;
     }
 
     bool value::is_double() const
     {
-        return mType == signalr::value_type::float64;
+        return mType == signalr::value::type::float64;
     }
 
     bool value::is_string() const
     {
-        return mType == signalr::value_type::string;
+        return mType == signalr::value::type::string;
     }
 
     bool value::is_null() const
     {
-        return mType == signalr::value_type::null;
+        return mType == signalr::value::type::null;
     }
 
     bool value::is_array() const
     {
-        return mType == signalr::value_type::array;
+        return mType == signalr::value::type::array;
     }
 
     bool value::is_bool() const
     {
-        return mType == signalr::value_type::boolean;
+        return mType == signalr::value::type::boolean;
     }
 
     bool value::is_binary() const
     {
-        return mType == signalr::value_type::binary;
+        return mType == signalr::value::type::binary;
     }
 
     double value::as_double() const
@@ -372,7 +372,7 @@ namespace signalr
         return mStorage.binary;
     }
 
-    value_type value::type() const
+    enum value::type value::type() const
     {
         return mType;
     }

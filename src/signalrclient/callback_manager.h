@@ -21,7 +21,7 @@ namespace signalr
         callback_manager(const callback_manager&) = delete;
         callback_manager& operator=(const callback_manager&) = delete;
 
-        std::string register_callback(const std::function<void(const char*, const signalr::value&)>& callback);
+        std::string register_callback(std::function<void(const char*, const signalr::value&)> callback);
         bool invoke_callback(const std::string& callback_id, const char* error, const signalr::value& arguments, bool remove_callback);
         bool remove_callback(const std::string& callback_id);
         void clear(const char* error);

@@ -7,7 +7,7 @@
 #include <mutex>
 #include <atomic>
 #include "signalrclient/http_client.h"
-#include "signalrclient/trace_level.h"
+#include "signalrclient/log_level.h"
 #include "signalrclient/connection_state.h"
 #include "signalrclient/signalr_client_config.h"
 #include "transport_factory.h"
@@ -27,8 +27,8 @@ namespace signalr
     class connection_impl : public std::enable_shared_from_this<connection_impl>
     {
     public:
-        static std::shared_ptr<connection_impl> create(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-            std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation = false);
+        static std::shared_ptr<connection_impl> create(const std::string& url, log_level log_level, const std::shared_ptr<log_writer>& log_writer,
+            std::function<std::unique_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::unique_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation = false);
 
         connection_impl(const connection_impl&) = delete;
 
@@ -41,10 +41,10 @@ namespace signalr
         void stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept;
 
         connection_state get_connection_state() const noexcept;
-        std::string get_connection_id() const noexcept;
+        const std::string& get_connection_id() const noexcept;
 
-        void set_message_received(const std::function<void(std::string&&)>& message_received);
-        void set_disconnected(const std::function<void(std::exception_ptr)>& disconnected);
+        void set_message_received(std::function<void(std::string&&)> message_received);
+        void on_disconnected(std::function<void(std::exception_ptr)> disconnected);
         void set_client_config(const signalr_client_config& config);
 
     private:
@@ -66,16 +66,17 @@ namespace signalr
         cancellation_token_source m_start_completed_event;
         std::string m_connection_id;
         std::string m_connection_token;
-        std::function<std::shared_ptr<http_client>(const signalr_client_config&)> m_http_client_factory;
+        std::function<std::unique_ptr<http_client>(const signalr_client_config&)> m_http_client_factory;
 
-        connection_impl(const std::string& url, trace_level trace_level, const std::shared_ptr<log_writer>& log_writer,
-            std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation);
+        connection_impl(const std::string& url, log_level log_level, const std::shared_ptr<log_writer>& log_writer,
+            std::function<std::unique_ptr<http_client>(const signalr_client_config&)> http_client_factory, std::function<std::unique_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, bool skip_negotiation);
 
         void start_transport(const std::string& url, std::function<void(std::shared_ptr<transport>, std::exception_ptr)> callback);
         void send_connect_request(const std::shared_ptr<transport>& transport,
             const std::string& url, std::function<void(std::exception_ptr)> callback);
         void start_negotiate(const std::string& url, std::function<void(std::exception_ptr)> callback);
-        void start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> callback);
+        void start_negotiate_internal(const std::string& url, int redirect_count,
+            std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> callback, std::shared_ptr<http_client> http_client);
 
         void process_response(std::string&& response);
 

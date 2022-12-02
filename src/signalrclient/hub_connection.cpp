@@ -12,10 +12,10 @@
 
 namespace signalr
 {
-    hub_connection::hub_connection(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol,
-        trace_level trace_level, std::shared_ptr<log_writer> log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
-        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
-        : m_pImpl(hub_connection_impl::create(url, std::move(hub_protocol), trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
+    hub_connection::hub_connection(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, signalr_client_config config,
+        log_level log_level, std::shared_ptr<log_writer> log_writer, std::function<std::unique_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::unique_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        : m_pImpl(hub_connection_impl::create(url, std::move(hub_protocol), config, log_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
     {}
 
     hub_connection::hub_connection(hub_connection&& rhs) noexcept
@@ -64,7 +64,7 @@ namespace signalr
         m_pImpl->stop(callback);
     }
 
-    void hub_connection::on(const std::string& event_name, const method_invoked_handler& handler)
+    void hub_connection::on(const std::string& event_name, std::function<void (const std::vector<signalr::value>&)> handler)
     {
         if (!m_pImpl)
         {
@@ -106,7 +106,7 @@ namespace signalr
         return m_pImpl->get_connection_state();
     }
 
-    std::string hub_connection::get_connection_id() const
+    const std::string& hub_connection::get_connection_id() const
     {
         if (!m_pImpl)
         {
@@ -116,17 +116,17 @@ namespace signalr
         return m_pImpl->get_connection_id();
     }
 
-    void hub_connection::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected_callback)
+    void hub_connection::on_disconnected(std::function<void(std::exception_ptr)> disconnected_callback)
     {
         if (!m_pImpl)
         {
             throw signalr_exception("set_disconnected() cannot be called on destructed hub_connection instance");
         }
 
-        m_pImpl->set_disconnected(disconnected_callback);
+        m_pImpl->on_disconnected(disconnected_callback);
     }
 
-    void hub_connection::set_client_config(const signalr_client_config& config)
+    /*void hub_connection::set_client_config(const signalr_client_config& config)
     {
         if (!m_pImpl)
         {
@@ -134,5 +134,5 @@ namespace signalr
         }
 
         m_pImpl->set_client_config(config);
-    }
+    }*/
 }

@@ -14,14 +14,14 @@ namespace signalr
     {
         static web::websockets::client::websocket_client_config create_client_config(const signalr_client_config& signalr_client_config) noexcept
         {
-            auto websocket_client_config = signalr_client_config.get_websocket_client_config();
-            auto& websocket_headers = websocket_client_config.headers();
+            web::websockets::client::websocket_client_config websocket_config;
+            auto& websocket_headers = websocket_config.headers();
             for (auto& header : signalr_client_config.get_http_headers())
             {
                 websocket_headers.add(utility::conversions::to_string_t(header.first), utility::conversions::to_string_t(header.second));
             }
 
-            return websocket_client_config;
+            return websocket_config;
         }
     }
 
@@ -106,8 +106,8 @@ namespace signalr
                         response.body().read_to_end(b).get();
                         auto t = b.create_ostream().streambuf().in_avail();
                         std::string msg(t, ' ');
+                        static_assert(sizeof(char) == sizeof(uint8_t), "char isn't the expected size");
                         b.create_istream().streambuf().getn(reinterpret_cast<uint8_t*>(&msg[0]), t);
-
                         callback(msg, nullptr);
                     }
                     else

@@ -10,10 +10,13 @@
 
 namespace signalr
 {
-    namespace negotiate
+    class negotiate
     {
-        void negotiate(std::shared_ptr<http_client> client, const std::string& base_url,
+    public:
+        static void send_negotiate(http_client* client, const std::string& base_url,
             const signalr_client_config& signalr_client_config,
             std::function<void(negotiation_response&&, std::exception_ptr)> callback, cancellation_token token) noexcept;
-    }
+    private:
+        static const int negotiate_version = 1;
+    };
 }

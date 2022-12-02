@@ -113,9 +113,9 @@ namespace signalr
     {
         switch (v.type())
         {
-        case signalr::value_type::boolean:
+        case signalr::value::type::boolean:
             return Json::Value(v.as_bool());
-        case signalr::value_type::float64:
+        case signalr::value::type::float64:
         {
             auto value = v.as_double();
             double intPart;
@@ -152,9 +152,9 @@ namespace signalr
             }
             return Json::Value(v.as_double());
         }
-        case signalr::value_type::string:
+        case signalr::value::type::string:
             return Json::Value(v.as_string());
-        case signalr::value_type::array:
+        case signalr::value::type::array:
         {
             const auto& array = v.as_array();
             Json::Value vec(Json::ValueType::arrayValue);
@@ -164,7 +164,7 @@ namespace signalr
             }
             return vec;
         }
-        case signalr::value_type::map:
+        case signalr::value::type::map:
         {
             const auto& obj = v.as_map();
             Json::Value object(Json::ValueType::objectValue);
@@ -174,12 +174,12 @@ namespace signalr
             }
             return object;
         }
-        case signalr::value_type::binary:
+        case signalr::value::type::binary:
         {
             const auto& binary = v.as_binary();
             return Json::Value(base64Encode(binary));
         }
-        case signalr::value_type::null:
+        case signalr::value::type::null:
         default:
             return Json::Value(Json::ValueType::nullValue);
         }

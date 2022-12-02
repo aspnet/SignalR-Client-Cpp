@@ -20,7 +20,7 @@ namespace signalr
     }
 
     // note: callback must not throw except for the `on_progress` callback which will never be invoked from the dtor
-    std::string callback_manager::register_callback(const std::function<void(const char*, const signalr::value&)>& callback)
+    std::string callback_manager::register_callback(std::function<void(const char*, const signalr::value&)> callback)
     {
         auto callback_id = get_callback_id();
 

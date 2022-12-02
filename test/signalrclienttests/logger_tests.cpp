@@ -10,24 +10,24 @@
 #include <regex>
 
 using namespace signalr;
-TEST(logger_write, entry_added_if_trace_level_set)
+TEST(logger_write, entry_added_if_log_level_set)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    logger l(writer, trace_level::info);
-    l.log(trace_level::info, "message");
+    logger l(writer, log_level::info);
+    l.log(log_level::info, "message");
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
 
     ASSERT_EQ(1U, log_entries.size());
 }
 
-TEST(logger_write, entry_not_added_if_trace_level_not_high_enough)
+TEST(logger_write, entry_not_added_if_log_level_not_high_enough)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    logger l(writer, trace_level::info);
-    l.log(trace_level::debug, "event");
+    logger l(writer, log_level::info);
+    l.log(log_level::debug, "event");
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
 
@@ -38,8 +38,8 @@ TEST(logger_write, entries_formatted_correctly)
 {
     std::shared_ptr<log_writer> writer(std::make_shared<memory_log_writer>());
 
-    logger l(writer, trace_level::verbose);
-    l.log(trace_level::info, "message");
+    logger l(writer, log_level::verbose);
+    l.log(log_level::info, "message");
 
     auto log_entries = std::dynamic_pointer_cast<memory_log_writer>(writer)->get_log_entries();
     ASSERT_FALSE(log_entries.empty());

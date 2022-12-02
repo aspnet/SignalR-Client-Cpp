@@ -27,7 +27,7 @@ TEST(negotiate, request_created_with_correct_url)
 
     auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<void>();
-    negotiate::negotiate(http_client, "http://fake/signalr", signalr_client_config(),
+    negotiate::send_negotiate(http_client.get(), "http://fake/signalr", signalr_client_config(),
         [&mre](signalr::negotiation_response&&, std::exception_ptr exception)
         {
             mre.set();
@@ -53,7 +53,7 @@ TEST(negotiate, negotiation_request_sent_and_response_serialized)
 
     auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::send_negotiate(request_factory.get(), "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
@@ -86,7 +86,7 @@ TEST(negotiate, negotiation_response_with_redirect)
 
     auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::send_negotiate(request_factory.get(), "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
@@ -116,7 +116,7 @@ TEST(negotiate, negotiation_response_with_negotiateVersion)
 
     auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::send_negotiate(request_factory.get(), "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);
@@ -146,7 +146,7 @@ TEST(negotiate, negotiation_response_with_future_negotiateVersion)
 
     auto cts = std::make_shared<cancellation_token_source>();
     auto mre = manual_reset_event<negotiation_response>();
-    negotiate::negotiate(request_factory, "http://fake/signalr", signalr_client_config(),
+    negotiate::send_negotiate(request_factory.get(), "http://fake/signalr", signalr_client_config(),
         [&mre](negotiation_response&& response, std::exception_ptr exception)
         {
             mre.set(response);

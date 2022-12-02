@@ -7,13 +7,13 @@
 #include "test_utils.h"
 #include "signalrclient/signalr_exception.h"
 
-std::shared_ptr<test_websocket_client> create_test_websocket_client(
+test_websocket_client* create_test_websocket_client(
     std::function<void(const std::string & msg, std::function<void(std::exception_ptr)>)> send_function,
     std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function,
     std::function<void(std::function<void(std::exception_ptr)>)> close_function,
     bool ignore_pings)
 {
-    auto websocket_client = std::make_shared<test_websocket_client>();
+    auto websocket_client = new test_websocket_client();
     websocket_client->set_send_function(send_function);
     websocket_client->set_connect_function(connect_function);
     websocket_client->set_close_function(close_function);

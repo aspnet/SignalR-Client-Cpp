@@ -19,45 +19,68 @@ namespace signalr
         POST
     };
 
-    class http_request
+    class http_request final
     {
     public:
+        http_method get_method() const;
+
+        const std::map<std::string, std::string>& get_headers() const;
+
+        const std::string& get_content() const;
+
+        std::chrono::seconds get_timeout() const;
+    private:
+        friend class negotiate;
+
+        http_method m_method;
+        std::map<std::string, std::string> m_headers;
+        std::string m_content;
+        std::chrono::seconds m_timeout;
+
         http_request()
-            : method(http_method::GET), timeout(std::chrono::seconds(120))
+            : m_method(http_method::GET), m_timeout(std::chrono::seconds(120))
         { }
 
-        http_method method;
-        std::map<std::string, std::string> headers;
-        std::string content;
-        std::chrono::seconds timeout;
+        void set_timeout(std::chrono::seconds timeout);
+        void set_content(const std::string& body);
+        void set_content(std::string&& body);
+        void set_headers(const std::map<std::string, std::string>& headers);
+        void set_method(http_method method);
     };
 
-    class http_response
+    class http_response final
     {
     public:
         http_response() {}
-        http_response(http_response&& rhs) noexcept : status_code(rhs.status_code), content(std::move(rhs.content)) {}
-        http_response(int code, const std::string& content) : status_code(code), content(content) {}
-        http_response(const http_response& rhs) : status_code(rhs.status_code), content(rhs.content) {}
+        http_response(http_response&& rhs) noexcept : m_status_code(rhs.m_status_code), m_content(std::move(rhs.m_content)) {}
+        http_response(int code, const std::string& content) : m_status_code(code), m_content(content) {}
+        http_response(int code, std::string&& content) : m_status_code(code), m_content(std::move(content)) {}
+        http_response(const http_response& rhs) : m_status_code(rhs.m_status_code), m_content(rhs.m_content) {}
 
         http_response& operator=(const http_response& rhs)
         {
-            status_code = rhs.status_code;
-            content = rhs.content;
+            m_status_code = rhs.m_status_code;
+            m_content = rhs.m_content;
 
             return *this;
         }
 
         http_response& operator=(http_response&& rhs) noexcept
         {
-            status_code = rhs.status_code;
-            content = std::move(rhs.content);
+            m_status_code = rhs.m_status_code;
+            m_content = std::move(rhs.m_content);
 
             return *this;
         }
 
-        int status_code = 0;
-        std::string content;
+    private:
+        friend class negotiate;
+
+        int get_status_code() const;
+        const std::string& get_content() const;
+
+        int m_status_code = 0;
+        std::string m_content;
     };
 
     class http_client

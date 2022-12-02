@@ -15,14 +15,14 @@
 
 namespace signalr
 {
-    std::shared_ptr<signalr::transport> websocket_transport::create(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+    std::shared_ptr<signalr::transport> websocket_transport::create(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_client_factory,
         const signalr_client_config& signalr_client_config, const logger& logger)
     {
         return std::shared_ptr<transport>(
             new websocket_transport(websocket_client_factory, signalr_client_config, logger));
     }
 
-    websocket_transport::websocket_transport(const std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)>& websocket_client_factory,
+    websocket_transport::websocket_transport(std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_client_factory,
         const signalr_client_config& signalr_client_config, const logger& logger)
         : transport(logger), m_websocket_client_factory(websocket_client_factory), m_process_response_callback([](std::string, std::exception_ptr) {}),
         m_close_callback([](std::exception_ptr) {}), m_signalr_client_config(signalr_client_config),
@@ -101,14 +101,14 @@ namespace signalr
                     catch (const std::exception & e)
                     {
                         logger.log(
-                            trace_level::error,
+                            log_level::error,
                             std::string("[websocket transport] error receiving response from websocket: ")
                             .append(e.what()));
                     }
                     catch (...)
                     {
                         logger.log(
-                            trace_level::error,
+                            log_level::error,
                             "[websocket transport] unknown error occurred when receiving response from websocket");
 
                         exception = std::make_exception_ptr(signalr_exception("unknown error"));
@@ -135,7 +135,7 @@ namespace signalr
                     {
                         // this should not be hit
                         // we wait for the receive loop to complete before completing stop (which will then destruct the transport and client)
-                        logger.log(trace_level::critical,
+                        logger.log(log_level::critical,
                             "[websocket transport] websocket client has been destructed before the receive loop completes, this is a bug");
                         assert(client != nullptr);
                     }
@@ -209,7 +209,7 @@ namespace signalr
                 return;
             }
 
-            m_logger.log(trace_level::info,
+            m_logger.log(log_level::info,
                 std::string("[websocket transport] connecting to: ")
                 .append(url));
 
@@ -252,7 +252,7 @@ namespace signalr
                     catch (const std::exception & e)
                     {
                         transport->m_logger.log(
-                            trace_level::error,
+                            log_level::error,
                             std::string("[websocket transport] exception when connecting to the server: ")
                             .append(e.what()));
 
@@ -285,7 +285,7 @@ namespace signalr
         auto close_callback = m_close_callback;
         auto receive_loop_task = m_receive_loop_task;
 
-        m_logger.log(trace_level::debug, "stopping websocket transport");
+        m_logger.log(log_level::debug, "stopping websocket transport");
 
         websocket_client->stop([logger, callback, close_callback, receive_loop_task](std::exception_ptr exception)
             {
@@ -297,14 +297,14 @@ namespace signalr
                             {
                                 std::rethrow_exception(exception);
                             }
-                            logger.log(trace_level::debug, "websocket transport stopped");
+                            logger.log(log_level::debug, "websocket transport stopped");
                         }
                         catch (const std::exception& e)
                         {
-                            if (logger.is_enabled(trace_level::error))
+                            if (logger.is_enabled(log_level::error))
                             {
                                 logger.log(
-                                    trace_level::error,
+                                    log_level::error,
                                     std::string("websocket transport stopped with error: ")
                                     .append(e.what()));
                             }

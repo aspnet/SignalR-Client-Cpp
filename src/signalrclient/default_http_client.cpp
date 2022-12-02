@@ -22,11 +22,11 @@ namespace signalr
         std::function<void(const http_response&, std::exception_ptr)> callback, cancellation_token token)
     {
         web::http::method method;
-        if (request.method == http_method::GET)
+        if (request.get_method() == http_method::GET)
         {
             method = U("GET");
         }
-        else if (request.method == http_method::POST)
+        else if (request.get_method() == http_method::POST)
         {
             method = U("POST");
         }
@@ -38,11 +38,11 @@ namespace signalr
 
         web::http::http_request http_request;
         http_request.set_method(method);
-        http_request.set_body(request.content);
-        if (request.headers.size() > 0)
+        http_request.set_body(request.get_content());
+        if (request.get_headers().size() > 0)
         {
             web::http::http_headers headers;
-            for (auto& header : request.headers)
+            for (auto& header : request.get_headers())
             {
                 headers.add(utility::conversions::to_string_t(header.first), utility::conversions::to_string_t(header.second));
             }
@@ -62,7 +62,7 @@ namespace signalr
         std::shared_ptr<cancel_wait_context> context;
         pplx::cancellation_token_source cts;
 
-        auto milliseconds = std::chrono::milliseconds(request.timeout);
+        auto milliseconds = std::chrono::milliseconds(request.get_timeout());
         if (milliseconds.count() != 0)
         {
             context = std::make_shared<cancel_wait_context>();
@@ -86,7 +86,7 @@ namespace signalr
                 cts.cancel();
             });
 
-        web::http::client::http_client client(utility::conversions::to_string_t(url), m_config.get_http_client_config());
+        web::http::client::http_client client(utility::conversions::to_string_t(url));
         client.request(http_request, cts.get_token())
             .then([context, callback](pplx::task<web::http::http_response> response_task)
         {
@@ -97,9 +97,7 @@ namespace signalr
                 http_response.extract_utf8string()
                     .then([callback, status_code](std::string response_body)
                 {
-                    signalr::http_response response;
-                    response.content = response_body;
-                    response.status_code = status_code;
+                    signalr::http_response response = signalr::http_response(status_code, std::move(response_body));
                     callback(std::move(response), nullptr);
                 });
             }

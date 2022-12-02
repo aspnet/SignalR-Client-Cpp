@@ -30,11 +30,11 @@ bool has_log_entry(const std::string& log_entry, const std::vector<std::string>&
     return false;
 }
 
-std::function<std::shared_ptr<signalr::http_client>(const signalr::signalr_client_config&)> create_test_http_client()
+std::function<std::unique_ptr<signalr::http_client>(const signalr::signalr_client_config&)> create_test_http_client()
 {
     return [](const signalr_client_config& config)
     {
-        auto client = std::shared_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request request, cancellation_token)
+        auto client = std::unique_ptr<test_http_client>(new test_http_client([](const std::string& url, http_request request, cancellation_token)
             {
                 auto response_body =
                     url.find_first_of("/negotiate") != 0
@@ -104,16 +104,16 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
     ASSERT_EQ(expected.type(), actual.type());
     switch (expected.type())
     {
-    case value_type::string:
+    case value::type::string:
         ASSERT_STREQ(expected.as_string().data(), actual.as_string().data());
         break;
-    case value_type::boolean:
+    case value::type::boolean:
         ASSERT_EQ(expected.as_bool(), actual.as_bool());
         break;
-    case value_type::float64:
+    case value::type::float64:
         ASSERT_DOUBLE_EQ(expected.as_double(), actual.as_double());
         break;
-    case value_type::map:
+    case value::type::map:
     {
         auto& expected_map = expected.as_map();
         auto& actual_map = actual.as_map();
@@ -126,7 +126,7 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
         }
         break;
     }
-    case value_type::array:
+    case value::type::array:
     {
         auto& expected_array = expected.as_array();
         auto& actual_array = actual.as_array();
@@ -137,7 +137,7 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
         }
         break;
     }
-    case value_type::binary:
+    case value::type::binary:
     {
         auto& expected_binary = expected.as_binary();
         auto& actual_binary = actual.as_binary();
@@ -148,7 +148,7 @@ void assert_signalr_value_equality(const signalr::value& expected, const signalr
         }
         break;
     }
-    case value_type::null:
+    case value::type::null:
         break;
     default:
         ASSERT_TRUE(false);

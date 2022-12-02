@@ -46,9 +46,9 @@ public:
 private:
     std::shared_ptr<std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_connect_function;
 
-    std::shared_ptr < std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_send_function;
+    std::shared_ptr<std::function<void(const std::string&, std::function<void(std::exception_ptr)>)>> m_send_function;
 
-    std::shared_ptr < std::function<void(std::function<void(std::exception_ptr)>)>> m_close_function;
+    std::shared_ptr<std::function<void(std::function<void(std::exception_ptr)>)>> m_close_function;
 
     std::exception_ptr m_receive_exception;
     std::string m_receive_message;
@@ -61,7 +61,7 @@ private:
     std::shared_ptr<scheduler> m_scheduler;
 };
 
-std::shared_ptr<test_websocket_client> create_test_websocket_client(
+test_websocket_client* create_test_websocket_client(
     std::function<void(const std::string & msg, std::function<void(std::exception_ptr)>)> send_function = [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
     std::function<void(const std::string&, std::function<void(std::exception_ptr)>)> connect_function = [](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
     std::function<void(std::function<void(std::exception_ptr)>)> close_function = [](std::function<void(std::exception_ptr)> callback) { callback(nullptr); }, bool ignore_pings = true);

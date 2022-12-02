@@ -19,29 +19,30 @@ namespace signalr
     namespace
     {
         static std::function<void(const char*, const signalr::value&)> create_hub_invocation_callback(const logger& logger,
-            const std::function<void(const signalr::value&)>& set_result,
-            const std::function<void(const std::exception_ptr e)>& set_exception);
+            std::function<void(const signalr::value&)> set_result,
+            std::function<void(const std::exception_ptr exception)> set_exception);
     }
 
-    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol,
-        trace_level trace_level, const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
-        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+    std::shared_ptr<hub_connection_impl> hub_connection_impl::create(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, signalr_client_config config,
+        log_level log_level, const std::shared_ptr<log_writer>& log_writer, std::function<std::unique_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::unique_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
     {
         auto connection = std::shared_ptr<hub_connection_impl>(new hub_connection_impl(url, std::move(hub_protocol),
-            trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation));
+            config, log_level, log_writer, http_client_factory, websocket_factory, skip_negotiation));
 
         connection->initialize();
 
         return connection;
     }
 
-    hub_connection_impl::hub_connection_impl(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, trace_level trace_level,
-        const std::shared_ptr<log_writer>& log_writer, std::function<std::shared_ptr<http_client>(const signalr_client_config&)> http_client_factory,
-        std::function<std::shared_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
-        : m_connection(connection_impl::create(url, trace_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
-            , m_logger(log_writer, trace_level),
+    hub_connection_impl::hub_connection_impl(const std::string& url, std::unique_ptr<hub_protocol>&& hub_protocol, signalr_client_config config, log_level log_level,
+        const std::shared_ptr<log_writer>& log_writer, std::function<std::unique_ptr<http_client>(const signalr_client_config&)> http_client_factory,
+        std::function<std::unique_ptr<websocket_client>(const signalr_client_config&)> websocket_factory, const bool skip_negotiation)
+        : m_connection(connection_impl::create(url, log_level, log_writer, http_client_factory, websocket_factory, skip_negotiation))
+            , m_logger(log_writer, log_level),
         m_callback_manager("connection went out of scope before invocation result was received"),
-        m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_protocol(std::move(hub_protocol))
+        m_handshakeReceived(false), m_disconnected([](std::exception_ptr) noexcept {}), m_signalr_client_config(config),
+        m_protocol(std::move(hub_protocol))
     {
         hub_message ping_msg(signalr::message_type::ping);
         m_cached_ping = m_protocol->write_message(&ping_msg);
@@ -49,6 +50,8 @@ namespace signalr
 
     void hub_connection_impl::initialize()
     {
+        m_connection->set_client_config(m_signalr_client_config);
+
         // weak_ptr prevents a circular dependency leading to memory leak and other problems
         std::weak_ptr<hub_connection_impl> weak_hub_connection = shared_from_this();
 
@@ -61,7 +64,7 @@ namespace signalr
             }
         });
 
-        m_connection->set_disconnected([weak_hub_connection](std::exception_ptr exception)
+        m_connection->on_disconnected([weak_hub_connection](std::exception_ptr exception)
         {
             auto connection = weak_hub_connection.lock();
             if (connection)
@@ -74,9 +77,9 @@ namespace signalr
                 }
                 catch (const std::exception& ex)
                 {
-                    if (connection->m_logger.is_enabled(trace_level::warning))
+                    if (connection->m_logger.is_enabled(log_level::warning))
                     {
-                        connection->m_logger.log(trace_level::warning, std::string("disconnect event threw an exception during connection closure: ")
+                        connection->m_logger.log(log_level::warning, std::string("disconnect event threw an exception during connection closure: ")
                             .append(ex.what()));
                     }
                 }
@@ -88,7 +91,7 @@ namespace signalr
         });
     }
 
-    void hub_connection_impl::on(const std::string& event_name, const std::function<void(const std::vector<signalr::value>&)>& handler)
+    void hub_connection_impl::on(const std::string& event_name, std::function<void(const std::vector<signalr::value>&)> handler)
     {
         if (event_name.length() == 0)
         {
@@ -270,7 +273,7 @@ namespace signalr
             // don't log if already disconnected and stop called from dtor, it's just noise
             if (!is_dtor)
             {
-                m_logger.log(trace_level::debug, "stop ignored because the connection is already disconnected.");
+                m_logger.log(log_level::debug, "stop ignored because the connection is already disconnected.");
             }
             callback(nullptr);
             return;
@@ -283,7 +286,7 @@ namespace signalr
 
                 if (m_stop_callbacks.size() > 1)
                 {
-                    m_logger.log(trace_level::info, "Stop is already in progress, waiting for it to finish.");
+                    m_logger.log(log_level::info, "Stop is already in progress, waiting for it to finish.");
                     // we already registered the callback
                     // so we can just return now as the in-progress stop will trigger the callback when it completes
                     return;
@@ -332,9 +335,9 @@ namespace signalr
                 if (found != obj.end())
                 {
                     auto& error = found->second.as_string();
-                    if (m_logger.is_enabled(trace_level::error))
+                    if (m_logger.is_enabled(log_level::error))
                     {
-                        m_logger.log(trace_level::error, std::string("handshake error: ")
+                        m_logger.log(log_level::error, std::string("handshake error: ")
                             .append(error));
                     }
                     m_handshakeTask->set(std::make_exception_ptr(signalr_exception(std::string("Received an error during handshake: ").append(error))));
@@ -383,7 +386,10 @@ namespace signalr
                     }
                     else
                     {
-                        m_logger.log(trace_level::info, "handler not found");
+                        if (m_logger.is_enabled(log_level::info))
+                        {
+                            m_logger.log(log_level::info, std::string("handler not found for '").append(invocation->target).append("'"));
+                        }
                     }
                     break;
                 }
@@ -403,9 +409,9 @@ namespace signalr
                     // Sent to server only, should not be received by client
                     throw std::runtime_error("Received unexpected message type 'CancelInvocation'.");
                 case message_type::ping:
-                    if (m_logger.is_enabled(trace_level::debug))
+                    if (m_logger.is_enabled(log_level::debug))
                     {
-                        m_logger.log(trace_level::debug, "ping message received.");
+                        m_logger.log(log_level::debug, "ping message received.");
                     }
                     break;
                 case message_type::close:
@@ -419,9 +425,9 @@ namespace signalr
         }
         catch (const std::exception &e)
         {
-            if (m_logger.is_enabled(trace_level::error))
+            if (m_logger.is_enabled(log_level::error))
             {
-                m_logger.log(trace_level::error, std::string("error occurred when parsing response: ")
+                m_logger.log(log_level::error, std::string("error occurred when parsing response: ")
                     .append(e.what())
                     .append(". response: ")
                     .append(response));
@@ -444,9 +450,9 @@ namespace signalr
         // worry about object lifetime
         if (!m_callback_manager.invoke_callback(completion->invocation_id, error, completion->result, true))
         {
-            if (m_logger.is_enabled(trace_level::info))
+            if (m_logger.is_enabled(log_level::info))
             {
-                m_logger.log(trace_level::info, std::string("no callback found for id: ").append(completion->invocation_id));
+                m_logger.log(log_level::info, std::string("no callback found for id: ").append(completion->invocation_id));
             }
         }
 
@@ -507,9 +513,9 @@ namespace signalr
         catch (const std::exception& e)
         {
             m_callback_manager.remove_callback(callback_id);
-            if (m_logger.is_enabled(trace_level::warning))
+            if (m_logger.is_enabled(log_level::warning))
             {
-                m_logger.log(trace_level::warning, std::string("failed to send invocation: ").append(e.what()));
+                m_logger.log(log_level::warning, std::string("failed to send invocation: ").append(e.what()));
             }
             set_exception(std::current_exception());
         }
@@ -520,18 +526,18 @@ namespace signalr
         return m_connection->get_connection_state();
     }
 
-    std::string hub_connection_impl::get_connection_id() const
+    const std::string& hub_connection_impl::get_connection_id() const
     {
         return m_connection->get_connection_id();
     }
 
-    void hub_connection_impl::set_client_config(const signalr_client_config& config)
+    /*void hub_connection_impl::set_client_config(const signalr_client_config& config)
     {
         m_signalr_client_config = config;
         m_connection->set_client_config(config);
-    }
+    }*/
 
-    void hub_connection_impl::set_disconnected(const std::function<void(std::exception_ptr)>& disconnected)
+    void hub_connection_impl::on_disconnected(std::function<void(std::exception_ptr)> disconnected)
     {
         m_disconnected = disconnected;
     }
@@ -550,9 +556,9 @@ namespace signalr
 
     void hub_connection_impl::start_keepalive()
     {
-        if (m_logger.is_enabled(trace_level::debug))
+        if (m_logger.is_enabled(log_level::debug))
         {
-            m_logger.log(trace_level::debug, "starting keep alive timer.");
+            m_logger.log(log_level::debug, "starting keep alive timer.");
         }
 
         auto send_ping = [](std::shared_ptr<hub_connection_impl> connection)
@@ -579,9 +585,9 @@ namespace signalr
                         {
                             if (exception)
                             {
-                                if (connection->m_logger.is_enabled(trace_level::warning))
+                                if (connection->m_logger.is_enabled(log_level::warning))
                                 {
-                                    connection->m_logger.log(trace_level::warning, "failed to send ping!");
+                                    connection->m_logger.log(log_level::warning, "failed to send ping!");
                                 }
                             }
                             else
@@ -593,9 +599,9 @@ namespace signalr
             }
             catch (const std::exception& e)
             {
-                if (connection->m_logger.is_enabled(trace_level::warning))
+                if (connection->m_logger.is_enabled(log_level::warning))
                 {
-                    connection->m_logger.log(trace_level::warning, std::string("failed to send ping: ").append(e.what()));
+                    connection->m_logger.log(log_level::warning, std::string("failed to send ping: ").append(e.what()));
                 }
             }
         };
@@ -629,9 +635,9 @@ namespace signalr
                         auto error_msg = std::string("server timeout (")
                             .append(std::to_string(connection->m_signalr_client_config.get_server_timeout().count()))
                             .append(" ms) elapsed without receiving a message from the server.");
-                        if (connection->m_logger.is_enabled(trace_level::warning))
+                        if (connection->m_logger.is_enabled(log_level::warning))
                         {
-                            connection->m_logger.log(trace_level::warning, error_msg);
+                            connection->m_logger.log(log_level::warning, error_msg);
                         }
 
                         connection->m_connection->stop([](std::exception_ptr)
@@ -642,9 +648,9 @@ namespace signalr
 
                 if (timeNowmSeconds > connection->m_nextActivationSendPing.load())
                 {
-                    if (connection->m_logger.is_enabled(trace_level::debug))
+                    if (connection->m_logger.is_enabled(log_level::debug))
                     {
-                        connection->m_logger.log(trace_level::debug, "sending ping to server.");
+                        connection->m_logger.log(log_level::debug, "sending ping to server.");
                     }
                     send_ping(connection);
                 }
@@ -657,8 +663,8 @@ namespace signalr
     namespace
     {
         static std::function<void(const char* error, const signalr::value&)> create_hub_invocation_callback(const logger& logger,
-            const std::function<void(const signalr::value&)>& set_result,
-            const std::function<void(const std::exception_ptr)>& set_exception)
+            std::function<void(const signalr::value&)> set_result,
+            std::function<void(const std::exception_ptr)> set_exception)
         {
             return [logger, set_result, set_exception](const char* error, const signalr::value& message)
             {
