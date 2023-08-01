@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <cstddef>
+#include <cstdint>
 
 namespace signalr
 {
