@@ -8,6 +8,8 @@
 #include <condition_variable>
 #include <mutex>
 #include <vector>
+#include <string>
+
 #include "signalrclient/cancellation_token.h"
 
 namespace signalr
