@@ -5,9 +5,11 @@
 #pragma once
 
 #include <atomic>
-#include <unordered_map>
 #include <functional>
 #include <mutex>
+#include <string>
+#include <unordered_map>
+
 #include "signalrclient/signalr_value.h"
 
 namespace signalr
