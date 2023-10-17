@@ -4,7 +4,6 @@
 
 #include "stdafx.h"
 #include "callback_manager.h"
-#include <sstream>
 
 namespace signalr
 {
