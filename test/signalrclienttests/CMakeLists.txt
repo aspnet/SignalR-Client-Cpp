@@ -29,6 +29,12 @@ if(USE_MSGPACK)
   )
 endif()
 
+if(USE_CPPRESTSDK)
+  list (APPEND SOURCES
+    cpprestsdk_tests.cpp
+    )
+endif()
+
 include_directories(
   ../../src/signalrclient
 )
@@ -84,6 +90,28 @@ endif() # USE_MSGPACK
 list (APPEND libraries ${JSONCPP_LIB})
 
 list (APPEND libraries gtest)
+
+if(NOT USE_CPPRESTSDK)
+  target_link_libraries(signalrclienttests)
+else()
+  set_target_properties(signalrclienttests PROPERTIES COMPILE_FLAGS "-DUSE_CPPRESTSDK" )
+
+  if(APPLE)
+    list (APPEND libraries
+      ${CPPREST_LIB}
+      OpenSSL::SSL Boost::boost Boost::system Boost::chrono Boost::thread
+    )
+  elseif(NOT WIN32)
+    list (APPEND libraries
+      ${CPPREST_LIB} Boost::system
+      OpenSSL::SSL
+    )
+  else()
+    list (APPEND libraries
+      ${CPPREST_LIB}
+    )
+  endif()
+endif()
 
 target_link_libraries(signalrclienttests ${libraries})
 
