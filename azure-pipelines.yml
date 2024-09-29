@@ -97,6 +97,17 @@ stages:
 
   - template: .azure/default-build.yml
     parameters:
+      agentOs: Linux
+      jobName: Linux_gcc10_Build_Test
+      useCppRestSDK: false
+      beforeBuild:
+      - bash: "sudo apt install valgrind"
+        displayName: install valgrind
+      variables:
+        CXX: g++-10
+
+  - template: .azure/default-build.yml
+    parameters:
       agentOs: Windows
       jobName: Windows_Build_Test
       useCppRestSDK: false
