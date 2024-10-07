@@ -20,6 +20,8 @@ variables:
 trigger:
 - main
 
+- template: /eng/common/templates-official/variables/pool-providers.yml@self
+
 resources:
   repositories:
   # Repo: 1ESPipelineTemplates/1ESPipelineTemplates
