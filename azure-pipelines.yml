@@ -16,19 +16,10 @@ variables:
     value: true
   - name: _BuildConfig
     value: 'Debug'
+  - name: Codeql.Enabled
+    value: true
+  # used for post-build phases, internal builds only
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - name: Codeql.Enabled
-      value: true
-    # Run once per week
-    - name: Codeql.Cadence
-      value: 168
-    - name: Codeql.SourceRoot
-      value: src
-    - name: Codeql.TSAEnabled
-      value: true
-    - name: Codeql.TSAOptionsPath
-      value: '$(Build.SourcesDirectory)/.config/tsaoptions.json'
-    # used for post-build phases, internal builds only
     - group: DotNet-AspNet-SDLValidation-Params
 
 trigger:
