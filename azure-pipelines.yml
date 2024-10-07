@@ -16,11 +16,11 @@ variables:
     value: true
   - name: _BuildConfig
     value: 'Debug'
+  - template: /eng/common/templates-official/variables/pool-providers.yml@self
 
 trigger:
 - main
 
-- template: /eng/common/templates-official/variables/pool-providers.yml@self
 
 resources:
   repositories:
