@@ -6,6 +6,7 @@
 #include "transport_factory.h"
 #include "websocket_transport.h"
 #include "signalrclient/websocket_client.h"
+#include <stdexcept>
 
 namespace signalr
 {
