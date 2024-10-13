@@ -61,6 +61,14 @@ namespace signalr
         bool has_result;
     };
 
+    struct close_message : hub_message
+    {
+        close_message(std::string&& error, bool allowReconnect) : hub_message(signalr::message_type::close), error(error), allowReconnect(allowReconnect) {}
+
+        std::string error;
+        bool allowReconnect;
+    };
+
     struct ping_message : hub_message
     {
         ping_message() : hub_message(signalr::message_type::ping) {}
