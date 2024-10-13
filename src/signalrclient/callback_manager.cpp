@@ -4,7 +4,6 @@
 
 #include "stdafx.h"
 #include "callback_manager.h"
-#include <sstream>
 
 namespace signalr
 {
@@ -26,8 +25,7 @@ namespace signalr
 
         {
             std::lock_guard<std::mutex> lock(m_map_lock);
-
-            m_callbacks.insert(std::make_pair(callback_id, callback));
+            m_callbacks.emplace(callback_id, callback);
         }
 
         return callback_id;
@@ -86,8 +84,6 @@ namespace signalr
     std::string callback_manager::get_callback_id()
     {
         const auto callback_id = m_id++;
-        std::stringstream ss;
-        ss << callback_id;
-        return ss.str();
+        return std::to_string(callback_id);
     }
 }
