@@ -8,8 +8,8 @@ Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
 
 > [!WARNING]
 > Websockets are currently disabled which means the client will fail to connect to a SignalR server.
-> Workarounds involve using a previous commit of this repository like: [7cce972d856e46f4ebb6d4951450cf7295d65147](https://github.com/aspnet/SignalR-Client-Cpp/commit/7cce972d856e46f4ebb6d4951450cf7295d65147).
-> Or providing a custom websocket client implementation and using it via `builder.with_websocket_factory(...)`
+> Workaround by providing a custom websocket client implementation and using it via `builder.with_websocket_factory(...)`.
+> A new websocket implementation will be provided in-box in a future commit.
 
 There are multiple ways to build this library
 
