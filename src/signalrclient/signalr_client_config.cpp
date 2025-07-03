@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "signalrclient/signalr_client_config.h"
 #include "signalr_default_scheduler.h"
+#include <stdexcept>
 
 namespace signalr
 {

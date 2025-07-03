@@ -5,6 +5,7 @@
 #pragma once
 
 #ifdef USE_MSGPACK
+#include <cstddef>
 
 namespace signalr
 {
