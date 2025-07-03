@@ -21,7 +21,7 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DBUILD_SAMPLES | Build the included sample project | false |
 | -DBUILD_TESTING | Builds the test project | true |
 | -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) (requires cpprestsdk to be installed) | false |
-| -DUSE_MSGPACK | Adds an option to use the MessagePack Hub Protocol (requires msgpack-c to be installed) | false |
+| -DUSE_MSGPACK | Adds an option to use the MessagePack Hub Protocol (requires msgpack to be installed, e.g. `vcpkg install msgpack:x64-windows`) | false |
 | -DWERROR | Enables warnings as errors | true |
 | -DWALL | Enables all warnings | true |
 | -DINJECT_HEADER_AFTER_STDAFX=`<header path>` | Adds the provided header to the library compilation in stdafx.cpp, intended to allow "new" and "delete" to be replaced. | `<none>` |

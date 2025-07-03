@@ -47,8 +47,8 @@ set(JSONCPP_LIB "jsoncpp_static" CACHE STRING "jsoncpp target name")
 endif()
 
 if(USE_MSGPACK)
-  find_package(msgpack CONFIG REQUIRED)
-  set(MSGPACK_LIB "msgpackc-cxx")
+  find_package(msgpack-cxx CONFIG REQUIRED)
+  set(MSGPACK_LIB "msgpack-cxx")
 endif()
 
 include_directories (include)
