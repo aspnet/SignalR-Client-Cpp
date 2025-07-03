@@ -16,6 +16,8 @@ if(NOT WIN32)
   set(EXTRA_FLAGS "-std=c++11 -fPIC -DNO_SIGNALRCLIENT_EXPORTS")
 else()
   set(EXTRA_FLAGS "-DSIGNALRCLIENT_EXPORTS")
+  # cpprestsdk hasn't updated to fix these warnings
+  string(APPEND EXTRA_FLAGS " -D_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING")
 endif()
 
 if(USE_MSGPACK)
