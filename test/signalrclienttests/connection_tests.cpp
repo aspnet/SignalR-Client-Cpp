@@ -1501,8 +1501,18 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
 {
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
 
+    cancellation_token_source close_event;
+
+    auto websocket_client = create_test_websocket_client(
+        /* send function */ [](const std::string, std::function<void(std::exception_ptr)> callback) { callback(std::make_exception_ptr(std::runtime_error("should not be invoked"))); },
+        /* connect function */ [&close_event](const std::string&, std::function<void(std::exception_ptr)> callback) { callback(nullptr); },
+        /* close function */ [&close_event](std::function<void(std::exception_ptr)> callback)
+        {
+            callback(nullptr);
+            close_event.cancel();
+        });
+
     {
-        auto websocket_client = create_test_websocket_client();
         auto connection = create_connection(websocket_client, writer, trace_level::verbose);
 
         auto mre = manual_reset_event<void>();
@@ -1519,10 +1529,12 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
     // The connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail
-    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 6; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 12; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }
+
+    close_event.wait();
 
     auto log_entries = memory_writer->get_log_entries();
 
