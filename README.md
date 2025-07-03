@@ -6,9 +6,14 @@ Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
 
 ## Install this library
 
+> [!WARNING]
+> Websockets are currently disabled which means the client will fail to connect to a SignalR server.
+> Workaround by providing a custom websocket client implementation and using it via `builder.with_websocket_factory(...)`.
+> A new websocket implementation will be provided in-box in a future commit.
+
 There are multiple ways to build this library
 
-* Use [vcpkg](https://github.com/microsoft/vcpkg) and install the library with `vcpkg install microsoft-signalr`
+* **Currently missing due to websocket issues.** ~~Use [vcpkg](https://github.com/microsoft/vcpkg) and install the library with `vcpkg install microsoft-signalr`~~
 * Build from [command line](#command-line-build)
 * Build in Visual Studio (must have the "Desktop Development with C++" workload) by selecting the "Open a local folder" option and selecting the repository root folder
 
@@ -21,7 +26,7 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DBUILD_SAMPLES | Build the included sample project | false |
 | -DBUILD_TESTING | Builds the test project | true |
 | -DUSE_CPPRESTSDK | Includes the CppRestSDK (default http stack) (requires cpprestsdk to be installed) | false |
-| -DUSE_MSGPACK | Adds an option to use the MessagePack Hub Protocol (requires msgpack-c to be installed) | false |
+| -DUSE_MSGPACK | Adds an option to use the MessagePack Hub Protocol (requires msgpack to be installed, e.g. `vcpkg install msgpack:x64-windows`) | false |
 | -DWERROR | Enables warnings as errors | true |
 | -DWALL | Enables all warnings | true |
 | -DINJECT_HEADER_AFTER_STDAFX=`<header path>` | Adds the provided header to the library compilation in stdafx.cpp, intended to allow "new" and "delete" to be replaced. | `<none>` |
@@ -30,7 +35,7 @@ Below are instructions to build on different OS's. You can also use the followin
 ```powershell
 PS> git submodule update --init
 PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
-PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk[websockets]:x64-windows jsoncpp:x64-windows
+PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk:x64-windows jsoncpp:x64-windows
 PS> mkdir build.release
 PS> cd build.release
 PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE="..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
@@ -43,7 +48,7 @@ Output will be in `build.release\bin\Release\`
 $ git submodule update --init
 $ brew install gcc6
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets] jsoncpp
+$ ./submodules/vcpkg/vcpkg install cpprestsdk jsoncpp
 $ mkdir build.release
 $ cd build.release
 $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
@@ -56,7 +61,7 @@ Output will be in `build.release/bin/`
 ```bash
 $ git submodule update --init
 $ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk[websockets] boost-system boost-chrono boost-thread jsoncpp
+$ ./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread jsoncpp
 $ mkdir build.release
 $ cd build.release
 $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
@@ -74,7 +79,11 @@ Output will be in `build.release/bin/`
 #include "signalrclient/signalr_value.h"
 
 std::promise<void> start_task;
-signalr::hub_connection connection = signalr::hub_connection_builder::create("http://localhost:5000/hub").build();
+signalr::hub_connection connection = signalr::hub_connection_builder::create("http://localhost:5000/hub")
+    //.with_messagepack_hub_protocol()
+    //.with_websocket_factory(...)
+    //.with_http_client_factory(...)
+    .build();
 
 connection.on("Echo", [](const std::vector<signalr::value>& m)
 {

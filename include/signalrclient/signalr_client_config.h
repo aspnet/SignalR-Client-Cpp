@@ -34,8 +34,10 @@ namespace signalr
         SIGNALRCLIENT_API web::http::client::http_client_config __cdecl get_http_client_config() const;
         SIGNALRCLIENT_API void __cdecl set_http_client_config(const web::http::client::http_client_config& http_client_config);
 
+#if false
         SIGNALRCLIENT_API web::websockets::client::websocket_client_config __cdecl get_websocket_client_config() const noexcept;
         SIGNALRCLIENT_API void __cdecl set_websocket_client_config(const web::websockets::client::websocket_client_config& websocket_client_config);
+#endif
 #endif
 
         SIGNALRCLIENT_API signalr_client_config();
@@ -55,7 +57,9 @@ namespace signalr
     private:
 #ifdef USE_CPPRESTSDK
         web::http::client::http_client_config m_http_client_config;
+#if false
         web::websockets::client::websocket_client_config m_websocket_client_config;
+#endif
 #endif
         std::map<std::string, std::string> m_http_headers;
         std::shared_ptr<scheduler> m_scheduler;

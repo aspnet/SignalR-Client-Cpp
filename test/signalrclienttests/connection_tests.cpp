@@ -1501,8 +1501,10 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
 {
     auto writer = std::shared_ptr<log_writer>{ std::make_shared<memory_log_writer>() };
 
+    // in the outer scope so we know the connection_impl dtor is what caused the connection to stop
+    auto websocket_client = create_test_websocket_client();
+
     {
-        auto websocket_client = create_test_websocket_client();
         auto connection = create_connection(websocket_client, writer, trace_level::verbose);
 
         auto mre = manual_reset_event<void>();
@@ -1519,7 +1521,7 @@ TEST(connection_impl_stop, dtor_stops_the_connection)
     // The connection_impl will be destroyed when the last reference to shared_ptr holding is released. This can happen
     // on a different thread in which case the dtor will be invoked on a different thread so we need to wait for this
     // to happen and if it does not the test will fail
-    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 6; wait_time_ms <<= 1)
+    for (int wait_time_ms = 5; wait_time_ms < 6000 && memory_writer->get_log_entries().size() < 13; wait_time_ms <<= 1)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_time_ms));
     }

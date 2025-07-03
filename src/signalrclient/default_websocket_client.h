@@ -4,6 +4,7 @@
 
 #pragma once
 
+#if false
 #ifdef USE_CPPRESTSDK
 
 #pragma warning (push)
@@ -29,4 +30,5 @@ namespace signalr
     };
 }
 
+#endif
 #endif

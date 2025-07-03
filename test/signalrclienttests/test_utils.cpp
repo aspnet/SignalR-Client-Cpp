@@ -6,6 +6,7 @@
 #include "test_utils.h"
 #include "test_http_client.h"
 #include "signalrclient/signalr_client_config.h"
+#include <algorithm>
 
 using namespace signalr;
 
