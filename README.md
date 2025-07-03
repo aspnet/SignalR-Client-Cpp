@@ -8,12 +8,12 @@ Use https://github.com/aspnet/AspNetCore/issues for issues with this project.
 
 > [!WARNING]
 > Websockets are currently disabled which means the client will fail to connect to a SignalR server.
-> Workarounds involve using a previous commit of this repository like: 7cce972d856e46f4ebb6d4951450cf7295d65147
-> Or provided a custom websocket client implementation and using it via `builder.with_websocket_factory(...)`
+> Workarounds involve using a previous commit of this repository like: [7cce972d856e46f4ebb6d4951450cf7295d65147](https://github.com/aspnet/SignalR-Client-Cpp/commit/7cce972d856e46f4ebb6d4951450cf7295d65147).
+> Or providing a custom websocket client implementation and using it via `builder.with_websocket_factory(...)`
 
 There are multiple ways to build this library
 
-* **Currently missing due to websocket issues.** Use [vcpkg](https://github.com/microsoft/vcpkg) and install the library with `vcpkg install microsoft-signalr`
+* **Currently missing due to websocket issues.** ~~Use [vcpkg](https://github.com/microsoft/vcpkg) and install the library with `vcpkg install microsoft-signalr`~~
 * Build from [command line](#command-line-build)
 * Build in Visual Studio (must have the "Desktop Development with C++" workload) by selecting the "Open a local folder" option and selecting the repository root folder
 
