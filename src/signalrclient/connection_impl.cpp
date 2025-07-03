@@ -46,7 +46,9 @@ namespace signalr
         if (websocket_factory == nullptr)
         {
 #ifdef USE_CPPRESTSDK
+#if false
             websocket_factory = [](const signalr_client_config& signalr_client_config) { return std::make_shared<default_websocket_client>(signalr_client_config); };
+#endif
 #endif
         }
 

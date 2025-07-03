@@ -4,6 +4,7 @@
 
 #include "stdafx.h"
 
+#if false
 #ifdef USE_CPPRESTSDK
 #include "default_websocket_client.h"
 #include <cpprest/producerconsumerstream.h>
@@ -122,4 +123,5 @@ namespace signalr
             });
     }
 }
+#endif
 #endif

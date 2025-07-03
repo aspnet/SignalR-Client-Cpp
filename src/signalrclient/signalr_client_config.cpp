@@ -12,13 +12,17 @@ namespace signalr
     void signalr_client_config::set_proxy(const web::web_proxy &proxy)
     {
         m_http_client_config.set_proxy(proxy);
+#if false
         m_websocket_client_config.set_proxy(proxy);
+#endif
     }
 
     void signalr_client_config::set_credentials(const web::credentials &credentials)
     {
         m_http_client_config.set_credentials(credentials);
+#if false
         m_websocket_client_config.set_credentials(credentials);
+#endif
     }
 
     web::http::client::http_client_config signalr_client_config::get_http_client_config() const
@@ -31,6 +35,7 @@ namespace signalr
         m_http_client_config = http_client_config;
     }
 
+#if false
     web::websockets::client::websocket_client_config signalr_client_config::get_websocket_client_config() const noexcept
     {
         return m_websocket_client_config;
@@ -40,6 +45,7 @@ namespace signalr
     {
         m_websocket_client_config = websocket_client_config;
     }
+#endif
 #endif
 
     signalr_client_config::signalr_client_config()
