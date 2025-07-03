@@ -11,6 +11,7 @@
 #include "memory_log_writer.h"
 #include <future>
 #include <atomic>
+#include <algorithm>
 
 using namespace signalr;
 
