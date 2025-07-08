@@ -21,6 +21,15 @@ variables:
 trigger:
 - main
 
+schedules:
+# Cron timezone is UTC.
+# Run once a month
+- cron: "0 0 1 * *"
+  branches:
+    include:
+    - main
+  always: true
+
 
 resources:
   repositories:
