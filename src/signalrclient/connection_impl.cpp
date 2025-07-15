@@ -132,7 +132,7 @@ namespace signalr
         std::function<void()> mFunc;
     };
 
-    void connection_impl::start(std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::start(transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
     {
         {
             std::lock_guard<std::mutex> lock(m_stop_lock);
@@ -148,6 +148,8 @@ namespace signalr
                 callback(std::make_exception_ptr(signalr_exception("cannot start a connection that is not in the disconnected state")));
                 return;
             }
+
+            m_transfer_format = transfer_format;
 
             // there should not be any active transport at this point
             assert(!m_transport);
@@ -308,6 +310,19 @@ namespace signalr
         start_negotiate_internal(url, 0, transport_started);
     }
 
+    const char* get_transfer_format(transfer_format transfer_format)
+    {
+        switch (transfer_format)
+        {
+        case transfer_format::text:
+            return "text";
+        case transfer_format::binary:
+            return "binary";
+        }
+        assert(false);
+        return "";
+    }
+
     void connection_impl::start_negotiate_internal(const std::string& url, int redirect_count, std::function<void(std::shared_ptr<transport> transport, std::exception_ptr)> transport_started)
     {
         if (m_disconnect_cts->is_canceled())
@@ -383,6 +398,15 @@ namespace signalr
                     if (comparer(availableTransport.transport, "WebSockets"))
                     {
                         foundWebsockets = true;
+
+                        auto transfer_format = get_transfer_format(connection->m_transfer_format);
+                        if (std::find_if(availableTransport.transfer_formats.begin(), availableTransport.transfer_formats.end(),
+                            [comparer, transfer_format](const std::string& s) { return comparer(s, transfer_format); }) == availableTransport.transfer_formats.end())
+                        {
+                            transport_started(nullptr, std::make_exception_ptr(signalr_exception(std::string("The server does not support WebSockets with the requested transfer format '").append(transfer_format).append("'."))));
+                            return;
+                        }
+
                         break;
                     }
                 }
@@ -392,8 +416,6 @@ namespace signalr
                     transport_started(nullptr, std::make_exception_ptr(signalr_exception("The server does not support WebSockets which is currently the only transport supported by this client.")));
                     return;
                 }
-
-                // TODO: use transfer format
 
                 if (token->is_canceled())
                 {
@@ -501,7 +523,7 @@ namespace signalr
         auto query_string = "id=" + m_connection_token;
         auto connect_url = url_builder::build_connect(url, transport->get_transport_type(), query_string);
 
-        transport->start(connect_url, [callback, logger](std::exception_ptr exception)
+        transport->start(connect_url, m_transfer_format, [callback, logger](std::exception_ptr exception)
             mutable {
                 try
                 {
@@ -560,7 +582,7 @@ namespace signalr
         }
     }
 
-    void connection_impl::send(const std::string& data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept
+    void connection_impl::send(const std::string& data, std::function<void(std::exception_ptr)> callback) noexcept
     {
         // To prevent an (unlikely) condition where the transport is nulled out after we checked the connection_state
         // and before sending data we store the pointer in the local variable. In this case `send()` will throw but
@@ -583,7 +605,7 @@ namespace signalr
             logger.log(trace_level::info, std::string("sending data: ").append(data));
         }
 
-        transport->send(data, transfer_format, [logger, callback](std::exception_ptr exception)
+        transport->send(data, [logger, callback](std::exception_ptr exception)
             mutable {
                 try
                 {
