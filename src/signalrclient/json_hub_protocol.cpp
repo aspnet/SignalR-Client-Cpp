@@ -219,7 +219,6 @@ namespace signalr
         // TODO: other message types
         default:
             // Future protocol changes can add message types, old clients can ignore them
-            // TODO: null
             break;
         }
 #pragma warning (pop)
