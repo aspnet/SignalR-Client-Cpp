@@ -35,13 +35,17 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DINJECT_HEADER_AFTER_STDAFX=`<header path>` | Adds the provided header to the library compilation in stdafx.cpp, intended to allow "new" and "delete" to be replaced. | `<none>` |
 
 ### Build on Windows ###
+
+This repo assumes [vcpkg](https://github.com/microsoft/vcpkg) is already installed on the
+machine (for example, via the Visual Studio installer) and that the `VCPKG_ROOT` environment
+variable points at it. CMake automatically picks up the vcpkg toolchain from `VCPKG_ROOT`.
+
 ```powershell
 PS> git submodule update --init
-PS> .\submodules\vcpkg\bootstrap-vcpkg.bat
-PS> .\submodules\vcpkg\vcpkg.exe install cpprestsdk:x64-windows jsoncpp:x64-windows
+PS> & "$env:VCPKG_ROOT\vcpkg.exe" install cpprestsdk:x64-windows jsoncpp:x64-windows
 PS> mkdir build.release
 PS> cd build.release
-PS> cmake .. -A x64 -DCMAKE_TOOLCHAIN_FILE="..\submodules\vcpkg\scripts\buildsystems\vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
+PS> cmake .. -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
 PS> cmake --build . --config Release
 ```
 Output will be in `build.release\bin\Release\`
@@ -50,11 +54,10 @@ Output will be in `build.release\bin\Release\`
 ```bash
 $ git submodule update --init
 $ brew install gcc6
-$ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk jsoncpp
+$ "$VCPKG_ROOT/vcpkg" install cpprestsdk jsoncpp
 $ mkdir build.release
 $ cd build.release
-$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
+$ cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
 $ cmake --build . --config Release
 ```
 Output will be in `build.release/bin/`
@@ -63,11 +66,10 @@ Output will be in `build.release/bin/`
 
 ```bash
 $ git submodule update --init
-$ ./submodules/vcpkg/bootstrap-vcpkg.sh
-$ ./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread jsoncpp
+$ "$VCPKG_ROOT/vcpkg" install cpprestsdk boost-system boost-chrono boost-thread jsoncpp
 $ mkdir build.release
 $ cd build.release
-$ cmake .. -DCMAKE_TOOLCHAIN_FILE=../submodules/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
+$ cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_CPPRESTSDK=true
 $ cmake --build . --config Release
 ```
 Output will be in `build.release/bin/`
