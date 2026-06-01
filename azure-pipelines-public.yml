@@ -41,6 +41,8 @@ stages:
       jobName: Mac_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
       - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk msgpack jsoncpp'
         displayName: vcpkg install dependencies
 
@@ -50,6 +52,8 @@ stages:
       jobName: Linux_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
       - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk boost-system boost-chrono boost-thread msgpack jsoncpp'
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
@@ -61,6 +65,8 @@ stages:
       jobName: Linux_Build_Test
       useCppRestSDK: false
       beforeBuild:
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
       - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
@@ -82,6 +88,8 @@ stages:
       jobName: Mac_Build_Test
       useCppRestSDK: false
       beforeBuild:
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
       - script: brew install gcc
         displayName: Install gcc
       - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'

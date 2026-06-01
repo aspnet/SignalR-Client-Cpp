@@ -71,6 +71,8 @@ extends:
           jobName: Mac_Build_Test_With_CppRestSDK
           useCppRestSDK: true
           beforeBuild:
+          - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+            displayName: Set VCPKG_ROOT
           - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk msgpack jsoncpp'
             displayName: vcpkg install dependencies
 
@@ -112,6 +114,8 @@ extends:
           jobName: Mac_Build_Test
           useCppRestSDK: false
           beforeBuild:
+          - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+            displayName: Set VCPKG_ROOT
           - script: brew install gcc
             displayName: Install gcc
           - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'
