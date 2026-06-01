@@ -8,16 +8,6 @@ ci=${ci:-false}
 # Build mode
 source_build=${source_build:-false}
 
-# Set to true to use the pipelines logger which will enable Azure logging output.
-# https://github.com/Microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
-# This flag is meant as a temporary opt-opt for the feature while validate it across
-# our consumers. It will be deleted in the future.
-if [[ "$ci" == true ]]; then
-  pipelines_log=${pipelines_log:-true}
-else
-  pipelines_log=${pipelines_log:-false}
-fi
-
 # Build configuration. Common values include 'Debug' and 'Release', but the repository may use other names.
 configuration=${configuration:-'Debug'}
 
@@ -458,21 +448,13 @@ function InitializeToolset {
 
   local package_dir="$_GetNuGetPackageCachePath/microsoft.dotnet.arcade.sdk/$toolset_version"
 
-  # TODO: Remove the tools/ check once all supported versions have the toolset folder.
-  if [[ ! -d "$package_dir/toolset" && ! -d "$package_dir/tools" ]]; then
-    Write-PipelineTelemetryError -category 'InitializeToolset' "Arcade SDK package does not contain a toolset or tools folder: $package_dir"
+  if [[ ! -d "$package_dir/toolset" ]]; then
+    Write-PipelineTelemetryError -category 'InitializeToolset' "Arcade SDK package does not contain a toolset folder: $package_dir"
     ExitWithExitCode 3
   fi
 
   mkdir -p "$toolset_tools_dir"
-
-  # Copy toolset if present at the package root (new layout), otherwise fall back to tools
-  if [[ -d "$package_dir/toolset" ]]; then
-    cp -r "$package_dir/toolset/." "$toolset_tools_dir"
-  else
-    # TODO: Remove this fallback once all supported versions have the toolset folder.
-    cp -r "$package_dir/tools/." "$toolset_tools_dir"
-  fi
+  cp -r "$package_dir/toolset/." "$toolset_tools_dir"
 
   if [[ -a "$toolset_tools_dir/Build.proj" ]]; then
     toolset_build_proj="$toolset_tools_dir/Build.proj"
@@ -521,26 +503,14 @@ function DotNet {
 
 function MSBuild {
   local args=( "$@" )
-  if [[ "$pipelines_log" == true ]]; then
-    InitializeBuildTool
+
+  if [[ "$ci" == true ]]; then
     InitializeToolset
 
-    if [[ "$ci" == true ]]; then
-      export NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS=20
-      export NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS=20
-      Write-PipelineSetVariable -name "NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS" -value "20"
-      Write-PipelineSetVariable -name "NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS" -value "20"
-    fi
-
-    local toolset_dir="${_InitializeToolset%/*}"
-    local selectedPath="$toolset_dir/net/Microsoft.DotNet.ArcadeLogging.dll"
-
-    if [[ -z "$selectedPath" ]]; then
-      Write-PipelineTelemetryError -category 'Build'  "Unable to find arcade sdk logger assembly: $selectedPath"
-      ExitWithExitCode 1
-    fi
-
-    args+=( "-logger:$selectedPath" )
+    export NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS=20
+    export NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS=20
+    Write-PipelineSetVariable -name "NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS" -value "20"
+    Write-PipelineSetVariable -name "NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS" -value "20"
   fi
 
   MSBuild-Core "${args[@]}"
@@ -629,12 +599,7 @@ function GetSdkTaskProject {
     echo "$proj"
     return
   fi
-  # TODO: Remove this fallback once all supported versions use the new layout.
-  local legacyProj="$toolsetDir/SdkTasks/$taskName.proj"
-  if [[ -a "$legacyProj" ]]; then
-    echo "$legacyProj"
-    return
-  fi
+
   Write-PipelineTelemetryError -category 'Build' "Unable to find $taskName.proj in toolset at: $toolsetDir"
   ExitWithExitCode 3
 }

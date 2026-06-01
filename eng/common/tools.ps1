@@ -13,12 +13,6 @@
 # Set to true to output binary log from msbuild. Note that emitting binary log slows down the build.
 [bool]$binaryLog = if (Test-Path variable:binaryLog) { $binaryLog } else { $ci -and !$excludeCIBinarylog }
 
-# Set to true to use the pipelines logger which will enable Azure logging output.
-# https://github.com/Microsoft/azure-pipelines-tasks/blob/master/docs/authoring/commands.md
-# This flag is meant as a temporary opt-opt for the feature while validate it across
-# our consumers. It will be deleted in the future.
-[bool]$pipelinesLog = if (Test-Path variable:pipelinesLog) { $pipelinesLog } else { $ci }
-
 # Turns on machine preparation/clean up code that changes the machine state (e.g. kills build processes).
 [bool]$prepareMachine = if (Test-Path variable:prepareMachine) { $prepareMachine } else { $false }
 
@@ -628,11 +622,7 @@ function GetSdkTaskProject([string]$taskName) {
   if (Test-Path $proj) {
     return $proj
   }
-  # TODO: Remove this fallback once all supported versions use the new layout.
-  $legacyProj = Join-Path $toolsetDir "SdkTasks\$taskName.proj"
-  if (Test-Path $legacyProj) {
-    return $legacyProj
-  }
+
   throw "Unable to find $taskName.proj in toolset at: $toolsetDir"
 }
 
@@ -708,23 +698,14 @@ function InitializeToolset() {
 
   $packageDir = Join-Path $nugetCache (Join-Path 'microsoft.dotnet.arcade.sdk' $toolsetVersion)
   $packageToolsetDir = Join-Path $packageDir 'toolset'
-  $packageToolsDir = Join-Path $packageDir 'tools'
 
-  # TODO: Remove the tools/ check once all supported versions have the toolset folder.
-  if (!(Test-Path $packageToolsetDir) -and !(Test-Path $packageToolsDir)) {
+  if (!(Test-Path $packageToolsetDir)) {
     Write-PipelineTelemetryError -Category 'InitializeToolset' -Message "Arcade SDK package does not contain a toolset or tools folder: $packageDir"
     ExitWithExitCode 3
   }
 
   New-Item -ItemType Directory -Path $toolsetToolsDir -Force | Out-Null
-
-  # Copy toolset if present at the package root (new layout), otherwise fall back to tools
-  if (Test-Path $packageToolsetDir) {
-    Copy-Item -Path "$packageToolsetDir\*" -Destination $toolsetToolsDir -Recurse -Force
-  } else {
-    # TODO: Remove this fallback once all supported versions have the toolset folder.
-    Copy-Item -Path "$packageToolsDir\*" -Destination $toolsetToolsDir -Recurse -Force
-  }
+  Copy-Item -Path "$packageToolsetDir\*" -Destination $toolsetToolsDir -Recurse -Force
 
   if (Test-Path $buildProjPath) {
     $toolsetBuildProj = $buildProjPath
@@ -766,28 +747,15 @@ function Stop-Processes() {
 # Terminates the script if the build fails.
 #
 function MSBuild() {
-  if ($pipelinesLog) {
-    $buildTool = InitializeBuildTool
+  if ($ci) {
+    InitializeToolset | Out-Null
 
-    if ($ci -and $buildTool.Tool -eq 'dotnet') {
-      $env:NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS = 20
-      $env:NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS = 20
-      Write-PipelineSetVariable -Name 'NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS' -Value '20'
-      Write-PipelineSetVariable -Name 'NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS' -Value '20'
-    }
+    $env:NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS = 20
+    $env:NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS = 20
+    Write-PipelineSetVariable -Name 'NUGET_PLUGIN_HANDSHAKE_TIMEOUT_IN_SECONDS' -Value '20'
+    Write-PipelineSetVariable -Name 'NUGET_PLUGIN_REQUEST_TIMEOUT_IN_SECONDS' -Value '20'
 
     Enable-Nuget-EnhancedRetry
-
-    $toolsetBuildProject = InitializeToolset
-    $basePath = Split-Path -parent $toolsetBuildProject
-    $selectedPath = Join-Path $basePath (Join-Path $buildTool.Framework 'Microsoft.DotNet.ArcadeLogging.dll')
-
-    if (-not $selectedPath) {
-      Write-PipelineTelemetryError -Category 'Build' -Message "Unable to find arcade sdk logger assembly: $selectedPath"
-      ExitWithExitCode 1
-    }
-
-    $args += "/logger:$selectedPath"
   }
 
   MSBuild-Core @args
