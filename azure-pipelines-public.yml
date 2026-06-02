@@ -16,6 +16,7 @@ variables:
     value: true
   - name: _BuildConfig
     value: 'Debug'
+  - template: /eng/common/templates/variables/pool-providers.yml@self
     
 trigger:
 - main
@@ -31,11 +32,19 @@ stages:
       useCppRestSDK: true
       cMakeRunArgs: '-A x64'
       beforeBuild:
-      - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
-        condition: ne(variables.CACHE_RESTORED, 'true')
-        displayName: Bootstrap vcpkg
-      - powershell: "& ./submodules/vcpkg/vcpkg.exe install cpprestsdk:x64-windows msgpack:x64-windows jsoncpp:x64-windows --vcpkg-root ./submodules/vcpkg"
-        condition: ne(variables.CACHE_RESTORED, 'true')
+      - powershell: |
+          $vcpkgRoot = $env:VCPKG_ROOT
+          if (-not $vcpkgRoot -and $env:VCPKG_INSTALLATION_ROOT) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $vcpkgRoot) {
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            $vsPath = & $vswhere -latest -prerelease -property installationPath
+            if ($vsPath) { $vcpkgRoot = Join-Path $vsPath 'VC\vcpkg' }
+          }
+          if (-not $vcpkgRoot -or -not (Test-Path $vcpkgRoot)) { Write-Error "Could not locate vcpkg"; exit 1 }
+          if (-not (Test-Path (Join-Path $vcpkgRoot 'vcpkg.exe'))) { & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') }
+          Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$vcpkgRoot"
+        displayName: Set VCPKG_ROOT
+      - powershell: '& "$env:VCPKG_ROOT\vcpkg.exe" install cpprestsdk:x64-windows msgpack:x64-windows jsoncpp:x64-windows'
         displayName: vcpkg install dependencies
 
   - template: .azure/default-build.yml
@@ -44,11 +53,9 @@ stages:
       jobName: Mac_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh --allowAppleClang"
-        condition: ne(variables.CACHE_RESTORED, 'true')
-        displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
-        condition: ne(variables.CACHE_RESTORED, 'true')
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
+      - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk msgpack jsoncpp'
         displayName: vcpkg install dependencies
 
   - template: .azure/default-build.yml
@@ -57,11 +64,9 @@ stages:
       jobName: Linux_Build_Test_With_CppRestSDK
       useCppRestSDK: true
       beforeBuild:
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
-        condition: ne(variables.CACHE_RESTORED, 'true')
-        displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install cpprestsdk boost-system boost-chrono boost-thread msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
-        condition: ne(variables.CACHE_RESTORED, 'true')
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
+      - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk boost-system boost-chrono boost-thread msgpack jsoncpp'
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
         displayName: install valgrind
@@ -72,11 +77,9 @@ stages:
       jobName: Linux_Build_Test
       useCppRestSDK: false
       beforeBuild:
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
-        condition: ne(variables.CACHE_RESTORED, 'true')
-        displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
-        condition: ne(variables.CACHE_RESTORED, 'true')
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
+      - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'
         displayName: vcpkg install dependencies
       - bash: "sudo apt-get update && sudo apt install valgrind"
         displayName: install valgrind
@@ -88,11 +91,19 @@ stages:
       useCppRestSDK: false
       cMakeRunArgs: '-A x64'
       beforeBuild:
-      - powershell: "& ./submodules/vcpkg/bootstrap-vcpkg.bat"
-        condition: ne(variables.CACHE_RESTORED, 'true')
-        displayName: Bootstrap vcpkg
-      - powershell: "& ./submodules/vcpkg/vcpkg.exe install msgpack:x64-windows jsoncpp:x64-windows --vcpkg-root ./submodules/vcpkg"
-        condition: ne(variables.CACHE_RESTORED, 'true')
+      - powershell: |
+          $vcpkgRoot = $env:VCPKG_ROOT
+          if (-not $vcpkgRoot -and $env:VCPKG_INSTALLATION_ROOT) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $vcpkgRoot) {
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            $vsPath = & $vswhere -latest -prerelease -property installationPath
+            if ($vsPath) { $vcpkgRoot = Join-Path $vsPath 'VC\vcpkg' }
+          }
+          if (-not $vcpkgRoot -or -not (Test-Path $vcpkgRoot)) { Write-Error "Could not locate vcpkg"; exit 1 }
+          if (-not (Test-Path (Join-Path $vcpkgRoot 'vcpkg.exe'))) { & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') }
+          Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$vcpkgRoot"
+        displayName: Set VCPKG_ROOT
+      - powershell: '& "$env:VCPKG_ROOT\vcpkg.exe" install msgpack:x64-windows jsoncpp:x64-windows'
         displayName: vcpkg install dependencies
 
   - template: .azure/default-build.yml
@@ -101,11 +112,9 @@ stages:
       jobName: Mac_Build_Test
       useCppRestSDK: false
       beforeBuild:
+      - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
+        displayName: Set VCPKG_ROOT
       - script: brew install gcc
         displayName: Install gcc
-      - bash: "./submodules/vcpkg/bootstrap-vcpkg.sh"
-        condition: ne(variables.CACHE_RESTORED, 'true')
-        displayName: Bootstrap vcpkg
-      - bash: "./submodules/vcpkg/vcpkg install msgpack jsoncpp --vcpkg-root ./submodules/vcpkg"
-        condition: ne(variables.CACHE_RESTORED, 'true')
+      - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'
         displayName: vcpkg install dependencies
