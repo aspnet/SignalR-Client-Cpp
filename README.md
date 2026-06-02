@@ -34,11 +34,12 @@ Below are instructions to build on different OS's. You can also use the followin
 | -DWALL | Enables all warnings | true |
 | -DINJECT_HEADER_AFTER_STDAFX=`<header path>` | Adds the provided header to the library compilation in stdafx.cpp, intended to allow "new" and "delete" to be replaced. | `<none>` |
 
-### Build on Windows ###
-
 This repo assumes [vcpkg](https://github.com/microsoft/vcpkg) is already installed on the
-machine (for example, via the Visual Studio installer) and that the `VCPKG_ROOT` environment
-variable points at it. CMake automatically picks up the vcpkg toolchain from `VCPKG_ROOT`.
+machine (for example, via the Visual Studio installer on Windows, or the agent image on
+macOS/Linux) and that the `VCPKG_ROOT` environment variable points at it. CMake
+automatically picks up the vcpkg toolchain from `VCPKG_ROOT`.
+
+### Build on Windows ###
 
 ```powershell
 PS> git submodule update --init
