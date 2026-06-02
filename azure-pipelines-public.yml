@@ -33,16 +33,8 @@ stages:
       cMakeRunArgs: '-A x64'
       beforeBuild:
       - powershell: |
-          $vcpkgRoot = $env:VCPKG_ROOT
-          if (-not $vcpkgRoot -and $env:VCPKG_INSTALLATION_ROOT) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
-          if (-not $vcpkgRoot) {
-            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-            $vsPath = & $vswhere -latest -prerelease -property installationPath
-            if ($vsPath) { $vcpkgRoot = Join-Path $vsPath 'VC\vcpkg' }
-          }
-          if (-not $vcpkgRoot -or -not (Test-Path $vcpkgRoot)) { Write-Error "Could not locate vcpkg"; exit 1 }
-          if (-not (Test-Path (Join-Path $vcpkgRoot 'vcpkg.exe'))) { & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') }
-          Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$vcpkgRoot"
+          $root = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { $env:VCPKG_INSTALLATION_ROOT }
+          Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$root"
         displayName: Set VCPKG_ROOT
       - powershell: '& "$env:VCPKG_ROOT\vcpkg.exe" install cpprestsdk:x64-windows msgpack:x64-windows jsoncpp:x64-windows'
         displayName: vcpkg install dependencies
@@ -92,16 +84,8 @@ stages:
       cMakeRunArgs: '-A x64'
       beforeBuild:
       - powershell: |
-          $vcpkgRoot = $env:VCPKG_ROOT
-          if (-not $vcpkgRoot -and $env:VCPKG_INSTALLATION_ROOT) { $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT }
-          if (-not $vcpkgRoot) {
-            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-            $vsPath = & $vswhere -latest -prerelease -property installationPath
-            if ($vsPath) { $vcpkgRoot = Join-Path $vsPath 'VC\vcpkg' }
-          }
-          if (-not $vcpkgRoot -or -not (Test-Path $vcpkgRoot)) { Write-Error "Could not locate vcpkg"; exit 1 }
-          if (-not (Test-Path (Join-Path $vcpkgRoot 'vcpkg.exe'))) { & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') }
-          Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$vcpkgRoot"
+          $root = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { $env:VCPKG_INSTALLATION_ROOT }
+          Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$root"
         displayName: Set VCPKG_ROOT
       - powershell: '& "$env:VCPKG_ROOT\vcpkg.exe" install msgpack:x64-windows jsoncpp:x64-windows'
         displayName: vcpkg install dependencies
