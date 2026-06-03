@@ -98,6 +98,35 @@ TEST(json_hub_protocol, parsing_field_order_does_not_matter)
     assert_hub_message_equality(&message, output[0].get());
 }
 
+std::vector<std::pair<std::string, std::shared_ptr<hub_message>>> close_messages
+{
+    // close message with error
+    { "{\"error\":\"error\",\"type\":7}\x1e",
+    std::shared_ptr<hub_message>(new close_message("error", false)) },
+
+    // close message without error
+    { "{\"type\":7}\x1e",
+    std::shared_ptr<hub_message>(new close_message("", false)) },
+
+    // close message with error and reconnect
+    { "{\"error\":\"error\",\"allowReconnect\":true,\"type\":7}\x1e",
+    std::shared_ptr<hub_message>(new close_message("error", true)) },
+
+    // close message with extra property
+    { "{\"error\":\"error\",\"extra\":true,\"type\":7}\x1e",
+    std::shared_ptr<hub_message>(new close_message("error", false)) },
+};
+
+TEST(json_hub_protocol, can_parse_close_message)
+{
+    for (auto& data : close_messages)
+    {
+        auto output = json_hub_protocol().parse_messages(data.first);
+        ASSERT_EQ(1, output.size());
+        assert_hub_message_equality(data.second.get(), output[0].get());
+    }
+}
+
 TEST(json_hub_protocol, can_serialize_binary)
 {
     auto output = json_hub_protocol().write_message(
@@ -146,16 +175,22 @@ std::vector<std::pair<std::string, std::string>> invalid_messages
 
     { "{\"arguments\":[],\"target\":\"send\",\"invocationId\":42}\x1e", "Field 'type' not found" },
 
+    // invocation message
     { "{\"type\":1}\x1e", "Field 'target' not found for 'invocation' message" },
     { "{\"type\":1,\"target\":\"send\",\"invocationId\":42}\x1e", "Field 'arguments' not found for 'invocation' message" },
     { "{\"type\":1,\"target\":\"send\",\"arguments\":[],\"invocationId\":42}\x1e", "Expected 'invocationId' to be of type 'string'" },
     { "{\"type\":1,\"target\":\"send\",\"arguments\":42,\"invocationId\":\"42\"}\x1e", "Expected 'arguments' to be of type 'array'" },
     { "{\"type\":1,\"target\":true,\"arguments\":[],\"invocationId\":\"42\"}\x1e", "Expected 'target' to be of type 'string'" },
 
+    // completion message
     { "{\"type\":3}\x1e", "Field 'invocationId' not found for 'completion' message" },
     { "{\"type\":3,\"invocationId\":42}\x1e", "Expected 'invocationId' to be of type 'string'" },
     { "{\"type\":3,\"invocationId\":\"42\",\"error\":[]}\x1e", "Expected 'error' to be of type 'string'" },
     { "{\"type\":3,\"invocationId\":\"42\",\"error\":\"foo\",\"result\":true}\x1e", "The 'error' and 'result' properties are mutually exclusive." },
+
+    // close message
+    { "{\"type\":7,\"error\":32}\x1e", "Expected 'error' to be of type 'string'"},
+    { "{\"type\":7,\"allowReconnect\":\"q\"}\x1e", "Expected 'allowReconnect' to be of type 'bool'"},
 };
 
 TEST(json_hub_protocol, invalid_messages_throw)

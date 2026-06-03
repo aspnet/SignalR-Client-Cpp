@@ -2183,3 +2183,39 @@ TEST(receive, unknown_message_type_closes_connection)
         ASSERT_STREQ("unknown message type '100' received", ex.what());
     }
 }
+
+TEST(receive, close_message_closes_connection)
+{
+    auto websocket_client = create_test_websocket_client();
+    auto hub_connection = create_hub_connection(websocket_client);
+
+    auto disconnect_mre = manual_reset_event<void>();
+    hub_connection.set_disconnected([&disconnect_mre](std::exception_ptr ex)
+        {
+            disconnect_mre.set(ex);
+        });
+
+    auto mre = manual_reset_event<void>();
+    hub_connection.start([&mre](std::exception_ptr exception)
+        {
+            mre.set(exception);
+        });
+
+    ASSERT_FALSE(websocket_client->receive_loop_started.wait(5000));
+    ASSERT_FALSE(websocket_client->handshake_sent.wait(5000));
+    websocket_client->receive_message("{ }\x1e");
+
+    mre.get();
+
+    websocket_client->receive_message("{ \"type\": 7, \"error\":\"custom error from server\" }\x1e");
+
+    try
+    {
+        disconnect_mre.get();
+        ASSERT_TRUE(false);
+    }
+    catch (const std::exception& ex)
+    {
+        ASSERT_STREQ("the server closed the connection with the following error: custom error from server", ex.what());
+    }
+}
