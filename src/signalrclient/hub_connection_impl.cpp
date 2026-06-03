@@ -125,7 +125,8 @@ namespace signalr
         m_disconnect_cts = std::make_shared<cancellation_token_source>();
         m_handshakeReceived = false;
         std::weak_ptr<hub_connection_impl> weak_connection = shared_from_this();
-        m_connection->start([weak_connection, callback](std::exception_ptr start_exception)
+        auto transfer_format = m_protocol->transfer_format();
+        m_connection->start(transfer_format, [weak_connection, callback](std::exception_ptr start_exception)
             {
                 auto connection = weak_connection.lock();
                 if (!connection)
@@ -242,7 +243,7 @@ namespace signalr
                         return true;
                     });
 
-                connection->m_connection->send(handshake_request, connection->m_protocol->transfer_format(),
+                connection->m_connection->send(handshake_request,
                     [handle_handshake, handshake_request_done, handshake_request_lock](std::exception_ptr exception)
                 {
                     {
@@ -481,7 +482,7 @@ namespace signalr
             // weak_ptr prevents a circular dependency leading to memory leak and other problems
             auto weak_hub_connection = std::weak_ptr<hub_connection_impl>(shared_from_this());
 
-            m_connection->send(message, m_protocol->transfer_format(), [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
+            m_connection->send(message, [set_completion, set_exception, weak_hub_connection, callback_id](std::exception_ptr exception)
                 {
                     if (exception)
                     {
@@ -572,7 +573,7 @@ namespace signalr
                 std::weak_ptr<hub_connection_impl> weak_connection = connection;
                 connection->m_connection->send(
                     connection->m_cached_ping,
-                    connection->m_protocol->transfer_format(), [weak_connection](std::exception_ptr exception)
+                    [weak_connection](std::exception_ptr exception)
                     {
                         auto connection = weak_connection.lock();
                         if (connection)
