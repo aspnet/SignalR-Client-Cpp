@@ -1,8 +1,6 @@
 {
   "name": "microsoft-signalr",
   "version-string": "1.0",
-  "$comment": "builtin-baseline pins vcpkg to microsoft/vcpkg fa9a5b33 (2026-06-02), the commit immediately before cpprestsdk was deindexed (microsoft/vcpkg#52130). This keeps using the machine-provided vcpkg (no submodule) while still resolving the removed cpprestsdk port from the versions database. cpprestsdk is opt-in via the 'cpprestsdk' feature (enabled with -DVCPKG_MANIFEST_FEATURES=cpprestsdk).",
-  "builtin-baseline": "fa9a5b330aed997a68310ed56418617b87a3b83d",
   "dependencies": [
     "jsoncpp",
     "msgpack"
