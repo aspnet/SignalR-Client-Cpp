@@ -60,36 +60,32 @@ extends:
           agentOs: Windows
           jobName: Windows_Build_Test_With_CppRestSDK
           useCppRestSDK: true
-          cMakeRunArgs: '-A x64'
+          cMakeRunArgs: '-A x64 -DVCPKG_MANIFEST_FEATURES=cpprestsdk'
           beforeBuild:
           - powershell: |
               $root = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { $env:VCPKG_INSTALLATION_ROOT }
               Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$root"
             displayName: Set VCPKG_ROOT
-          - powershell: '& "$env:VCPKG_ROOT\vcpkg.exe" install cpprestsdk:x64-windows msgpack:x64-windows jsoncpp:x64-windows'
-            displayName: vcpkg install dependencies
 
       - template: .azure/default-build.yml@self
         parameters:
           agentOs: macOs
           jobName: Mac_Build_Test_With_CppRestSDK
           useCppRestSDK: true
+          cMakeRunArgs: '-DVCPKG_MANIFEST_FEATURES=cpprestsdk'
           beforeBuild:
           - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
             displayName: Set VCPKG_ROOT
-          - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk msgpack jsoncpp'
-            displayName: vcpkg install dependencies
 
       - template: .azure/default-build.yml@self
         parameters:
           agentOs: Linux
           jobName: Linux_Build_Test_With_CppRestSDK
           useCppRestSDK: true
+          cMakeRunArgs: '-DVCPKG_MANIFEST_FEATURES=cpprestsdk'
           beforeBuild:
           - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
             displayName: Set VCPKG_ROOT
-          - bash: '"$VCPKG_ROOT/vcpkg" install cpprestsdk boost-system boost-chrono boost-thread msgpack jsoncpp'
-            displayName: vcpkg install dependencies
           - bash: "sudo apt-get update && sudo apt install valgrind"
             displayName: install valgrind
 
@@ -101,8 +97,6 @@ extends:
           beforeBuild:
           - bash: echo "##vso[task.setvariable variable=VCPKG_ROOT]$VCPKG_INSTALLATION_ROOT"
             displayName: Set VCPKG_ROOT
-          - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'
-            displayName: vcpkg install dependencies
           - bash: "sudo apt-get update && sudo apt install valgrind"
             displayName: install valgrind
 
@@ -117,8 +111,6 @@ extends:
               $root = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { $env:VCPKG_INSTALLATION_ROOT }
               Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$root"
             displayName: Set VCPKG_ROOT
-          - powershell: '& "$env:VCPKG_ROOT\vcpkg.exe" install msgpack:x64-windows jsoncpp:x64-windows'
-            displayName: vcpkg install dependencies
 
       - template: .azure/default-build.yml@self
         parameters:
@@ -130,5 +122,3 @@ extends:
             displayName: Set VCPKG_ROOT
           - script: brew install gcc
             displayName: Install gcc
-          - bash: '"$VCPKG_ROOT/vcpkg" install msgpack jsoncpp'
-            displayName: vcpkg install dependencies
