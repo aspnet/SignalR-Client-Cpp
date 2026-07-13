@@ -1,0 +1,8 @@
+{
+  "$comment": "Pin the vcpkg registry to microsoft/vcpkg fa9a5b33 (2026-06-02), the commit immediately before cpprestsdk was deindexed in microsoft/vcpkg#52130. vcpkg fetches this registry into its own cache, so resolution is independent of the machine-provided vcpkg checkout and the removed cpprestsdk port stays installable.",
+  "default-registry": {
+    "kind": "git",
+    "repository": "https://github.com/microsoft/vcpkg",
+    "baseline": "fa9a5b330aed997a68310ed56418617b87a3b83d"
+  }
+}
