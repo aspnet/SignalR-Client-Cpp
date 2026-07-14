@@ -1,0 +1,16 @@
+{
+  "name": "microsoft-signalr",
+  "version-string": "1.0",
+  "dependencies": [
+    "jsoncpp",
+    "msgpack"
+  ],
+  "features": {
+    "cpprestsdk": {
+      "description": "Build with the cpprestsdk-based HTTP/WebSocket transport",
+      "dependencies": [
+        "cpprestsdk"
+      ]
+    }
+  }
+}
