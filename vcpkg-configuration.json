@@ -4,5 +4,14 @@
     "kind": "git",
     "repository": "https://github.com/microsoft/vcpkg",
     "baseline": "fa9a5b330aed997a68310ed56418617b87a3b83d"
-  }
+  },
+  "$comment-registries": "Route openssl to a recent vcpkg baseline (2026-07-14) so it resolves to the patched 3.6.3 instead of the vulnerable 3.6.2 frozen by the default-registry pin. cpprestsdk (which pulls openssl transitively) still resolves via the pinned default-registry. Add 'brotli' here once a fixed release is published upstream and indexed by vcpkg.",
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/microsoft/vcpkg",
+      "baseline": "8e8dfb4ba483886936ded5ca201b500b8d8b0096",
+      "packages": [ "openssl" ]
+    }
+  ]
 }
