@@ -12,5 +12,11 @@
         "cpprestsdk"
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "name": "openssl",
+      "version": "3.6.3"
+    }
+  ]
 }
