@@ -62,6 +62,8 @@ extends:
           useCppRestSDK: true
           cMakeRunArgs: '-A x64 -DVCPKG_MANIFEST_FEATURES=cpprestsdk'
           beforeBuild:
+          - powershell: eng\common\Configure-VcpkgAssetCache.ps1
+            displayName: Configure vcpkg asset cache (Terrapin)
           - powershell: |
               $root = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { $env:VCPKG_INSTALLATION_ROOT }
               Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$root"
@@ -107,6 +109,8 @@ extends:
           useCppRestSDK: false
           cMakeRunArgs: '-A x64'
           beforeBuild:
+          - powershell: eng\common\Configure-VcpkgAssetCache.ps1
+            displayName: Configure vcpkg asset cache (Terrapin)
           - powershell: |
               $root = if ($env:VCPKG_ROOT) { $env:VCPKG_ROOT } else { $env:VCPKG_INSTALLATION_ROOT }
               Write-Host "##vso[task.setvariable variable=VCPKG_ROOT]$root"
