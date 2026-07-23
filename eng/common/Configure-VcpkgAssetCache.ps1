@@ -30,7 +30,7 @@ if ($terrapin) {
     # x-block-origin ensures vcpkg never falls back to the public internet if an asset is missing
     # from the cache, so a cache miss surfaces as a clear build failure rather than a silent
     # policy violation.
-    $assetSources = "x-script,`\"$terrapin`\" -b https://vcpkg.storage.devpackages.microsoft.io/artifacts/ -a true -u Environment -p {url} -s {sha512} -d {dst};x-block-origin"
+    $assetSources = "x-script,`"$terrapin`" -b https://vcpkg.storage.devpackages.microsoft.io/artifacts/ -a true -u Environment -p {url} -s {sha512} -d {dst};x-block-origin"
     Write-Host "##vso[task.setvariable variable=X_VCPKG_ASSET_SOURCES]$assetSources"
     Write-Host "Configured vcpkg asset cache using Terrapin at '$terrapin'."
 }
