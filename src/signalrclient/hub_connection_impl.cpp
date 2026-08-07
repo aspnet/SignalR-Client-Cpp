@@ -409,8 +409,23 @@ namespace signalr
                     }
                     break;
                 case message_type::close:
-                    // TODO
-                    break;
+                {
+                    auto close = static_cast<close_message*>(val.get());
+                    if (m_logger.is_enabled(trace_level::debug))
+                    {
+                        if (close->error.length() == 0)
+                        {
+                            m_logger.log(trace_level::debug, "received close message.");
+                        }
+                        else
+                        {
+                            m_logger.log(trace_level::debug, "received close message with an error: " + close->error);
+                        }
+
+                    }
+                    m_connection->stop([](std::exception_ptr) {}, std::make_exception_ptr(std::runtime_error("the server closed the connection with the following error: " + close->error)));
+                    return;
+                }
                 default:
                     throw std::runtime_error("unknown message type '" + std::to_string(static_cast<int>(val->message_type)) + "' received");
                     break;

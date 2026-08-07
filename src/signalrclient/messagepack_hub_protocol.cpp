@@ -433,6 +433,36 @@ namespace signalr
                 vec.emplace_back(std::unique_ptr<hub_message>(new ping_message()));
                 break;
             }
+            case message_type::close:
+            {
+                std::string error;
+                if (msgpack_obj_index->type == msgpack::type::NIL)
+                {
+                    // Empty string
+                }
+                else if (msgpack_obj_index->type != msgpack::type::STR)
+                {
+                    throw signalr_exception("reading 'error' as string failed");
+                }
+                else
+                {
+                    error.append(msgpack_obj_index->via.str.ptr, msgpack_obj_index->via.str.size);
+                }
+                ++msgpack_obj_index;
+
+                bool allowReconnect = false;
+                if (num_elements_of_message > 2)
+                {
+                    if (msgpack_obj_index->type != msgpack::type::BOOLEAN)
+                    {
+                        throw signalr_exception("reading 'allowReconnect' as bool failed");
+                    }
+                    allowReconnect = msgpack_obj_index->via.boolean;
+                }
+
+                vec.push_back(std::unique_ptr<hub_message>(new close_message(std::move(error), allowReconnect)));
+                break;
+            }
             // TODO: other message types
             default:
                 // Future protocol changes can add message types, old clients can ignore them

@@ -96,6 +96,38 @@ TEST(messagepack_hub_protocol, parse_message)
     }
 }
 
+namespace
+{
+    std::vector<std::pair<std::string, std::shared_ptr<hub_message>>> close_messages
+    {
+        // close message with error
+        { string_from_bytes({0x08, 0x92, 0x07, 0xA5, 0x65, 0x72, 0x72, 0x6F, 0x72}),
+        std::shared_ptr<hub_message>(new close_message("error", false)) },
+
+        // close message without error
+        { string_from_bytes({0x03, 0x92, 0x07, 0xC0}),
+        std::shared_ptr<hub_message>(new close_message("", false)) },
+
+        // close message with error and reconnect
+        { string_from_bytes({0x09, 0x93, 0x07, 0xA5, 0x65, 0x72, 0x72, 0x6F, 0x72, 0xC3}),
+        std::shared_ptr<hub_message>(new close_message("error", true)) },
+
+        // close message with extra property
+        { string_from_bytes({0x0A, 0x94, 0x07, 0xA5, 0x65, 0x72, 0x72, 0x6F, 0x72, 0xC2, 0x80}),
+        std::shared_ptr<hub_message>(new close_message("error", false)) },
+    };
+}
+
+TEST(messagepack_hub_protocol, can_parse_close_message)
+{
+    for (auto& data : close_messages)
+    {
+        auto output = messagepack_hub_protocol().parse_messages(data.first);
+        ASSERT_EQ(1, output.size());
+        assert_hub_message_equality(data.second.get(), output[0].get());
+    }
+}
+
 TEST(messagepack_hub_protocol, can_parse_multiple_messages)
 {
     auto payload = string_from_bytes({ 0x0D, 0x96, 0x01, 0x80, 0xC0, 0xA6, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x90, 0x90,
@@ -152,6 +184,10 @@ namespace
         { string_from_bytes({0x05, 0x93, 0x03, 0x80, 0xA1, 0x31}), "completion message has too few properties"},
         { string_from_bytes({0x06, 0x94, 0x03, 0x80, 0xA1, 0x31, 0x03}), "completion message has too few properties"},
         { string_from_bytes({0x08, 0x95, 0x03, 0x80, 0xA1, 0x31, 0x01, 0x91, 0x03}), "reading 'error' as string failed"},
+
+        // close message
+        { string_from_bytes({0x03, 0x92, 0x07, 0xC3}), "reading 'error' as string failed"},
+        { string_from_bytes({0x04, 0x93, 0x07, 0xA0, 0xA0}), "reading 'allowReconnect' as bool failed"},
     };
 }
 
