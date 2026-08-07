@@ -36,8 +36,8 @@ namespace signalr
 
         ~connection_impl();
 
-        void start(std::function<void(std::exception_ptr)> callback) noexcept;
-        void send(const std::string &data, transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept;
+        void start(transfer_format transfer_format, std::function<void(std::exception_ptr)> callback) noexcept;
+        void send(const std::string &data, std::function<void(std::exception_ptr)> callback) noexcept;
         void stop(std::function<void(std::exception_ptr)> callback, std::exception_ptr exception) noexcept;
 
         connection_state get_connection_state() const noexcept;
@@ -60,6 +60,7 @@ namespace signalr
         std::function<void(std::string&&)> m_message_received;
         std::function<void(std::exception_ptr)> m_disconnected;
         signalr_client_config m_signalr_client_config;
+        transfer_format m_transfer_format;
 
         std::shared_ptr<cancellation_token_source> m_disconnect_cts;
         std::mutex m_stop_lock;
