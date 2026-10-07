@@ -23,8 +23,9 @@ trigger:
 
 schedules:
 # Cron timezone is UTC.
-# Run once a month
-- cron: "0 0 1 * *"
+# Run twice a month
+- cron: "0 0 1,15 * *"
+  displayName: "Twice-monthly official build"
   branches:
     include:
     - main
