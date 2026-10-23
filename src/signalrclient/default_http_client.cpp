@@ -86,35 +86,51 @@ namespace signalr
                 cts.cancel();
             });
 
-        web::http::client::http_client client(utility::conversions::to_string_t(url), m_config.get_http_client_config());
-        client.request(http_request, cts.get_token())
-            .then([context, callback](pplx::task<web::http::http_response> response_task)
+        try
         {
-            try
-            {
-                auto http_response = response_task.get();
-                auto status_code = http_response.status_code();
-                http_response.extract_utf8string()
-                    .then([callback, status_code](std::string response_body)
-                {
-                    signalr::http_response response;
-                    response.content = response_body;
-                    response.status_code = status_code;
-                    callback(std::move(response), nullptr);
-                });
-            }
-            catch (...)
-            {
-                callback(http_response(), std::current_exception());
-            }
+            web::http::client::http_client client(utility::conversions::to_string_t(url), m_config.get_http_client_config());
+            client.request(http_request, cts.get_token())
+                .then([context, callback](pplx::task<web::http::http_response> response_task)
+                    {
+                        try
+                        {
+                            auto http_response = response_task.get();
+                            auto status_code = http_response.status_code();
+                            http_response.extract_utf8string()
+                                .then([callback, status_code](std::string response_body)
+                                    {
+                                        signalr::http_response response;
+                            response.content = response_body;
+                            response.status_code = status_code;
+                            callback(std::move(response), nullptr);
+                                    });
+                        }
+                        catch (...)
+                        {
+                            callback(http_response(), std::current_exception());
+                        }
 
+                        if (context != nullptr)
+                        {
+                            std::unique_lock<std::mutex> lck(context->mtx);
+                            context->complete = true;
+                            context->cv.notify_all();
+                        }
+                    });
+        }
+        // Url validation could throw from the client ctor
+        catch (...)
+        {
+            // unblock timeout task if it was created
             if (context != nullptr)
             {
                 std::unique_lock<std::mutex> lck(context->mtx);
                 context->complete = true;
                 context->cv.notify_all();
             }
-        });
+            callback({}, std::current_exception());
+            return;
+        }
     }
 }
 #endif
